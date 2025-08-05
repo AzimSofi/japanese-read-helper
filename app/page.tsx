@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-
+import CollapsibleItem from './CollapsibleItem';
 
 export default function Home() {
   let inputSentence = "";
@@ -21,40 +21,46 @@ export default function Home() {
   const filePath = path.join(process.cwd(), 'public', 'text.txt');
   inputSentence = fs.readFileSync(filePath, 'utf8');
 
-  function parseMarkdown(text: string): string[][] {
+  interface ParsedItem {
+    head: string;
+    subItems: string[];
+  }
+
+  function parseMarkdown(text: string): ParsedItem[] {
     const splitByLines = text.split("\n");
     const headingPrefix = "*   ";
-    const subItemPrefix = "    *   "
-    const headResult: string[] = [];
-    const subItemResult: string[] = [];
+    const subItemPrefix = "    *   ";
+    const parsedData: ParsedItem[] = [];
+    let currentHeadItem: ParsedItem | null = null;
 
     splitByLines.forEach(line => {
       if (line.startsWith(headingPrefix)) {
-        const match = line.match(/^\s*\*\s+\*\*(.*)\*\*$/);
-        const trimmedHeading = match ? match[1] : '';
-        console.log("Heading:", trimmedHeading ?? "ないですか");
-        headResult.push(trimmedHeading);
+        // const match = line.match(/^\*\s+\*\*(.*?)\*\*$/);
+        // console.log(`Line: ${line}`);
+        // console.log(`Line: ${line.match(/^\*\s+\*\*(.*?)\*\*$/)}`);
+        // console.log(`Match: ${match}`);
+        // const trimmedHeading = match ? match[1] : '';
+        currentHeadItem = { head: line.slice(6, -3), subItems: [] };
+        parsedData.push(currentHeadItem);
+        // console.log(`Heading found: ${trimmedHeading}`);
       } else if (line.startsWith(subItemPrefix)) {
         const trimmedSubItem = line.replace(/^\s*\*\s+/, '').trim();
-        console.log("Sub-item:", trimmedSubItem ?? "ないですか");
-        subItemResult.push(trimmedSubItem);
+        if (currentHeadItem) {
+          currentHeadItem.subItems.push(trimmedSubItem);
+          // console.log(`Sub-item found: ${trimmedSubItem}`);
+        }
       }
     });
-
-    const result = [[...headResult], [...subItemResult]];
-    return result;
+    return parsedData;
   }
 
 return (
     <div>
       <div>
-        {parseMarkdown(inputSentence).map((line, index) => (
-          <div key={index} className="text-sm">
-            {line}
-          </div>
+        {parseMarkdown(inputSentence).map((item, index) => (
+          <CollapsibleItem key={index} head={item.head} subItems={item.subItems} />
         ))}
       </div>
-
     </div>
   );
 }
