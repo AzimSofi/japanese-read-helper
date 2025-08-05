@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
+
 export default function Home() {
   let inputSentence = "";
 
@@ -20,23 +21,27 @@ export default function Home() {
   const filePath = path.join(process.cwd(), 'public', 'text.txt');
   inputSentence = fs.readFileSync(filePath, 'utf8');
 
-  function parseMarkdown(text: string): string[] {
+  function parseMarkdown(text: string): string[][] {
     const splitByLines = text.split("\n");
     const headingPrefix = "*   ";
     const subItemPrefix = "    *   "
-    const result: string[] = [];
+    const headResult: string[] = [];
+    const subItemResult: string[] = [];
 
     splitByLines.forEach(line => {
       if (line.startsWith(headingPrefix)) {
-        const trimmedHeading = line.match(/^\*\s+\*\*(.*)\*\*$/)[1];
+        const match = line.match(/^\s*\*\s+\*\*(.*)\*\*$/);
+        const trimmedHeading = match ? match[1] : '';
         console.log("Heading:", trimmedHeading ?? "ないですか");
-        result.push(trimmedHeading);
+        headResult.push(trimmedHeading);
       } else if (line.startsWith(subItemPrefix)) {
         const trimmedSubItem = line.replace(/^\s*\*\s+/, '').trim();
         console.log("Sub-item:", trimmedSubItem ?? "ないですか");
-        result.push(trimmedSubItem);
+        subItemResult.push(trimmedSubItem);
       }
     });
+
+    const result = [[...headResult], [...subItemResult]];
     return result;
   }
 
