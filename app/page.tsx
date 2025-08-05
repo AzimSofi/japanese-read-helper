@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 export default function Home() {
   let inputSentence = "";
 
@@ -7,42 +10,38 @@ export default function Home() {
     *   成果を最大限に引き出す
     *   最も良い結果を出すには
     *   良い結果を出す
+
+*   **2アウトプットを最大化する**
+    *   2成果を最大限に引き出す
+    *   2最も良い結果を出すには
+    *   2良い結果を出す
     `;
 
+  const filePath = path.join(process.cwd(), 'public', 'text.txt');
+  inputSentence = fs.readFileSync(filePath, 'utf8');
 
   function parseMarkdown(text: string): string[] {
     const splitByLines = text.split("\n");
-    // console.log(splitByLines);
-    // return splitByLines;
+    const headingPrefix = "*   ";
+    const subItemPrefix = "    *   "
+    const result: string[] = [];
+
     splitByLines.forEach(line => {
-      if (line.startsWith("*   ")) {
-        console.log("Heading:", line);
-      } else if (line.startsWith("    *   ")) {
-        console.log("Sub-item:", line);
+      if (line.startsWith(headingPrefix)) {
+        const trimmedHeading = line.match(/^\*\s+\*\*(.*)\*\*$/)[1];
+        console.log("Heading:", trimmedHeading ?? "ないですか");
+        result.push(trimmedHeading);
+      } else if (line.startsWith(subItemPrefix)) {
+        const trimmedSubItem = line.replace(/^\s*\*\s+/, '').trim();
+        console.log("Sub-item:", trimmedSubItem ?? "ないですか");
+        result.push(trimmedSubItem);
       }
     });
-
-    return splitByLines;
-
-
-    // const lines = text.trim().split('\n');
-    //   return lines.map(line => {
-    //     const trimmedLine = line.trim();
-    //     if (trimmedLine.startsWith('* ')) {
-    //       const content = trimmedLine.substring(2);
-    //       // 太字かどうかを判定 (簡易的に ** で囲まれているかで判断)
-    //       const isHeading = content.startsWith('**') && content.endsWith('**');
-    //       return {
-    //         text: content.replace(/\*\*/g, ''), // 太字マークを削除
-    //         isHeading: isHeading,
-    //       };
-    //     }
-    //     return { text: trimmedLine }; // リスト形式でない行も考慮する場合
-    //   }).filter(item => item.text); // 空の項目を除外
+    return result;
   }
 
 return (
-    <div>Test
+    <div>
       <div>
         {parseMarkdown(inputSentence).map((line, index) => (
           <div key={index} className="text-sm">
