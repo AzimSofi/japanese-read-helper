@@ -7,15 +7,15 @@ export default function Home() {
 
   //　例
   inputSentence = `
-*   **アウトプットを最大化する**
-    *   成果を最大限に引き出す
-    *   最も良い結果を出すには
-    *   良い結果を出す
+<正しい答えなどない。
+>>唯一の正解はない。
+>>必ずしも「これだ」という正しい答えがあるわけではない。
+>>正解はない。
 
-*   **2アウトプットを最大化する**
-    *   2成果を最大限に引き出す
-    *   2最も良い結果を出すには
-    *   2良い結果を出す
+<それでも、自分のスタンスを決める
+>>しかし、自分の意見や立場は決める必要がある。
+>>それでも、最終的には自分の立ち位置を明確にする。
+>>自分の意見を決める。
     `;
 
   const filePath = path.join(process.cwd(), 'public', 'text.txt');
@@ -28,26 +28,19 @@ export default function Home() {
 
   function parseMarkdown(text: string): ParsedItem[] {
     const splitByLines = text.split("\n");
-    const headingPrefix = "*   ";
-    const subItemPrefix = "    *   ";
+    const headingPrefix = "<";
+    const subItemPrefix = ">>";
     const parsedData: ParsedItem[] = [];
     let currentHeadItem: ParsedItem | null = null;
 
     splitByLines.forEach(line => {
       if (line.startsWith(headingPrefix)) {
-        // const match = line.match(/^\*\s+\*\*(.*?)\*\*$/);
-        // console.log(`Line: ${line}`);
-        // console.log(`Line: ${line.match(/^\*\s+\*\*(.*?)\*\*$/)}`);
-        // console.log(`Match: ${match}`);
-        // const trimmedHeading = match ? match[1] : '';
-        currentHeadItem = { head: line.slice(6, -3), subItems: [] };
+        currentHeadItem = { head: line.slice(1), subItems: [] };
         parsedData.push(currentHeadItem);
-        // console.log(`Heading found: ${trimmedHeading}`);
       } else if (line.startsWith(subItemPrefix)) {
-        const trimmedSubItem = line.replace(/^\s*\*\s+/, '').trim();
+        const trimmedSubItem = line.slice(2);
         if (currentHeadItem) {
           currentHeadItem.subItems.push(trimmedSubItem);
-          // console.log(`Sub-item found: ${trimmedSubItem}`);
         }
       }
     });
@@ -56,7 +49,7 @@ export default function Home() {
 
 return (
     <div>
-      <div>
+      <div className='mx-36'>
         {parseMarkdown(inputSentence).map((item, index) => (
           <CollapsibleItem key={index} head={item.head} subItems={item.subItems} />
         ))}
