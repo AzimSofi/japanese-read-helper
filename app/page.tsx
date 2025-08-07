@@ -49,8 +49,6 @@ export default function Home() {
             if (currentHeadItem) {
               currentHeadItem.head += "、" + unfinishedHeadItem.head;
             }
-          //console.log("current:", currentHeadItem.head);
-          // parsedData.push(unfinishedHeadItem);
         }
       }
     });
