@@ -43,6 +43,16 @@ export default function Home() {
           currentHeadItem.subItems.push(trimmedSubItem);
         }
       }
+      else {
+        if (parsedData.length > 0) {
+          const unfinishedHeadItem = { head: line, subItems: [] };
+            if (currentHeadItem) {
+              currentHeadItem.head += "、" + unfinishedHeadItem.head;
+            }
+          //console.log("current:", currentHeadItem.head);
+          // parsedData.push(unfinishedHeadItem);
+        }
+      }
     });
     return parsedData;
   }
