@@ -45,7 +45,6 @@ export default function Home() {
       }
       else {
         if (line.trim().length > 0) {
-          console.log(line);
           const unfinishedHeadItem = { head: line, subItems: [] };
             if (currentHeadItem) {
               currentHeadItem.head += "、" + unfinishedHeadItem.head;
