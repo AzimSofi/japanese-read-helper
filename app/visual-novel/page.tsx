@@ -3,6 +3,8 @@
 import React from "react";
 import { GoogleGenAI } from "@google/genai";
 import { useState } from "react";
+import { parseMarkdown } from "../../lib/parserMarkdown";
+import CollapsibleItem from "../CollapsibleItem";
 
 export default function Home() {
     const aiInstructions = `
@@ -58,7 +60,17 @@ export default function Home() {
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
             最後のPタグ
         </button>
-        <p>{response}</p>
+        <div className="">
+            {parseMarkdown(response).map((item, index) => (
+                <CollapsibleItem
+                    key={index}
+                    head={item.head}
+                    subItems={item.subItems}
+                    initialDropdownState={true}
+                />
+            ))}
+      </div>
+
     </div>
   );
 }
