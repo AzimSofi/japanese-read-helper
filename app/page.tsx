@@ -16,8 +16,8 @@ export default function Home() {
 >>資料を早く読むコツは「仮説」と「異常値」
     `;
 
-  // const filePath = path.join(process.cwd(), 'public', 'text.txt');
-  // inputSentence = fs.readFileSync(filePath, 'utf8');
+  const filePath = path.join(process.cwd(), 'public', 'text.txt');
+  inputSentence = fs.readFileSync(filePath, 'utf8');
 
   interface ParsedItem {
     head: string;
