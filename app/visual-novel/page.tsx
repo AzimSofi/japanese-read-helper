@@ -49,6 +49,14 @@ export default function Home() {
         setResponse(data.response);
     };
 
+    const handleFlushButtonClick = () => {
+        const pElements = document.querySelectorAll("p");
+        if (pElements.length > 0) {
+            for (let i = 0; i < pElements.length - 1; i++) {
+                document.getElementsByTagName("p")[i].innerHTML = "";
+        }
+    }};
+
   return (
     <div className="p-2 bg-gray-100 flex flex-col">
         <input
@@ -59,6 +67,11 @@ export default function Home() {
             onClick={handleButtonClick}
             className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
             最後のPタグ
+        </button>
+        <button
+            onClick={handleFlushButtonClick}
+            className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+            Flush
         </button>
         <div className="">
             {parseMarkdown(response).map((item, index) => (
