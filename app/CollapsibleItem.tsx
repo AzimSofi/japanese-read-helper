@@ -5,10 +5,11 @@ import React, { useState } from 'react';
 interface CollapsibleItemProps {
   head: string;
   subItems: string[];
+  initialDropdownState?: boolean;
 }
 
-const CollapsibleItem: React.FC<CollapsibleItemProps> = ({ head, subItems }) => {
-  const [isOpen, setIsOpen] = useState(false);
+const CollapsibleItem: React.FC<CollapsibleItemProps> = ({ head, subItems, initialDropdownState = false }) => {
+  const [isOpen, setIsOpen] = useState(initialDropdownState);
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
