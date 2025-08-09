@@ -1,36 +1,29 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Read Helper
 
-## Getting Started
+Read Helper is a web-based tool designed to assist Japanese language learners when reading Visual Novels. It integrates with Textractor and a clipboard inserter to provide AI-rephrased versions of in-game text, aiming to improve comprehension.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Demo
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This video demonstrates Read Helper in operation, showcasing its text processing and AI rephrasing capabilities.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+https://github.com/user-attachments/assets/16d81533-e417-4123-b764-a0066d0b6c84
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## Functionality
 
-To learn more about Next.js, take a look at the following resources:
+Read Helper provides the following core functions:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+*   **Text Acquisition:** Captures Visual Novel text in real-time via Textractor and a clipboard inserter.
+*   **AI Rephrasing:** Utilizes the Gemini AI model to generate three distinct rephrased versions of the extracted text.
+*   **Comprehension Support:** Offers alternative phrasings to clarify complex Japanese sentences and enhance understanding for learners.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Usage Context
 
-## Deploy on Vercel
+This tool is intended for:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+*   **Japanese Language Learners:** To aid in understanding and learning Japanese through Visual Novels.
+*   **Visual Novel Readers:** To provide immediate linguistic assistance without interrupting the reading flow.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
