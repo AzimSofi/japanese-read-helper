@@ -30,12 +30,14 @@ export default function Home() {
     const MAX_RETRY_ATTEMPTS = 5;
 
     const findLastPTagContent = (): string | null => {
-        const pElements = document.querySelectorAll("p");
-        if (pElements.length > 0) {
-            const lastP = pElements[pElements.length - 1];
-            return lastP.textContent;
-        }
-        return null;
+        if (typeof document !== 'undefined') {
+            const pElements = document.querySelectorAll("p");
+            if (pElements.length > 0) {
+                const lastP = pElements[pElements.length - 1];
+                return lastP.textContent;
+            }
+            return null;
+        }   return null;
     };
 
     const handleButtonClick = useCallback(async (initialInstruction = aiInstructions) => {
