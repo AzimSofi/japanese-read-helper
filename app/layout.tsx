@@ -27,7 +27,20 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+      <div className="bg-gray-300 py-5" style={{ textAlign: "center" }}>
+        <a href="./" className="hover:underline outline-1 m-5 p-2 bg-amber-50">
+          ホーム
+        </a>
+        <a href="/text-input" className="hover:underline outline-1 m-5 p-2 bg-red-50">
+          入力
+        </a>
+        <a href="/visual-novel" className="hover:underline outline-1 m-5 p-2 bg-red-50">
+          ビジュアルノベル
+        </a>
+      </div>
+      <div /*className="mx-36 my-5"*/>
         {children}
+      </div>
       </body>
     </html>
   );
