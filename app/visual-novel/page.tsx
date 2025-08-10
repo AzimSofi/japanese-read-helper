@@ -62,7 +62,7 @@ export default function Home() {
                 const res = await fetch('/api/gemini-api', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ prompt_post: currentInstruction + contentToPrompt }),
+                    body: JSON.stringify({ prompt_post: currentInstruction + contentToPrompt, ai_model: "gemini-2.5-flash-lite" }),
                 });
 
                 apiResponseData = await res.json();
@@ -115,14 +115,14 @@ export default function Home() {
             />
             <button
                 onClick={handleFlushButtonClick}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
             >
                 Flush
             </button>
 
             <button
                 onClick={() => handleButtonClick()}
-                className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={isLoading}
             >
                 {isLoading ? '処理中...' : '最後のPタグ'}
