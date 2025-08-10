@@ -21,16 +21,14 @@ export default function Home() {
   inputSentence = fs.readFileSync(filePath, "utf8");
 
   return (
-    <div>
-      <div className="mx-36">
-        {parseMarkdown(inputSentence).map((item, index) => (
-          <CollapsibleItem
-            key={index}
-            head={item.head}
-            subItems={item.subItems}
-          />
-        ))}
-      </div>
+    <div className="mx-36 my-5">
+      {parseMarkdown(inputSentence).map((item, index) => (
+        <CollapsibleItem
+          key={index}
+          head={item.head}
+          subItems={item.subItems}
+        />
+      ))}
     </div>
   );
 }
