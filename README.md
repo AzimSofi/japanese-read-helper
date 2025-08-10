@@ -4,7 +4,7 @@ Read Helper is a web-based tool designed to assist Japanese language learners wh
 
 ---
 
-## Demo
+## Demo (Early prototype)
 
 This video demonstrates Read Helper in operation, showcasing its text processing and AI rephrasing capabilities.
 
