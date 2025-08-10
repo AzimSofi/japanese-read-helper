@@ -16,7 +16,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({ head, subItems, initi
   };
 
   return (
-    <div className='flex'>
+    <div className='flex collapsibleItem'>
       <div>
         
       </div>

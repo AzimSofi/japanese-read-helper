@@ -107,23 +107,25 @@ export default function Home() {
 
     return (
         <div className="p-2 bg-gray-100 flex flex-col">
+            <span style={{height: "20rem", overflow: "auto", alignContent: "end", /*display: "flex", flexDirection: "column-reverse"*/}}></span>
             <input
                 value={aiInstructions + findLastPTagContent()}
                 type="hidden"
                 readOnly
             />
             <button
+                onClick={handleFlushButtonClick}
+                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+            >
+                Flush
+            </button>
+
+            <button
                 onClick={() => handleButtonClick()}
                 className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 disabled={isLoading}
             >
                 {isLoading ? '処理中...' : '最後のPタグ'}
-            </button>
-            <button
-                onClick={handleFlushButtonClick}
-                className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-            >
-                Flush
             </button>
             <div className="">
                 {parseMarkdown(response).map((item, index) => (

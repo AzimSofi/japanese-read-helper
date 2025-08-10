@@ -30,6 +30,13 @@ body {
   color: black; /* Black text */
 }
 
+.collapsibleItem, p {
+  font-size: 1.3rem;
+  font-family: Noto Serif JP;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
 .sub-item-text {
   background: #f1f1f1;
   font-size: large;
