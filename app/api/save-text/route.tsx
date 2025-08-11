@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { generateGeminiContent } from '@/lib/geminiService';
 
 export async function POST(request: Request) {
   const aiInstructions = `
@@ -22,8 +23,6 @@ export async function POST(request: Request) {
 ---
 それでは、以下の文章でお願いします：
     `;
-  let apiResponseData = null;
-
   try {
     const { text } = await request.json();
 
@@ -32,17 +31,12 @@ export async function POST(request: Request) {
     }
 
     // AIとのやり取り
-    const res = await fetch('/api/gemini-api', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt_post: aiInstructions + text, ai_model: "gemini-2.5-flash" }),
-    });
-    apiResponseData = await res.json();
+    const aiResponseText = await generateGeminiContent(aiInstructions + text, "gemini-2.5-flash");
     //
 
     const filePath = path.join(process.cwd(), 'public', 'text.txt');
 
-    await fs.promises.writeFile(filePath, apiResponseData.response);
+    await fs.promises.writeFile(filePath, aiResponseText);
 
     console.log(`サーバー側ログ: "${filePath}" にテキストを保存しました。`);
     return NextResponse.json({ message: 'テキストが保存されました。' }, { status: 200 });
