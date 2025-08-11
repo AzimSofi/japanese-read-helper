@@ -4,6 +4,7 @@ import React from "react";
 import { useState, useCallback } from "react";
 import { parseMarkdown } from "../../lib/parserMarkdown";
 import CollapsibleItem from "../CollapsibleItem";
+import { generateGeminiContent } from "@/lib/geminiService";
 
 export default function Home() {
     const aiInstructions = `
@@ -64,20 +65,23 @@ export default function Home() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ prompt_post: currentInstruction + contentToPrompt, ai_model: "gemini-2.5-flash-lite" }),
                 });
-
+                // console.log(apiResponseData);
                 apiResponseData = await res.json();
+                //apiResponseData = await generateGeminiContent(aiInstructions + contentToPrompt, "gemini-2.5-flash-lite");
+                
 
                 const parsedItems = parseMarkdown(apiResponseData.response);
                 const allItemsValid = parsedItems.every(item => 
                     item.head && item.head.length > 0 && item.subItems.length > 0
                 );
-
+                
                 if (allItemsValid && parsedItems.length > 0) {
                     success = true;
                     // console.log("API response format is valid.");
                 } else {
                     console.warn(`API response format invalid on attempt ${attempt + 1}. Retrying...`);
                     console.log("Invalid data response: ", apiResponseData.response);
+                    console.log("allItemsValid: ", allItemsValid, "\parsedItems.length : ", parsedItems.length);
                     currentInstruction = "回答のフォーマットが正しくありません。もう一度やり直してください。必ず下記の構成に従ってください。\n" + aiInstructions;
                 }
             } catch (error) {
