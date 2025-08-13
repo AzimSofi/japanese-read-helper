@@ -30,9 +30,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'テキストが提供されていません。' }, { status: 400 });
     }
 
-    // AIとのやり取り
     const aiResponseText = await generateGeminiContent(aiInstructions + text, "gemini-2.5-flash");
-    //
 
     const filePath = path.join(process.cwd(), 'public', 'text.txt');
 
