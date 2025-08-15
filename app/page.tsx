@@ -5,6 +5,7 @@ import { parseMarkdown } from "../lib/parserMarkdown";
 
 export default function Home() {
   let inputSentence = "";
+  const englishRegex = /[a-zA-Z]/;; 
 
   //　例
   inputSentence = `
@@ -27,6 +28,7 @@ export default function Home() {
           key={index}
           head={item.head}
           subItems={item.subItems}
+          initialDropdownState={ englishRegex.test(item.head) ? true : false }
         />
       ))}
     </div>
