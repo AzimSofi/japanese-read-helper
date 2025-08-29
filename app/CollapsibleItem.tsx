@@ -27,7 +27,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         return { kanji, reading, meaning };
     }
 
-    const parsed = subItem.split("、");
+    const parsed = subItem.split("＊");
     const words: { kanji: string; reading: string; meaning: string }[] = [];
     const doubleDefinition: string[] = [];
     parsed.forEach((item) => {
