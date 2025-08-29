@@ -62,7 +62,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                         <ruby>
                           <span className="font-bold text-blue-700">{word.kanji}</span>
                            <rt>
-                            <span className="text-gray-600">{word.reading}</span>
+                            <span className="text-black">{word.reading}</span>
                            </rt>
                         </ruby>
                         {/* <span className="font-bold text-blue-700">{word.kanji}</span> (
