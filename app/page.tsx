@@ -1,10 +1,8 @@
-import fs from "fs";
-import path from "path";
 import CollapsibleItem from "./CollapsibleItem";
 import { parseMarkdown } from "../lib/parserMarkdown";
 
-export default function Home() {
-  let inputSentence = "";
+export default async function Home() {
+  let inputSentence: string = "";
   const englishRegex = /[a-zA-Z]/;; 
 
   //　例
@@ -18,9 +16,17 @@ export default function Home() {
 >>資料を早く読むコツは「仮説」と「異常値」
     `;
 
-  const filePath = path.join(process.cwd(), "public", "text.txt");
-  inputSentence = fs.readFileSync(filePath, "utf8");
+  const response = await fetch("/api/read-public-txt", {
+    method: "POST",
+  });
 
+  if (response.ok) {
+    const data = await response.json();
+    inputSentence = await data.text;
+  } else {
+    console.error(response.statusText);
+  }
+  
   return (
     <div className="mx-36 my-5">
       {parseMarkdown(inputSentence).map((item, index) => (
