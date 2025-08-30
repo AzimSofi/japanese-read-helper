@@ -9,16 +9,16 @@ export default function Home() {
         e.preventDefault();
         if (isLoading) return;
         setIsLoading(true);
-        const response = await fetch("/api/write-public-txt", {
+        const response = await fetch("/api/save-text", {
             method: "POST",
             headers: { "Content-Type": "application/json", },
             body: JSON.stringify({ text: inputText }),
         });
 
         if (!response.ok) {
-            console.error("/api/write-public-txtは失敗");
+            console.error("/api/saveTextは失敗");
         } else {
-            console.log("/api/write-public-txtは完了");
+            console.log("/api/saveTextは完了");
             setIsLoading(false);
         }
 
@@ -30,7 +30,7 @@ export default function Home() {
         <div>
             {isLoading ? (
                 <div className="flex justify-center m-30 h-screen text-5xl font-semibold">
-                    処理中...
+                    AIで処理中...
                 </div>
             ) : (
                 // isLoadingがfalseの場合
