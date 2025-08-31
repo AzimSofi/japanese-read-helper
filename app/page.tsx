@@ -16,8 +16,8 @@ export default async function Home() {
 >>資料を早く読むコツは「仮説」と「異常値」
     `;
 
-  const response = await fetch("/api/read-public-txt", {
-    method: "POST",
+  const response = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"}/api/read-public-txt`, {
+    method: "GET",
   });
 
   if (response.ok) {

@@ -1,7 +1,18 @@
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
+import { NextResponse } from "next/server";
 
-export function writePublicTxt(inputText: string) {
+export async function writePublicTxt(inputText: string) {
     const filePath = path.join(process.cwd(), "public", "text.txt");
-    fs.writeFileSync(filePath, inputText);    
+    await fs.writeFile(filePath, inputText);    
+}
+
+export async function POST(request: Request) {
+    try{
+        const content = await request.json();
+        await writePublicTxt(content.text);
+        return NextResponse.json({ message: "おけです！"})
+    } catch(e){
+        return NextResponse.json(e);
+    }
 }
