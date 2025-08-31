@@ -7,7 +7,7 @@ export async function readPublicTxt(): Promise<string> {
     return (await fs.readFile(filePath, "utf8")) || "";
 }
 
-export async function POST() {
+export async function GET() {
     try {
         const content = await readPublicTxt();
         return NextResponse.json({ text: content });
