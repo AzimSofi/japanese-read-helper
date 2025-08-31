@@ -26,7 +26,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       const kanji = item.split("[")[0];
       let reading: string = "";
       let meaning: string = "";
-      if (item.split("[")[1].split("]").includes("・")) { //　例：>>ジッパー[チャック、ファスナー]＊ノック[ドアなどを軽く叩くこと]　つまり　単語[意味]＊…
+      if (item.split("[")[1].split("]")[0].includes("・")) { //　例：>>ジッパー[チャック、ファスナー]＊ノック[ドアなどを軽く叩くこと]　つまり　単語[意味]＊…
           reading = item.split("[")[1].split("・")[0];
           meaning = item.split("[")[1].split("・")[1].replace("]", "").trim();
       } else {
