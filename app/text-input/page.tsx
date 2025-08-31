@@ -17,13 +17,13 @@ export default function Home() {
 
         if (!response.ok) {
             console.error("/api/write-public-txtは失敗");
+            console.error(response)
         } else {
             console.log("/api/write-public-txtは完了");
             setIsLoading(false);
+            setInputText("");
+            window.location.replace("./");            
         }
-
-        setInputText("");
-        window.location.replace("./");
     }
 
     return (

@@ -9,7 +9,7 @@ export default function Home() {
         e.preventDefault();
         if (isLoading) return;
         setIsLoading(true);
-        const response = await fetch("/api/save-text", {
+        const response = await fetch("/api/save-text-ai", {
             method: "POST",
             headers: { "Content-Type": "application/json", },
             body: JSON.stringify({ text: inputText }),
