@@ -3,8 +3,13 @@ interface ParsedItem {
   subItems: string[];
 }
 
-export function parseMarkdown(text: string): ParsedItem[] {
-  const splitByLines = text.split("\n");
+export function parseMarkdown(text: string, isError: boolean = false): ParsedItem[] {
+  if (isError) {
+    console.error("エラー: 正しい形式の応答が得られませんでした。")
+    return [];
+  }
+
+  const splitByLines = text.split("\n");    
   const headingPrefix = "<";
   const headingPrefixV2 = "＜";
   const subItemPrefix = ">>";
