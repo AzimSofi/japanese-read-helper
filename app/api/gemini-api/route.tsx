@@ -59,7 +59,9 @@ export async function POST(request: Request) {
   }
 
   console.log(`[${new Date().toISOString()}] レスポンスを送信します。合計リクエスト時間: ${Date.now() - startTime}ms`);
+  
   return NextResponse.json({
-    response: response.text,
+    response: response.text, 
+    message: "おけです！",
   });
 }

@@ -34,6 +34,9 @@ export default function RootLayout({
         <a href="/text-input" className="hover:underline outline-1 m-5 p-2 bg-red-50">
           入力
         </a>
+        <a href="/text-input-ai" className="hover:underline outline-1 m-5 p-2 bg-red-50">
+          入力-AI
+        </a>
         <a href="/ocr" className="hover:underline outline-1 m-5 p-2 bg-green-50">
           OCR
         </a>
