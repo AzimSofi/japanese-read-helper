@@ -1,5 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
+import { writePublicTxt } from "../write-public-txt/route";
 
 export async function POST(request: Request) {
   const startTime = Date.now();
@@ -59,7 +60,12 @@ export async function POST(request: Request) {
   }
 
   console.log(`[${new Date().toISOString()}] レスポンスを送信します。合計リクエスト時間: ${Date.now() - startTime}ms`);
+  
+  const content = await request.json();
+  await writePublicTxt(content.text);
+
   return NextResponse.json({
-    response: response.text,
+    // response: response.text, 
+    message: "おけです！",
   });
 }
