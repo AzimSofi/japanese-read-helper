@@ -10,6 +10,7 @@ export default function Home() {
   const aiInstructions: string = ai_instructions;
   const [response, setResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState<boolean>(false);
   const MAX_RETRY_ATTEMPTS = 2;
 
   const findLastPTagContent = (): string | null => {
@@ -93,6 +94,7 @@ export default function Home() {
           `複数回(${attempt}回)試行しましたが、有効な応答を取得できませんでした。`
         );
         setResponse("エラー: 正しい形式の応答が得られませんでした。");
+        setIsError(true);
       }
       setIsLoading(false);
     },
@@ -141,7 +143,7 @@ export default function Home() {
         {isLoading ? "処理中..." : "最後のPタグ"}
       </button>
       <div className="">
-        {parseMarkdown(response).map((item, index) => (
+        {parseMarkdown(response, isError).map((item, index) => (
           <CollapsibleItem
             key={index}
             head={item.head}

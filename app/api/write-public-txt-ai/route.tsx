@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { generateGeminiContent } from '@/lib/geminiService';
 import { ai_instructions } from '@/lib/geminiService';
+import { writePublicTxt } from "../write-public-txt/route"
 
 export async function POST(request: Request) {
   const aiInstructions: string = ai_instructions;
@@ -10,7 +11,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'テキストが提供されていません。' }, { status: 400 });
     }
 
-    // AIとのやり取り
     const splittedInputText: string[] = text.split("\n")
     let splittedTextResult: string[][];
     let combinedAiResponse: string = "";
@@ -37,12 +37,7 @@ export async function POST(request: Request) {
       combinedAiResponse += aiResponseText;
     }
 
-    const response = await fetch("/api/write-public-txt", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", },
-      body: JSON.stringify({ text: combinedAiResponse }),
-    });
-
+    await writePublicTxt(combinedAiResponse);
 
     console.log(`サーバー側ログ: "テキストを保存しました。`);
     return NextResponse.json({ message: 'テキストが保存されました。' }, { status: 200 });
