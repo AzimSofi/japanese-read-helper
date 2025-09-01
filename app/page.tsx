@@ -1,41 +1,64 @@
+"use client";
 import CollapsibleItem from "./CollapsibleItem";
 import { parseMarkdown } from "../lib/parserMarkdown";
+import { useEffect, useState } from "react";
 
-export default async function Home() {
-  let inputSentence: string = "";
-  const englishRegex = /[a-zA-Z]/;; 
+export default function Home() {
+  const [inputText, setInputText] = useState<string>("");
+  const englishRegex = /[a-zA-Z]/;
+  const exampleText = `
+  <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
+        「仮説」と「例外」
+        >>たくさんの資料を短い時間で理解するヒントは
+        「仮説」と「普通ではないこと」
+        >>資料を早く読むコツは「仮説」と「異常値」
+  `;
 
-  //　例
-  inputSentence = `
-<膨大な資料を短時間で読み解くための
-「仮説」と「異常値」
->>大量の資料を短い時間で理解するために使う
-「仮説」と「例外」
->>たくさんの資料を短い時間で理解するヒントは
-「仮説」と「普通ではないこと」
->>資料を早く読むコツは「仮説」と「異常値」
-    `;
+  // ※ 学んだこと
+  // ※ useEffectを使わないと：　fetch → setInputText → 再レンダリング → fetch → setInputText → ... という無限ループに陥ってしまう
+  // useEffect のコールバック関数は、コンポーネントが レンダリングされた後 に実行されます
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL || "http://localhost:3000"}/api/read-public-txt`, {
-    method: "GET",
-  });
+  // コンポーネントがマウントされたときに一度実行、useEffectの第2引数の配列 []
+  // マウントされたコンポーネントが レンダリングされるたびに毎回 実行される
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch("/api/read-public-txt", {
+          method: "GET",
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setInputText(data.text);
+        } else {
+          console.error(response);
+          setInputText(exampleText);
+        }
+      } catch (e) {
+        console.error(e);
+        setInputText(exampleText);
+      }
+    };
 
-  if (response.ok) {
-    const data = await response.json();
-    inputSentence = await data.text;
-  } else {
-    console.error(response.statusText);
+    fetchData();
+  }, []);
+
+  if (!inputText) {
+    return <div className="mx-36 my-5">Loading content...</div>;
   }
-  
+
   return (
     <div className="mx-36 my-5">
-      {parseMarkdown(inputSentence).map((item, index) => (
+      {parseMarkdown(inputText).map((item, index) => (
         <CollapsibleItem
           key={index}
           head={item.head}
           subItems={item.subItems}
-          initialDropdownState={ /*englishRegex.test(item.head) || */item.subItems.length>3 ? true : false 
-            || (item.subItems[2] !== "" && item.subItems[2] !== "無い") }
+          initialDropdownState={
+            /*englishRegex.test(item.head) || */ item.subItems.length > 3
+              ? true
+              : false ||
+                (item.subItems[2] !== "" && item.subItems[2] !== "無い")
+          }
         />
       ))}
     </div>
