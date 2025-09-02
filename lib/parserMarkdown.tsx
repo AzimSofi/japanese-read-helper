@@ -3,13 +3,16 @@ interface ParsedItem {
   subItems: string[];
 }
 
-export function parseMarkdown(text: string, isError: boolean = false): ParsedItem[] {
+export function parseMarkdown(
+  text: string,
+  isError: boolean = false
+): ParsedItem[] {
   if (isError) {
-    console.error("エラー: 正しい形式の応答が得られませんでした。")
+    console.error("エラー: 正しい形式の応答が得られませんでした。");
     return [];
   }
 
-  const splitByLines = text.split("\n");    
+  const splitByLines = text.split("\n");
   const headingPrefix = "<";
   const headingPrefixV2 = "＜";
   const subItemPrefix = ">>";
@@ -39,27 +42,27 @@ export function parseMarkdown(text: string, isError: boolean = false): ParsedIte
       // } else {
       //   console.log("Unexpected line format:", line);
       // }
-      
+
       const trimmedSubItem = line.slice(2);
       if (currentHeadItem) {
         currentHeadItem.subItems.push(trimmedSubItem);
-        currentHeadItem.subItems.push(splitByLines[i+1].slice(2));
+        currentHeadItem.subItems.push(splitByLines[i + 1].slice(2));
       }
 
-      if (splitByLines[i+2].includes(headingPrefix)) {
-        const oddLine = splitByLines[i+2].split(headingPrefix);
+      if (splitByLines[i + 2].includes(headingPrefix)) {
+        const oddLine = splitByLines[i + 2].split(headingPrefix);
         const part1 = oddLine[0];
         const part2 = oddLine[1];
-        splitByLines[i+1] = part1;
-        splitByLines[i+2] = part2;
-      } else if (splitByLines[i+2].includes(headingPrefixV2)) {
-        const oddLine = splitByLines[i+2].split(headingPrefixV2);
+        splitByLines[i + 1] = part1;
+        splitByLines[i + 2] = part2;
+      } else if (splitByLines[i + 2].includes(headingPrefixV2)) {
+        const oddLine = splitByLines[i + 2].split(headingPrefixV2);
         const part1 = oddLine[0];
         const part2 = oddLine[1];
-        splitByLines[i+1] = part1;
-        splitByLines[i+2] = part2;
+        splitByLines[i + 1] = part1;
+        splitByLines[i + 2] = part2;
       } else {
-        console.log("Unexpected line format:", splitByLines[i+2]);
+        console.log("Unexpected line format:", splitByLines[i + 2]);
       }
     } else if (
       // 元々Headですが、〝headingPrefix〟はない、
@@ -76,6 +79,17 @@ export function parseMarkdown(text: string, isError: boolean = false): ParsedIte
       if (currentHeadItem) {
         currentHeadItem.subItems.push(trimmedSubItem);
       }
+    } else if (
+      // Headですが、subitemは2しかない
+      i + 5 < splitByLines.length &&
+      splitByLines[i + 1].startsWith(subItemPrefix) &&
+      splitByLines[i + 2].startsWith(subItemPrefix) &&
+      splitByLines[i + 3] === "" &&
+      splitByLines[i + 4] &&
+      splitByLines[i + 5].startsWith(subItemPrefix)
+    ) {
+      currentHeadItem = { head: line, subItems: [] };
+      parsedData.push(currentHeadItem);
     } else {
       if (line.trim().length > 0 && currentHeadItem) {
         // Head + {}
