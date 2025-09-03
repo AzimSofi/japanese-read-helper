@@ -80,7 +80,7 @@ export function parseMarkdown(
         currentHeadItem.subItems.push(trimmedSubItem);
       }
     } else if (
-      // Headですが、subitemは2しかない
+      // Headですが、subitemは2つしかいない
       i + 5 < splitByLines.length &&
       splitByLines[i + 1].startsWith(subItemPrefix) &&
       splitByLines[i + 2].startsWith(subItemPrefix) &&
