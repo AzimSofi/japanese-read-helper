@@ -43,18 +43,24 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       return { kanji, reading, meaning };
     }
 
-    const parsed = subItem.split("＊");
+    let parsed: string[] = [];
+    if (subItem.includes("＊")) {
+      parsed = subItem.split("＊");
+    } else if (subItem.includes("、")) {
+      parsed = subItem.split("、");
+    } else {
+      parsed = [subItem];
+    }
     const words: { kanji: string; reading: string; meaning: string }[] = [];
-    const doubleDefinition: string[] = [];
+    const multipleDefinition: string[] = [];
     parsed.forEach((item) => {
       if (item.includes("[") /*&& item.includes("・")*/ && item.includes("]")) {
         words.push(KanjiReadingMeaningSplit(item));
       } else {
-        // debugger;
-        doubleDefinition.push(item);
-        if (doubleDefinition.length === 2) {
-          words.push(KanjiReadingMeaningSplit(doubleDefinition.toString()));
-          doubleDefinition.length = 0;
+        multipleDefinition.push(item);
+        if (item.includes("]")) {
+          words.push(KanjiReadingMeaningSplit(multipleDefinition.toString()));
+          multipleDefinition.length = 0;
         }
       }
     });
