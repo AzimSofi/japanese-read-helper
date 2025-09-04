@@ -53,11 +53,11 @@ export default function Home() {
           key={index}
           head={item.head}
           subItems={item.subItems}
-          initialDropdownState={
-            /*englishRegex.test(item.head) || */ item.subItems.length > 3
+          initialDropdownState={ false
+            /*englishRegex.test(item.head) ||  item.subItems.length > 3
               ? true
               : false ||
-                (item.subItems[2] !== "" && item.subItems[2] !== "無い")
+                (item.subItems[2] !== "" && item.subItems[2] !== "無い")*/
           }
         />
       ))}
