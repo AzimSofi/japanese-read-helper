@@ -11,7 +11,7 @@ export default function Home() {
   const [response, setResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState<boolean>(false);
-  const MAX_RETRY_ATTEMPTS = 2;
+  const MAX_RETRY_ATTEMPTS = 4;
 
   const findLastPTagContent = (): string | null => {
     if (typeof document !== "undefined") {
@@ -55,8 +55,14 @@ export default function Home() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ prompt_post: currentInstruction + contentToPrompt, ai_model: "gemini-2.5-flash-lite" }),
         });
-        apiResponseData = await res.json();
-          const parsedItems = parseMarkdown(apiResponseData.response);
+        if (res.ok) {
+          const text = await res.text();
+          apiResponseData = JSON.parse(text);
+        } else {
+          console.error(res.statusText);
+        }
+
+        const parsedItems = parseMarkdown(apiResponseData.response);
           const allItemsValid = parsedItems.every(
             (item) =>
               item.head && item.head.length > 0 && item.subItems.length > 0
