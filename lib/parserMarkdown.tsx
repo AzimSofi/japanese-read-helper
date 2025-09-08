@@ -105,6 +105,16 @@ export function parseMarkdown(
             }
           }
         }
+        // subitemのないヘッダー
+        else if (previousLineContent === "" && splitByLines[i + 1] === "") {
+          if (line.startsWith("##") || line.startsWith("＃＃")) {
+            currentHeadItem = { head: line.slice(2).trim(), subItems: [] };
+            parsedData.push(currentHeadItem);
+          } else {
+            currentHeadItem = { head: line, subItems: [] };
+            parsedData.push(currentHeadItem);
+          }
+        }
         // 変な形
         else {
           console.log("Unexpected line format:", line);
