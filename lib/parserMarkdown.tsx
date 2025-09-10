@@ -20,7 +20,7 @@ export function parseMarkdown(
   let currentHeadItem: ParsedItem | null = null;
 
   for (let i = 0; i < splitByLines.length; i++) {
-    const line = splitByLines[i];
+    let line = splitByLines[i];
     const previousLineContent = i > 0 ? splitByLines[i - 1] : "";
 
     if (line.startsWith(headingPrefix) || line.startsWith(headingPrefixV2)) {
@@ -72,6 +72,15 @@ export function parseMarkdown(
       splitByLines[i + 2].startsWith(subItemPrefix) &&
       splitByLines[i + 3].startsWith(subItemPrefix)
     ) {
+      if ( // **Head** の形
+        line[0] === "*" &&
+        line[1] === "*" &&
+        line[line.length - 1] === "*" &&
+        line[line.length - 2] === "*"
+      ) {
+        line = line.slice(2, -2);
+      }
+
       currentHeadItem = { head: line, subItems: [] };
       parsedData.push(currentHeadItem);
     } else if (line.startsWith(subItemPrefix)) {
