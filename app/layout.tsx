@@ -22,14 +22,34 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+
+  const homeParams = new URLSearchParams({ fileName: "", dropdownAlwaysOpen: "true" });
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
       <div className="bg-gray-300 py-5" style={{ textAlign: "center" }}>
-        <a href="./" className="hover:underline outline-1 m-5 p-2 bg-amber-50">
-          ホーム
+        <a
+          href={`.?${(() => {
+            const params = new URLSearchParams(homeParams);
+            params.set("fileName", "text-1");
+            return params.toString();
+          })()}`}
+          className="hover:underline outline-1 m-5 p-2 bg-amber-50"
+        >
+          テキスト1
+        </a>
+        <a
+          href={`.?${(() => {
+            const params = new URLSearchParams(homeParams);
+            params.set("fileName", "text-2");
+            return params.toString();
+          })()}`}
+          className="hover:underline outline-1 m-5 p-2 bg-amber-50"
+        >
+          テキスト2
         </a>
         <a href="/text-input" className="hover:underline outline-1 m-5 p-2 bg-red-50">
           入力

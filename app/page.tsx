@@ -2,6 +2,7 @@
 import CollapsibleItem from "./CollapsibleItem";
 import { parseMarkdown } from "../lib/parserMarkdown";
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 export default function Home() {
   const [inputText, setInputText] = useState<string>("");
@@ -13,6 +14,9 @@ export default function Home() {
         「仮説」と「普通ではないこと」
         >>資料を早く読むコツは「仮説」と「異常値」
   `;
+  const fileName: string = useSearchParams().get("fileName") || "text-1";
+  const dropdownAlwaysOpenParam = useSearchParams().get("dropdownAlwaysOpen");
+  const dropdownAlwaysOpen: boolean = dropdownAlwaysOpenParam === null ? true : dropdownAlwaysOpenParam === "true";
 
   // ※ 学んだこと
   // ※ useEffectを使わないと：　fetch → setInputText → 再レンダリング → fetch → setInputText → ... という無限ループに陥ってしまう
@@ -23,7 +27,7 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch("/api/read-public-txt", {
+        const response = await fetch(`/api/read-public-txt?fileName=${fileName}`, {
           method: "GET",
         });
         if (response.ok) {
@@ -53,7 +57,7 @@ export default function Home() {
           key={index}
           head={item.head}
           subItems={item.subItems}
-          initialDropdownState={ false
+          initialDropdownState={ dropdownAlwaysOpen
             /*englishRegex.test(item.head) ||  item.subItems.length > 3
               ? true
               : false ||
