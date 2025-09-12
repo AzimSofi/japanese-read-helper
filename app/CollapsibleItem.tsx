@@ -85,7 +85,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         >
           {head}
         </div>
-        <div className="ml-4 mt-2">
+        {/* <div className="ml-4 mt-2">
           <div className="ml-4 mt-2">
             {subItems.map((subItem, index) => (
               <div key={index} className="sub-item-text my-1">
@@ -109,17 +109,17 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                     ))}
                   </div>
                 ) : (
-                  ""
+                  null
                 )}
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
         {isOpen && (
           <div className="ml-4 mt-2">
             {subItems.map((subItem, index) => (
               <div key={index} className="sub-item-text my-1">
-                {index === 2 ? (
+                {index === 4 ? (
                   /*<div className="jisho-output-container bg-gray-50 p-2 rounded">
                     {Jisho(subItem).map((word, wordIndex) => (
                       <div
