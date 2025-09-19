@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 interface CollapsibleItemProps {
   head: string;
@@ -76,14 +76,28 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     return words;
   }
 
+  const itemRef = React.useRef<HTMLDivElement>(null);
+  const headRef = React.useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [headSize, setHeadSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  useEffect(() => {
+    if (itemRef.current) {
+      setSize({ width: itemRef.current.offsetWidth, height: itemRef.current.offsetHeight });
+    }
+    if (headRef.current) {
+      setHeadSize({ width: headRef.current.offsetWidth, height: headRef.current.offsetHeight });
+    }
+  }, [itemRef]);
+
   return (
     <div className="flex collapsibleItem">
-      <div className="border p-2 my-1 w-full">
+      <div className="border p-2 my-1 w-full" id ="collapsible-item" ref={itemRef}>
         <div
           className="head-text cursor-pointer font-bold text-lg"
           onClick={toggleOpen}
+          ref={headRef}
         >
-          {head}
+          {head} 
         </div>
         {/* <div className="ml-4 mt-2">
           <div className="ml-4 mt-2">
@@ -146,6 +160,16 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           </div>
         )}
       </div>
+      <span 
+        style={{ 
+          backgroundColor: "red", 
+          position: "absolute", 
+          marginLeft: `${size.width}px`, 
+          height: `${headSize.height}px`
+        }} 
+        className="my-1">
+          | 
+      </span>
     </div>
   );
 };
