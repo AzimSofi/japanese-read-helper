@@ -26,11 +26,12 @@ export default function RootLayout({
   const homeParams = new URLSearchParams({ fileName: "", dropdownAlwaysOpen: "true" });
 
   return (
-    <html lang="en">
+    <html lang="ja">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-      <div className="bg-gray-300 py-5" style={{ textAlign: "center" }}>
+      <div className="bg-gray-300 py-5 fixed top-0 left-0 w-full bg-blue-500 p-4 z-50 text-xs" 
+        style={{ textAlign: "center" }}>
         <a
           href={`.?${(() => {
             const params = new URLSearchParams(homeParams);
