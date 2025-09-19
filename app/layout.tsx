@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import React from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -24,13 +25,12 @@ export default function RootLayout({
 }>) {
 
   const homeParams = new URLSearchParams({ fileName: "", dropdownAlwaysOpen: "true" });
-
   return (
     <html lang="ja">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-      <div className="bg-gray-300 py-5 fixed top-0 left-0 w-full bg-blue-500 p-4 z-50 text-xs" 
+      <div className="bg-gray-300 py-5 fixed top-0 left-0 w-full p-4 z-50 text-xs" 
         style={{ textAlign: "center" }}>
         <a
           href={`.?${(() => {
@@ -65,7 +65,7 @@ export default function RootLayout({
           ビジュアルノベル
         </a>
       </div>
-      <div /*className="mx-36 my-5"*/>
+      <div className="my-14">
         {children}
       </div>
       </body>
