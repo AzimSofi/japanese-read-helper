@@ -1,14 +1,18 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Bookmark from "./components/bookmark";
+import BookmarkFilled from "./components/bookmark-filled";
 
 interface CollapsibleItemProps {
+  id?: string;
   head: string;
   subItems: string[];
   initialDropdownState?: boolean;
 }
 
 const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
+  id,
   head,
   subItems,
   initialDropdownState = false,
@@ -18,6 +22,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   const toggleOpen = () => {
     setIsOpen(!isOpen);
   };
+
+  useEffect(() => {
+    setIsOpen(initialDropdownState);
+  }, [initialDropdownState]);
 
   function KanjiReadingMeaningSplit(item: string) {
     const kanji = item.split("[")[0];
@@ -47,7 +55,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       parsed = subItem.split("＊");
     } else if (subItem.includes("]")) {
       parsed = subItem.split("]");
-      const mappedParsed = parsed.map(element => {
+      const mappedParsed = parsed.map((element) => {
         return element + "]";
       });
       mappedParsed.pop();
@@ -55,7 +63,15 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     } else if (subItem.includes("、")) {
       parsed = subItem.split("、");
     } else {
-      if (!(subItem === "無い" || subItem === "ない" || subItem === "無し" || subItem === "なし" || subItem === "無") ) {
+      if (
+        !(
+          subItem === "無い" ||
+          subItem === "ない" ||
+          subItem === "無し" ||
+          subItem === "なし" ||
+          subItem === "無"
+        )
+      ) {
         console.error("Error: ", subItem);
       }
       parsed = [subItem];
@@ -78,26 +94,46 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
 
   const itemRef = React.useRef<HTMLDivElement>(null);
   const headRef = React.useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
-  const [headSize, setHeadSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+  const [size, setSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
+  const [headSize, setHeadSize] = useState<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  });
   useEffect(() => {
     if (itemRef.current) {
-      setSize({ width: itemRef.current.offsetWidth, height: itemRef.current.offsetHeight });
+      setSize({
+        width: itemRef.current.offsetWidth,
+        height: itemRef.current.offsetHeight,
+      });
     }
     if (headRef.current) {
-      setHeadSize({ width: headRef.current.offsetWidth, height: headRef.current.offsetHeight });
+      setHeadSize({
+        width: headRef.current.offsetWidth,
+        height: headRef.current.offsetHeight,
+      });
     }
   }, [itemRef]);
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+  };
+
   return (
-    <div className="flex collapsibleItem">
-      <div className="border p-2 my-1 w-full" id ="collapsible-item" ref={itemRef}>
+    <div className="flex collapsibleItem" id={id}>
+      <div
+        className="border p-2 my-1 w-full"
+        id="collapsible-item"
+        ref={itemRef}
+      >
         <div
           className="head-text cursor-pointer font-bold text-lg"
           onClick={toggleOpen}
           ref={headRef}
         >
-          {head} 
+          {head}
         </div>
         {/* <div className="ml-4 mt-2">
           <div className="ml-4 mt-2">
@@ -133,8 +169,8 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           <div className="ml-4 mt-2">
             {subItems.map((subItem, index) => (
               <div key={index} className="sub-item-text my-1">
-                {index === 4 ? (
-                  /*<div className="jisho-output-container bg-gray-50 p-2 rounded">
+                {index === 4
+                  ? /*<div className="jisho-output-container bg-gray-50 p-2 rounded">
                     {Jisho(subItem).map((word, wordIndex) => (
                       <div
                         key={wordIndex}
@@ -152,24 +188,42 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                       </div>
                     ))}
                   </div>*/ ""
-                ) : (
-                  subItem
-                )}
+                  : subItem}
               </div>
             ))}
           </div>
         )}
       </div>
-      <span 
-        style={{ 
-          backgroundColor: "red", 
-          position: "absolute", 
-          marginLeft: `${size.width}px`, 
-          height: `${headSize.height}px`
-        }} 
-        className="my-1">
-          | 
+      <span
+        style={{
+          backgroundColor: "red",
+          position: "absolute",
+          marginLeft: `${size.width}px`,
+          height: `${headSize.height}px`,
+        }}
+        className="my-1"
+      >
+        |
       </span>
+      <form onSubmit={handleSubmit}>
+        <button
+          onClick={() => console.log("Bookmark機能は未実装")}
+          type="button"
+          style={{
+            position: "absolute",
+            marginLeft: '0.5rem',
+            marginTop: '0.3rem',
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer"
+          }}
+          className={false ? '' : 'cursor-pointer'}
+          aria-label="Bookmark"
+        >
+          {false ? <BookmarkFilled /> : <Bookmark />}
+        </button>
+      </form>
     </div>
   );
 };
