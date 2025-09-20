@@ -18,10 +18,13 @@ export function parseMarkdown(
   const subItemPrefix = ">>";
   const parsedData: ParsedItem[] = [];
   let currentHeadItem: ParsedItem | null = null;
-
   for (let i = 0; i < splitByLines.length; i++) {
     let line = splitByLines[i];
     const previousLineContent = i > 0 ? splitByLines[i - 1] : "";
+
+    if (line.trim() === "") {
+      continue;
+    }
 
     if (line.startsWith(headingPrefix) || line.startsWith(headingPrefixV2)) {
       currentHeadItem = { head: line.slice(1), subItems: [] };
@@ -100,6 +103,15 @@ export function parseMarkdown(
       currentHeadItem = { head: line, subItems: [] };
       parsedData.push(currentHeadItem);
     } else {
+      if (
+        line &&
+        splitByLines[i + 1] === "" &&
+        splitByLines[i + 2].startsWith(subItemPrefix) &&
+        splitByLines[i + 3].startsWith(subItemPrefix) &&
+        splitByLines[i + 4].startsWith(subItemPrefix)
+      ) {
+        currentHeadItem = { head: line, subItems: [] };
+      }
       if (line.trim().length > 0 && currentHeadItem) {
         // Head + {}
         if (previousLineContent.startsWith(headingPrefix)) {
