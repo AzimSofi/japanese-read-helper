@@ -3,8 +3,11 @@ import fs from 'fs';
 import path from 'path';
 
 export async function POST(request: Request) {
-  const { target, content } = await request.json();
+  if (request.headers.get("content-type") !== "application/json") {
+    return new Response("Invalid Content-Type", { status: 400 });
+  }
 
+  const { target, content } = await request.json();
   const filePath = path.join(process.cwd(), 'public', 'bookmark.json');
   const json = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
   

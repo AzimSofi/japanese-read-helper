@@ -11,6 +11,7 @@ export default function Home() {
   const [inputText, setInputText] = useState<string>("");
   const [bookmarkText, setBookmarkText] = useState<string>("");
   const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(true);
+  const [isBookmarkUpdated, setIsBookmarkUpdated] = useState<boolean>(false);
   const englishRegex = /[a-zA-Z]/;
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
@@ -67,7 +68,7 @@ export default function Home() {
 
     fetchData();
     fetchBookmark();
-  }, []);
+  }, [isBookmarkUpdated, fileName, dropdownAlwaysOpenParam]);
 
   if (!inputText) {
     return <div className="mx-36 my-5">Loading content...</div>;
@@ -88,6 +89,7 @@ export default function Home() {
               : false ||
                 (item.subItems[2] !== "" && item.subItems[2] !== "無い")*/
           }
+          onSubmitSuccess={() => {isBookmarkUpdated ? setIsBookmarkUpdated(false) : setIsBookmarkUpdated(true)}}
         />
       ))}
     </div>
