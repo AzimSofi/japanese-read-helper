@@ -76,16 +76,6 @@ export default function Home() {
   return (
     <div className="mx-36 my-5">
       <Sidebar setDropdownAlwaysOpenState={setDropdownAlwaysOpenState} dropdownAlwaysOpenState={dropdownAlwaysOpenState} />
-      <a
-        href="#bookmark"
-        className="hover:underline outline-1"
-        onClick={() => {
-          // console.log("ブックマークへ", bookmarkText);
-          // console.log("結果：", document.getElementById("bookmark"));
-        }}
-      >
-        ブックマークへ
-      </a>
       {parseMarkdown(inputText).map((item, index) => (
         <CollapsibleItem
           {...(item.head.includes(bookmarkText) ? { id: "bookmark" } : {})}
