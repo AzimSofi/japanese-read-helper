@@ -3,12 +3,15 @@
 import React, { useEffect, useState } from "react";
 import Bookmark from "./components/bookmark";
 import BookmarkFilled from "./components/bookmark-filled";
+import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/router";
 
 interface CollapsibleItemProps {
   id?: string;
   head: string;
   subItems: string[];
   initialDropdownState?: boolean;
+  onSubmitSuccess: () => void;
 }
 
 const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
@@ -16,8 +19,11 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   head,
   subItems,
   initialDropdownState = false,
+  onSubmitSuccess,
 }) => {
+  const fileName: string = useSearchParams().get("fileName") || "text-1";
   const [isOpen, setIsOpen] = useState(initialDropdownState);
+  const [loading, setLoading] = useState(false);
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
@@ -119,17 +125,34 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    try {
+      setLoading(true);
+      const response = await fetch("/api/write-bookmark", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ target: fileName, content: head }),
+      });
+      if (!response.ok) {
+        throw new Error("失敗");
+      }
+      onSubmitSuccess();
+      setLoading(false);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   return (
     <div className="flex collapsibleItem" id={id}>
       <div
-        className="border p-2 my-1 w-full"
+        className={`border p-2 my-1 w-full ${id === "bookmark" ? "bg-yellow-100" : ""}`}
         id="collapsible-item"
         ref={itemRef}
       >
         <div
-          className="head-text cursor-pointer font-bold text-lg"
+          className={"head-text cursor-pointer font-bold text-lg"}
           onClick={toggleOpen}
           ref={headRef}
         >
@@ -194,7 +217,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           </div>
         )}
       </div>
-      <span
+      {/* <span
         style={{
           backgroundColor: "red",
           position: "absolute",
@@ -204,11 +227,12 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         className="my-1"
       >
         |
-      </span>
+      </span> */}
       <form onSubmit={handleSubmit}>
         <button
-          onClick={() => console.log("Bookmark機能は未実装")}
-          type="button"
+          // onClick={() => console.log("Bookmark機能は未実装")}
+          disabled={loading}
+          type="submit"
           style={{
             position: "absolute",
             marginLeft: '0.5rem',
@@ -218,10 +242,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             padding: 0,
             cursor: "pointer"
           }}
-          className={false ? '' : 'cursor-pointer'}
+          className={id === "bookmark" ? 'cursor-pointer' : ''}
           aria-label="Bookmark"
         >
-          {false ? <BookmarkFilled /> : <Bookmark />}
+          {id === "bookmark" ? <BookmarkFilled /> : <Bookmark />}
         </button>
       </form>
     </div>
