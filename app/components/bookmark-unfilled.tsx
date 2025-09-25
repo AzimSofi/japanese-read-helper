@@ -1,4 +1,4 @@
-export default function Bookmark() {
+export default function BookmarkUnfilled() {
   return (
     <svg
       viewBox="0 0 16 16"

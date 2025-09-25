@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import Bookmark from "./components/bookmark";
+import BookmarkUnfilled from "./components/bookmark-unfilled";
 import BookmarkFilled from "./components/bookmark-filled";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/router";
@@ -132,7 +132,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ target: fileName, content: head }),
+        body: JSON.stringify({ target: fileName, content: head.trim() }),
       });
       if (!response.ok) {
         throw new Error("失敗");
@@ -245,7 +245,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           className={id === "bookmark" ? 'cursor-pointer' : ''}
           aria-label="Bookmark"
         >
-          {id === "bookmark" ? <BookmarkFilled /> : <Bookmark />}
+          {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
         </button>
       </form>
     </div>
