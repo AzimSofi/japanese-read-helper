@@ -29,7 +29,8 @@ export default function Home() {
   // コンポーネントがマウントされたときに一度実行、useEffectの第2引数の配列 []
   // マウントされたコンポーネントが レンダリングされるたびに毎回 実行される
   useEffect(() => {
-    setDropdownAlwaysOpenState(dropdownAlwaysOpenParam === null ? true : dropdownAlwaysOpenParam === "true");
+    setDropdownAlwaysOpenState(dropdownAlwaysOpenParam === null ? false : 
+                              dropdownAlwaysOpenParam === "true" ? true : false);
     const fetchData = async () => {
       try {
         const response = await fetch(`/api/read-public-txt?fileName=${fileName}`, {
