@@ -51,7 +51,7 @@ export default function Home() {
 
     const fetchBookmark = async () => {
       try {
-        const response = await fetch(`/api/read-bookmark`, {
+        const response = await fetch(`/api/read-bookmark?fileName=${fileName}`, {
           method: "GET",
         });
         if (response.ok) {
