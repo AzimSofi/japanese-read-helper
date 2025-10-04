@@ -132,7 +132,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ target: fileName, content: head.trim() }),
+        body: JSON.stringify({ target: fileName, content: head }),
       });
       if (!response.ok) {
         throw new Error("失敗");
