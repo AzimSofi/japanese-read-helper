@@ -50,7 +50,7 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       );
     }
 
-    // Split text into processable chunks
+    // テキストを処理可能なチャンクに分割する
     let textChunks: string[][];
     try {
       textChunks = splitTextIntoChunks(text, MAX_CHUNK_SIZE);
