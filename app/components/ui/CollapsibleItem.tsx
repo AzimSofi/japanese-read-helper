@@ -71,7 +71,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       if (
         !(
           subItem === "無い" ||
-          subItem === "無い" ||
+          subItem === "ない" ||
           subItem === "無し" ||
           subItem === "なし" ||
           subItem === "無"
