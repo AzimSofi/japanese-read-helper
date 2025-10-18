@@ -95,9 +95,9 @@ export function isEmptyLineBeforeSubItems(
   return (
     lines[i] !== undefined &&
     lines[i + 1] === '' &&
-    isSubItemLine(lines[i + 2]) === true &&
-    isSubItemLine(lines[i + 3]) === true &&
-    isSubItemLine(lines[i + 4]) === true
+    isSubItemLine(lines[i + 2]) &&
+    isSubItemLine(lines[i + 3]) &&
+    isSubItemLine(lines[i + 4])
   );
 }
 
