@@ -1,10 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import BookmarkUnfilled from "./components/bookmark-unfilled";
-import BookmarkFilled from "./components/bookmark-filled";
+import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
+import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import { useSearchParams } from "next/navigation";
-import { useRouter } from "next/router";
 
 interface CollapsibleItemProps {
   id?: string;
@@ -72,7 +71,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       if (
         !(
           subItem === "無い" ||
-          subItem === "ない" ||
+          subItem === "無い" ||
           subItem === "無し" ||
           subItem === "なし" ||
           subItem === "無"
