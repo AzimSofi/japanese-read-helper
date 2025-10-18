@@ -1,18 +1,20 @@
 "use client";
-import CollapsibleItem from "./CollapsibleItem";
-import { parseMarkdown } from "../lib/parserMarkdown";
+
+import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
+import { parseMarkdown } from "@/lib/utils/markdownParser";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Sidebar from "./layout/sidebar";
+import Sidebar from "@/app/components/ui/Sidebar";
+import { DEFAULT_FILE_NAME, DEFAULT_DROPDOWN_STATE } from "@/lib/constants";
 
 export default function Home() {
-  const fileName: string = useSearchParams().get("fileName") || "text-1";
+  const fileName: string = useSearchParams().get("fileName") || DEFAULT_FILE_NAME;
   const dropdownAlwaysOpenParam = useSearchParams().get("dropdownAlwaysOpen");
   const [inputText, setInputText] = useState<string>("");
   const [bookmarkText, setBookmarkText] = useState<string>("");
-  const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(true);
+  const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(DEFAULT_DROPDOWN_STATE);
   const [isBookmarkUpdated, setIsBookmarkUpdated] = useState<boolean>(false);
-  const englishRegex = /[a-zA-Z]/;
+
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
         「仮説」と「例外」
@@ -21,16 +23,15 @@ export default function Home() {
         >>資料を早く読むコツは「仮説」と「異常値」
   `;
 
-
-  // ※ 学んだこと
-  // ※ useEffectを使わないと：　fetch → setInputText → 再レンダリング → fetch → setInputText → ... という無限ループに陥ってしまう
-  // useEffect のコールバック関数は、コンポーネントが レンダリングされた後 に実行されます
-
-  // コンポーネントがマウントされたときに一度実行、useEffectの第2引数の配列 []
-  // マウントされたコンポーネントが レンダリングされるたびに毎回 実行される
+  // useEffectは、コンポーネントがマウントされた後にデータ取得が行われることを保証します
+  // これにより、無限レンダリングループ（フェッチ → setState → 再レンダリング → フェッチ...）を防ぎます
   useEffect(() => {
-    setDropdownAlwaysOpenState(dropdownAlwaysOpenParam === null ? false : 
-                              dropdownAlwaysOpenParam === "true" ? true : false);
+    setDropdownAlwaysOpenState(
+      dropdownAlwaysOpenParam === null
+        ? DEFAULT_DROPDOWN_STATE
+        : dropdownAlwaysOpenParam === "true"
+    );
+
     const fetchData = async () => {
       try {
         const response = await fetch(`/api/read-public-txt?fileName=${fileName}`, {
@@ -47,7 +48,7 @@ export default function Home() {
         console.error(e);
         setInputText(exampleText);
       }
-    }
+    };
 
     const fetchBookmark = async () => {
       try {
@@ -57,40 +58,38 @@ export default function Home() {
         if (response.ok) {
           const data = await response.json();
           setBookmarkText(data.text);
-          // console.log(data.text);
         } else {
           console.error(response);
         }
       } catch (e) {
         console.error(e);
       }
-    }
-    ;
+    };
 
     fetchData();
     fetchBookmark();
   }, [isBookmarkUpdated, fileName, dropdownAlwaysOpenParam]);
 
   if (!inputText) {
-    return <div className="mx-36 my-5">Loading content...</div>;
+    return <div className="mx-36 my-5">コンテンツを読み込み中...</div>;
   }
 
   return (
     <div className="mx-36 my-5">
-      <Sidebar setDropdownAlwaysOpenState={setDropdownAlwaysOpenState} dropdownAlwaysOpenState={dropdownAlwaysOpenState} />
+      <Sidebar
+        setDropdownAlwaysOpen={setDropdownAlwaysOpenState}
+        dropdownAlwaysOpen={dropdownAlwaysOpenState}
+      />
       {parseMarkdown(inputText).map((item, index) => (
         <CollapsibleItem
           {...(item.head.includes(bookmarkText) ? { id: "bookmark" } : {})}
           key={index}
           head={item.head}
           subItems={item.subItems}
-          initialDropdownState={ dropdownAlwaysOpenState
-            /*englishRegex.test(item.head) ||  item.subItems.length > 3
-              ? true
-              : false ||
-                (item.subItems[2] !== "" && item.subItems[2] !== "無い")*/
-          }
-          onSubmitSuccess={() => {isBookmarkUpdated ? setIsBookmarkUpdated(false) : setIsBookmarkUpdated(true)}}
+          initialDropdownState={dropdownAlwaysOpenState}
+          onSubmitSuccess={() => {
+            setIsBookmarkUpdated(!isBookmarkUpdated);
+          }}
         />
       ))}
     </div>
