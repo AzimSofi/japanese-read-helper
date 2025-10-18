@@ -1,22 +1,22 @@
 import * as React from "react";
 
 interface SidebarProps {
-  setDropdownAlwaysOpenState: (state: boolean) => void;
-  dropdownAlwaysOpenState: boolean;
+  setDropdownAlwaysOpen: (state: boolean) => void;
+  dropdownAlwaysOpen: boolean;
 }
 
 export default function Sidebar({
-  setDropdownAlwaysOpenState,
-  dropdownAlwaysOpenState,
+  setDropdownAlwaysOpen,
+  dropdownAlwaysOpen,
 }: SidebarProps) {
-  return ( 
+  return (
     <div className="fixed bottom-2 left-0 h-full z-50 text-xs flex flex-col items-center">
       <button
-        onClick={() => setDropdownAlwaysOpenState(!dropdownAlwaysOpenState)}
+        onClick={() => setDropdownAlwaysOpen(!dropdownAlwaysOpen)}
         className={`hover:underline outline-1 m-5 p-2 cursor-pointer
-                    ${dropdownAlwaysOpenState ? "bg-white" : "bg-grey-50"}`}
+                    ${dropdownAlwaysOpen ? "bg-white" : "bg-grey-50"}`}
       >
-        {dropdownAlwaysOpenState ? "表示" : "隠す"}
+        {dropdownAlwaysOpen ? "表示" : "隠す"}
       </button>
       <a
         href="#"
