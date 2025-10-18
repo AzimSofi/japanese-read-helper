@@ -2,16 +2,16 @@
 
 import React from "react";
 import { useState, useCallback } from "react";
-import { parseMarkdown } from "../../lib/parserMarkdown";
-import CollapsibleItem from "../CollapsibleItem";
+import { parseMarkdown } from "@/lib/utils/markdownParser";
+import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
 import { ai_instructions } from "@/lib/geminiService";
+import { VN_RETRY_CONFIG, AI_MODELS, API_ROUTES } from "@/lib/constants";
 
 export default function Home() {
   const aiInstructions: string = ai_instructions;
   const [response, setResponse] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState<boolean>(false);
-  const MAX_RETRY_ATTEMPTS = 4;
 
   const findLastPTagContent = (): string | null => {
     if (typeof document !== "undefined") {
@@ -35,7 +35,7 @@ export default function Home() {
       let success = false;
       let apiResponseData = null;
 
-      while (attempt < MAX_RETRY_ATTEMPTS && !success) {
+      while (attempt < VN_RETRY_CONFIG.MAX_ATTEMPTS && !success) {
         try {
           const contentToPrompt = findLastPTagContent();
           if (contentToPrompt === null) {
@@ -50,10 +50,13 @@ export default function Home() {
         //   formData.append("ai_model", "gemini-2.5-flash");
 
         console.log(`${attempt + 1}回目の試行: プロンプトを送信中...`);
-        const res = await fetch('/api/gemini-api', {
+        const res = await fetch(API_ROUTES.GEMINI, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt_post: currentInstruction + contentToPrompt, ai_model: "gemini-2.5-flash-lite" }),
+            body: JSON.stringify({
+              prompt_post: currentInstruction + contentToPrompt,
+              ai_model: AI_MODELS.GEMINI_FLASH
+            }),
         });
         if (res.ok) {
           const text = await res.text();
@@ -132,13 +135,12 @@ export default function Home() {
         type="hidden"
         readOnly
       />
-      <button
-        onClick={handleFlushButtonClick}
-        className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
-      >
-        Flush
-      </button>
-
+              <button
+              onClick={handleFlushButtonClick}
+              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
+            >
+              クリア
+            </button>
       <button
         onClick={() => handleButtonClick()}
         className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer ${
@@ -155,6 +157,7 @@ export default function Home() {
             head={item.head}
             subItems={item.subItems}
             initialDropdownState={true}
+            onSubmitSuccess={() => {}}
           />
         ))}
       </div>

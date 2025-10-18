@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from "react";
+import { API_ROUTES, PAGE_ROUTES } from "@/lib/constants";
 
 export default function Home() {
     const [inputText, setInputText] = useState<string>("");
@@ -9,21 +10,21 @@ export default function Home() {
         e.preventDefault();
         if (isLoading) return;
         setIsLoading(true);
-        const response = await fetch("/api/write-public-txt-ai", {
+        const response = await fetch(API_ROUTES.WRITE_TEXT_AI, {
             method: "POST",
             headers: { "Content-Type": "application/json", },
             body: JSON.stringify({ text: inputText }),
         });
 
         if (!response.ok) {
-            console.error("/api/saveTextは失敗");
+            console.error("AIテキスト処理に失敗しました");
         } else {
-            console.log("/api/saveTextは完了");
+            console.log("AIテキスト処理が完了しました");
             setIsLoading(false);
         }
 
         setInputText("");
-        window.location.replace("./");
+        window.location.replace(PAGE_ROUTES.HOME);
     }
 
     return (
