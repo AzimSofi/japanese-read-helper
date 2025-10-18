@@ -151,8 +151,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         ref={itemRef}
       >
         <div
-          className={"head-text cursor-pointer font-bold text-lg"}
-          onClick={toggleOpen}
+          className={"head-text font-bold text-lg"}
           ref={headRef}
         >
           {head}
@@ -216,17 +215,9 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           </div>
         )}
       </div>
-      {/* <span
-        style={{
-          backgroundColor: "red",
-          position: "absolute",
-          marginLeft: `${size.width}px`,
-          height: `${headSize.height}px`,
-        }}
-        className="my-1"
-      >
-        |
-      </span> */}
+      <span onClick={toggleOpen} className="cursor-pointer">
+        {isOpen ? "○" : "●"}
+      </span>
       <form onSubmit={handleSubmit}>
         <button
           // onClick={() => console.log("Bookmark機能は未実装")}
