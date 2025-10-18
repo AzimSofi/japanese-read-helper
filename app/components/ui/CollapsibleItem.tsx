@@ -233,16 +233,16 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           aria-label="Bookmark"
         >
           {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
-        </button>
+        </button> 
       </form>
-      <span onClick={toggleOpen} className="cursor-pointer"
+      <span onClick={toggleOpen} className="cursor-pointer select-none"
         style={{
             marginLeft: '0.35rem',
             marginTop: '1.3rem',
             background: "none",
             border: "none",
             padding: 0,
-        }}  
+        }}
       >
         {isOpen ? "○" : "●"}
       </span>
