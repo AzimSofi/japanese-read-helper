@@ -153,7 +153,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         ref={itemRef}
       >
         <div
-          className={"head-text font-bold text-lg"}
+          className={"head-text font-bold text-lg whitespace-pre-wrap"}
           ref={headRef}
         >
           {head}
