@@ -29,11 +29,18 @@ import { fixMergedLine, hasEmbeddedHeading } from './splitter';
  *
  * 期待されるフォーマット:
  * ```
- * <見出しテキスト
+ * <見出しテキスト（複数行可能）
+ * 見出しの続き...
+ * さらに続き...
  * >>サブアイテム1
  * >>サブアイテム2
  * >>サブアイテム3
  * ```
+ *
+ * 複数行ヘッダー:
+ * - `<`で始まる行からヘッダーが開始
+ * - `>>`が出現するまでの全ての行がヘッダーとして扱われる
+ * - `>>`以降はサブアイテムとして扱われる
  *
  * @param text - AIからの生のマークダウンテキスト
  * @param isError - trueの場合、空の配列を返しエラーをログに記録
@@ -51,13 +58,17 @@ export function parseMarkdown(
   const splitByLines = text.split('\n');
   const parsedData: ParsedItem[] = [];
   let currentHeadItem: ParsedItem | null = null;
+  let collectingMultiLineHeader = false;
 
   for (let i = 0; i < splitByLines.length; i++) {
     let line = splitByLines[i];
     const previousLine = i > 0 ? splitByLines[i - 1] : '';
 
-    // 空行をスキップ
+    // 空行をスキップ（ただし複数行ヘッダー収集中は改行として追加）
     if (line.trim() === '') {
+      if (collectingMultiLineHeader && currentHeadItem) {
+        currentHeadItem.head += '\n';
+      }
       continue;
     }
 
@@ -68,10 +79,30 @@ export function parseMarkdown(
         subItems: [],
       };
       parsedData.push(currentHeadItem);
+      collectingMultiLineHeader = true; // 複数行ヘッダーの収集を開始
+    }
+    // 複数行ヘッダー収集中にサブアイテムが見つかった場合
+    else if (collectingMultiLineHeader && isSubItemLine(line)) {
+      collectingMultiLineHeader = false; // ヘッダー収集終了
+      const trimmedSubItem = removeSubItemPrefix(line);
+      if (currentHeadItem) {
+        currentHeadItem.subItems.push(trimmedSubItem);
+      }
+    }
+    // 複数行ヘッダーの継続
+    else if (collectingMultiLineHeader && currentHeadItem) {
+      currentHeadItem.head += '\n' + line;
+    }
+    // 標準的なサブアイテム行（複数行ヘッダー収集中でない場合）
+    else if (!collectingMultiLineHeader && isSubItemLine(line)) {
+      const trimmedSubItem = removeSubItemPrefix(line);
+      if (currentHeadItem) {
+        currentHeadItem.subItems.push(trimmedSubItem);
+      }
     }
     // ケース2: サブアイテムに埋め込まれた見出し（マージされた行パターン）
     // パターン: プレフィックスなしの行 + 4つのサブアイテムが続き、i+2行目に埋め込まれた見出し
-    else if (hasSubItemsAhead(splitByLines, i, 4)) {
+    else if (!collectingMultiLineHeader && hasSubItemsAhead(splitByLines, i, 4)) {
       const trimmedSubItem = removeSubItemPrefix(line);
 
       if (currentHeadItem) {
@@ -87,7 +118,7 @@ export function parseMarkdown(
     }
     // ケース3: プレフィックスなしの見出しだが、3つのサブアイテムが続く
     // 太字フォーマットまたはプレーン
-    else if (hasSubItemsAhead(splitByLines, i, 3)) {
+    else if (!collectingMultiLineHeader && hasSubItemsAhead(splitByLines, i, 3)) {
       // 太字フォーマットがある場合は削除
       if (isBoldFormatted(line)) {
         line = removeBoldFormatting(line);
@@ -95,24 +126,20 @@ export function parseMarkdown(
 
       currentHeadItem = { head: line, subItems: [] };
       parsedData.push(currentHeadItem);
-    }
-    // ケース4: 標準的なサブアイテム行
-    else if (isSubItemLine(line)) {
-      const trimmedSubItem = removeSubItemPrefix(line);
-      if (currentHeadItem) {
-        currentHeadItem.subItems.push(trimmedSubItem);
-      }
+      collectingMultiLineHeader = true;
     }
     // ケース5: 2つのサブアイテムパターン（見出しと2つのサブアイテムのみ）
-    else if (isTwoSubItemPattern(splitByLines, i)) {
+    else if (!collectingMultiLineHeader && isTwoSubItemPattern(splitByLines, i)) {
       currentHeadItem = { head: line, subItems: [] };
       parsedData.push(currentHeadItem);
+      collectingMultiLineHeader = true;
     }
     // ケース6: その他のエッジケース
-    else {
+    else if (!collectingMultiLineHeader) {
       // エッジケース6a: 見出しの後に空行があり、その後サブアイテム
       if (isEmptyLineBeforeSubItems(splitByLines, i)) {
         currentHeadItem = { head: line, subItems: [] };
+        collectingMultiLineHeader = true;
       }
 
       if (line.trim().length > 0 && currentHeadItem) {
@@ -142,6 +169,7 @@ export function parseMarkdown(
             currentHeadItem = { head: line, subItems: [] };
             parsedData.push(currentHeadItem);
           }
+          collectingMultiLineHeader = true;
         }
         // エッジケース6e: 予期しない形式
         else {
