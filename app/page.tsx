@@ -23,6 +23,11 @@ export default function Home() {
         >>資料を早く読むコツは「仮説」と「異常値」
   `;
 
+  // ブックマーク比較用に改行を削除して正規化する
+  const normalizeForComparison = (text: string): string => {
+    return text.replace(/[\r\n]/g, '');
+  };
+
   // useEffectは、コンポーネントがマウントされた後にデータ取得が行われることを保証します
   // これにより、無限レンダリングループ（フェッチ → setState → 再レンダリング → フェッチ...）を防ぎます
   useEffect(() => {
@@ -80,18 +85,23 @@ export default function Home() {
         setDropdownAlwaysOpen={setDropdownAlwaysOpenState}
         dropdownAlwaysOpen={dropdownAlwaysOpenState}
       />
-      {parseMarkdown(inputText).map((item, index) => (
-        <CollapsibleItem
-          {...(item.head.includes(bookmarkText) ? { id: "bookmark" } : {})}
-          key={index}
-          head={item.head}
-          subItems={item.subItems}
-          initialDropdownState={dropdownAlwaysOpenState}
-          onSubmitSuccess={() => {
-            setIsBookmarkUpdated(!isBookmarkUpdated);
-          }}
-        />
-      ))}
+      {parseMarkdown(inputText).map((item, index) => {
+        // 改行を削除して比較（複数行ヘッダー対応）
+        const isBookmarked = bookmarkText && normalizeForComparison(item.head).includes(normalizeForComparison(bookmarkText));
+
+        return (
+          <CollapsibleItem
+            {...(isBookmarked ? { id: "bookmark" } : {})}
+            key={index}
+            head={item.head}
+            subItems={item.subItems}
+            initialDropdownState={dropdownAlwaysOpenState}
+            onSubmitSuccess={() => {
+              setIsBookmarkUpdated(!isBookmarkUpdated);
+            }}
+          />
+        );
+      })}
     </div>
   );
 }
