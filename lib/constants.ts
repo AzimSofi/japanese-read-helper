@@ -57,6 +57,7 @@ export const API_ROUTES = {
   WRITE_TEXT: '/api/write-public-txt',
   WRITE_TEXT_AI: '/api/write-public-txt-ai',
   WRITE_BOOKMARK: '/api/write-bookmark',
+  LIST_TEXT_FILES: '/api/list-text-files',
 } as const;
 
 // ページルート
