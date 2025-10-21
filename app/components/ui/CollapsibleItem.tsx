@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
+import ChevronUp from "@/app/components/icons/ChevronUp";
+import ChevronDown from "@/app/components/icons/ChevronDown";
 import { useSearchParams } from "next/navigation";
 
 interface CollapsibleItemProps {
@@ -244,7 +246,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             padding: 0,
         }}
       >
-        {isOpen ? "○" : "●"}
+        {isOpen ? <ChevronUp /> : <ChevronDown />}
       </span>
 
     </div>
