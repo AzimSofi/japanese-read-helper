@@ -3,17 +3,23 @@
 import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
 import { parseMarkdown } from "@/lib/utils/markdownParser";
 import { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
-import { DEFAULT_FILE_NAME, DEFAULT_DROPDOWN_STATE } from "@/lib/constants";
+import { DEFAULT_DROPDOWN_STATE } from "@/lib/constants";
 
 export default function Home() {
-  const fileName: string = useSearchParams().get("fileName") || DEFAULT_FILE_NAME;
-  const dropdownAlwaysOpenParam = useSearchParams().get("dropdownAlwaysOpen");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fileNameParam = searchParams.get("fileName");
+  const dropdownAlwaysOpenParam = searchParams.get("dropdownAlwaysOpen");
+
+  const [fileName, setFileName] = useState<string | null>(fileNameParam);
   const [inputText, setInputText] = useState<string>("");
   const [bookmarkText, setBookmarkText] = useState<string>("");
   const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(DEFAULT_DROPDOWN_STATE);
   const [isBookmarkUpdated, setIsBookmarkUpdated] = useState<boolean>(false);
+  const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
+  const [availableFiles, setAvailableFiles] = useState<string[]>([]);
 
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
@@ -28,9 +34,42 @@ export default function Home() {
     return text.replace(/[\r\n]/g, '');
   };
 
+  // URL パラメータの変更を監視してローカル state を更新
+  useEffect(() => {
+    if (fileNameParam) {
+      setFileName(fileNameParam);
+    }
+  }, [fileNameParam]);
+
+  // ファイルリストを取得し、ファイルが指定されていない場合は最初のファイルにリダイレクト
+  useEffect(() => {
+    const fetchFileList = async () => {
+      try {
+        const response = await fetch('/api/list-text-files');
+        if (response.ok) {
+          const data = await response.json();
+          setAvailableFiles(data.files);
+
+          // ファイルが指定されていない場合、最初のファイルにリダイレクト
+          if (!fileNameParam && data.files.length > 0) {
+            const params = new URLSearchParams(searchParams.toString());
+            params.set('fileName', data.files[0]);
+            router.replace(`/?${params.toString()}`);
+          }
+        }
+      } catch (e) {
+        console.error('ファイルリストの取得に失敗しました:', e);
+      }
+    };
+
+    fetchFileList();
+  }, []);
+
   // useEffectは、コンポーネントがマウントされた後にデータ取得が行われることを保証します
   // これにより、無限レンダリングループ（フェッチ → setState → 再レンダリング → フェッチ...）を防ぎます
   useEffect(() => {
+    if (!fileName) return; // ファイル名が確定するまで待つ
+
     setDropdownAlwaysOpenState(
       dropdownAlwaysOpenParam === null
         ? DEFAULT_DROPDOWN_STATE
@@ -71,11 +110,34 @@ export default function Home() {
       }
     };
 
-    fetchData();
-    fetchBookmark();
+    const loadAllData = async () => {
+      setIsInitialLoadComplete(false);
+      await Promise.all([fetchData(), fetchBookmark()]);
+      setIsInitialLoadComplete(true);
+    };
+
+    loadAllData();
   }, [isBookmarkUpdated, fileName, dropdownAlwaysOpenParam]);
 
-  if (!inputText) {
+  // ファイルがない場合の表示
+  if (availableFiles.length === 0 && !fileName) {
+    return (
+      <div className="mx-36 my-5">
+        <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h2 className="text-xl font-bold mb-4">テキストファイルが見つかりません</h2>
+          <p className="mb-4">
+            public/ ディレクトリに .txt ファイルを追加してください。
+          </p>
+          <p className="text-sm text-gray-600">
+            ファイルを追加後、ページを更新してください。
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // データ読み込み中の表示
+  if (!inputText || !isInitialLoadComplete) {
     return <div className="mx-36 my-5">コンテンツを読み込み中...</div>;
   }
 
