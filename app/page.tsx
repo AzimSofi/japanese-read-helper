@@ -17,7 +17,6 @@ export default function Home() {
   const [inputText, setInputText] = useState<string>("");
   const [bookmarkText, setBookmarkText] = useState<string>("");
   const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(DEFAULT_DROPDOWN_STATE);
-  const [isBookmarkUpdated, setIsBookmarkUpdated] = useState<boolean>(false);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
 
@@ -65,8 +64,26 @@ export default function Home() {
     fetchFileList();
   }, []);
 
-  // useEffectは、コンポーネントがマウントされた後にデータ取得が行われることを保証します
-  // これにより、無限レンダリングループ（フェッチ → setState → 再レンダリング → フェッチ...）を防ぎます
+  // ブックマークを再取得する関数（onSubmitSuccessから呼び出し用）
+  const refetchBookmark = async () => {
+    if (!fileName) return;
+
+    try {
+      const response = await fetch(`/api/read-bookmark?fileName=${fileName}`, {
+        method: "GET",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setBookmarkText(data.text);
+      } else {
+        console.error(response);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // テキストコンテンツとブックマークを取得（ファイル変更時のみ）
   useEffect(() => {
     if (!fileName) return; // ファイル名が確定するまで待つ
 
@@ -117,7 +134,7 @@ export default function Home() {
     };
 
     loadAllData();
-  }, [isBookmarkUpdated, fileName, dropdownAlwaysOpenParam]);
+  }, [fileName, dropdownAlwaysOpenParam]);
 
   // ファイルがない場合の表示
   if (availableFiles.length === 0 && !fileName) {
@@ -158,9 +175,7 @@ export default function Home() {
             head={item.head}
             subItems={item.subItems}
             initialDropdownState={dropdownAlwaysOpenState}
-            onSubmitSuccess={() => {
-              setIsBookmarkUpdated(!isBookmarkUpdated);
-            }}
+            onSubmitSuccess={refetchBookmark}
           />
         );
       })}
