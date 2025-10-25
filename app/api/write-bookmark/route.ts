@@ -24,11 +24,15 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       );
     }
 
+    console.log(`ブックマーク保存: fileName="${target}", content length=${content.length}`);
     updateBookmarkSync(target, content);
+    console.log(`ブックマーク保存成功: fileName="${target}"`);
 
     return NextResponse.json({ success: true, message: 'ブックマークを更新しました' });
   } catch (error) {
     console.error('ブックマークの更新中にエラーが発生しました:', error);
+    console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
+    console.error('スタックトレース:', error instanceof Error ? error.stack : 'スタックトレースなし');
     return NextResponse.json(
       { message: 'ブックマークの更新に失敗しました' },
       { status: 500 }

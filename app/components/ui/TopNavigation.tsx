@@ -12,7 +12,7 @@ export default function TopNavigation() {
   const searchParams = useSearchParams();
   const { files, isLoading } = useTextFileList();
 
-  const currentFile = searchParams.get('fileName') || 'text-1';
+  const currentFile = searchParams.get('fileName') || (files.length > 0 ? files[0] : '');
   const dropdownAlwaysOpen = searchParams.get('dropdownAlwaysOpen') === 'true';
 
   const handleFileChange = (fileName: string) => {
