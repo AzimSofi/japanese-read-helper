@@ -148,7 +148,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   return (
     <div className="flex collapsibleItem" id={id}>
       <div
-        className={`border p-2 my-1 w-full ${id === "bookmark" ? "bg-yellow-100" : ""}`}
+        className={`p-2 my-1 w-full ${id === "bookmark" ? "bg-yellow-100" : ""}`}
         id="collapsible-item"
         ref={itemRef}
       >

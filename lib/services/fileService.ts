@@ -22,7 +22,9 @@ function removeControlCharacters(text: string): string {
  * publicディレクトリ内の完全なファイルパスを取得する
  */
 export function getPublicFilePath(fileName: string): string {
-  return path.join(process.cwd(), PUBLIC_DIR, fileName);
+  const fullPath = path.join(process.cwd(), PUBLIC_DIR, fileName);
+  console.log(`getPublicFilePath: fileName="${fileName}" -> fullPath="${fullPath}"`);
+  return fullPath;
 }
 
 /**
@@ -33,9 +35,16 @@ export function getPublicFilePath(fileName: string): string {
 export async function readTextFile(fileName: string): Promise<string> {
   const filePath = getPublicFilePath(`${fileName}.txt`);
   try {
-    return await fs.readFile(filePath, 'utf8');
+    console.log(`readTextFile: 読み込み開始 filePath="${filePath}"`);
+    const content = await fs.readFile(filePath, 'utf8');
+    console.log(`readTextFile: 読み込み成功 length=${content.length}`);
+    return content;
   } catch (error) {
     console.error(`ファイル ${fileName} の読み込み中にエラーが発生しました:`, error);
+    console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && 'code' in error) {
+      console.error('エラーコード:', (error as NodeJS.ErrnoException).code);
+    }
     return '';
   }
 }
@@ -110,10 +119,17 @@ export async function updateBookmark(
 export function readBookmarkFileSync(): BookmarkData {
   const filePath = getPublicFilePath(BOOKMARK_FILE);
   try {
+    console.log(`readBookmarkFileSync: 読み込み開始 filePath="${filePath}"`);
     const content = fsSync.readFileSync(filePath, 'utf8');
-    return JSON.parse(content);
+    const parsed = JSON.parse(content);
+    console.log(`readBookmarkFileSync: 読み込み成功 keys=${Object.keys(parsed).length}`);
+    return parsed;
   } catch (error) {
     console.error('ブックマークファイルの読み込み中にエラーが発生しました（同期）:', error);
+    console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && 'code' in error) {
+      console.error('エラーコード:', (error as NodeJS.ErrnoException).code);
+    }
     return {};
   }
 }
@@ -124,7 +140,18 @@ export function readBookmarkFileSync(): BookmarkData {
  */
 export function writeBookmarkFileSync(bookmarkData: BookmarkData): void {
   const filePath = getPublicFilePath(BOOKMARK_FILE);
-  fsSync.writeFileSync(filePath, JSON.stringify(bookmarkData, null, 2), 'utf8');
+  try {
+    console.log(`writeBookmarkFileSync: 書き込み開始 filePath="${filePath}", keys=${Object.keys(bookmarkData).length}`);
+    fsSync.writeFileSync(filePath, JSON.stringify(bookmarkData, null, 2), 'utf8');
+    console.log(`writeBookmarkFileSync: 書き込み成功`);
+  } catch (error) {
+    console.error('ブックマークファイルの書き込み中にエラーが発生しました（同期）:', error);
+    console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
+    if (error instanceof Error && 'code' in error) {
+      console.error('エラーコード:', (error as NodeJS.ErrnoException).code);
+    }
+    throw error;
+  }
 }
 
 /**

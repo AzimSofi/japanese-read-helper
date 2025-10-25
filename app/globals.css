@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
+  --background: #FFFFE5;
   --foreground: #171717;
 }
 
@@ -24,6 +24,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   /* zoom: 125%; Adjust zoom level */
+  width: 1200px;
+  max-width: 90%;
+  margin: 0 auto;
 }
 
 ::selection {
