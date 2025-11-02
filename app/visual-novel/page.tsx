@@ -121,7 +121,7 @@ export default function Home() {
   };
 
   return (
-    <div className="p-2 bg-gray-100 flex flex-col">
+    <div className="p-2 bg-[#FFF0DD] flex flex-col">
       <span
         style={{
           height: "20rem",
@@ -137,13 +137,13 @@ export default function Home() {
       />
               <button
               onClick={handleFlushButtonClick}
-              className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
+              className="bg-[#E2A16F] hover:bg-[#d18a54] text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
             >
               クリア
             </button>
       <button
         onClick={() => handleButtonClick()}
-        className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer ${
+        className={`bg-[#86B0BD] hover:bg-[#6a98a8] text-white font-bold py-2 px-4 rounded hover:cursor-pointer ${
           isLoading ? "opacity-50 cursor-not-allowed" : ""
         }`}
         disabled={isLoading}
