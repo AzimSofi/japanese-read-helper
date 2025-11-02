@@ -6,6 +6,7 @@ import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import ChevronUp from "@/app/components/icons/ChevronUp";
 import ChevronDown from "@/app/components/icons/ChevronDown";
 import { useSearchParams } from "next/navigation";
+import { COLORS } from "@/lib/constants";
 
 interface CollapsibleItemProps {
   id?: string;
@@ -148,7 +149,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   return (
     <div className="flex collapsibleItem" id={id}>
       <div
-        className={`p-2 my-1 w-full ${id === "bookmark" ? "bg-[#FFF0DD]" : ""}`}
+        className={`p-2 my-1 w-full ${id === "bookmark" ? `bg-[${COLORS.BOOKMARK_HIGHLIGHT}]` : ""}`}
         id="collapsible-item"
         ref={itemRef}
       >
