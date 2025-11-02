@@ -41,11 +41,11 @@ export default function Home() {
                             <textarea
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                className="bg-gray-200 w-4xl h-64 m-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="bg-[#D1D3D8] w-4xl h-64 m-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#86B0BD]"
                             ></textarea>
                             <button
                                 type="submit"
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer w-4xl"
+                                className="bg-[#86B0BD] hover:bg-[#6a98a8] text-white font-bold py-2 px-4 rounded hover:cursor-pointer w-4xl"
                             >
                                 保存
                             </button>
