@@ -3,6 +3,14 @@
 :root {
   --background: #fff0dd82;
   --foreground: #171717;
+
+  /* Color Palette */
+  --color-base: #FFF0DD;
+  --color-neutral: #D1D3D8;
+  --color-primary: #E2A16F;
+  --color-primary-dark: #d18a54;
+  --color-secondary: #86B0BD;
+  --color-secondary-dark: #6a98a8;
 }
 
 @theme inline {
@@ -23,7 +31,7 @@ body {
 }
 
 ::selection {
-  background-color: #E2A16F4D;
+  background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
   color: black;
 }
 
@@ -39,7 +47,7 @@ ruby {
 }
 
 .sub-item-text {
-  background: #D1D3D8;
+  background: var(--color-neutral);
   font-size: large;
 }
 
