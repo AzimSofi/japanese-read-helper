@@ -21,7 +21,7 @@ interface UseTextFileListReturn {
  */
 export function useTextFileList(): UseTextFileListReturn {
   const [files, setFiles] = useState<string[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Start as true since we fetch on mount
   const [error, setError] = useState<Error | null>(null);
 
   const fetchFiles = async () => {

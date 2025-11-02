@@ -9,13 +9,12 @@ import { PUBLIC_DIR, BOOKMARK_FILE } from '@/lib/constants';
 import type { BookmarkData } from '@/lib/types';
 
 /**
- * 文字列から制御文字（\r, \n）を削除する
- * 通常の空白文字（スペース、全角スペースなど）は保持する
+ * 文字列から制御文字（\r, \n）を削除し、前後の空白をトリムする
  * @param text - 処理する文字列
- * @returns 制御文字を削除した文字列
+ * @returns 制御文字を削除し、トリムした文字列
  */
 function removeControlCharacters(text: string): string {
-  return text.replace(/[\r\n]/g, '');
+  return text.replace(/[\r\n]/g, '').trim();
 }
 
 /**
