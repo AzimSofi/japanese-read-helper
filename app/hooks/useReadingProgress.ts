@@ -17,6 +17,7 @@ interface UseReadingProgressReturn {
   progress: ReadingProgress | null;
   isLoading: boolean;
   error: string | null;
+  refetch: () => Promise<void>;
 }
 
 /**
@@ -40,6 +41,7 @@ export function useReadingProgress({
     bookmarkText,
     isLoading: isLoadingBookmark,
     error: bookmarkError,
+    refetch: refetchBookmark,
   } = useBookmark({ fileName, enabled });
 
   // Calculate progress when both data sources are available
@@ -52,11 +54,15 @@ export function useReadingProgress({
   }, [textContent, bookmarkText]);
 
   const isLoading = isLoadingText || isLoadingBookmark;
-  const error = textError || bookmarkError;
+  const error =
+    textError && bookmarkError
+      ? `${textError}; ${bookmarkError}`
+      : textError || bookmarkError;
 
   return {
     progress,
     isLoading,
     error,
+    refetch: refetchBookmark,
   };
 }

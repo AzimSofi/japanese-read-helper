@@ -16,11 +16,11 @@ export interface ReadingProgress {
  * Checks if a character is Japanese (hiragana, katakana, or kanji)
  */
 function isJapaneseChar(char: string): boolean {
-  const code = char.charCodeAt(0);
+  const code = char.codePointAt(0);
   return (
-    (code >= 0x3040 && code <= 0x309f) || // Hiragana
-    (code >= 0x30a0 && code <= 0x30ff) || // Katakana
-    (code >= 0x4e00 && code <= 0x9faf)    // Kanji (CJK Unified Ideographs)
+    (code !== undefined && code >= 0x3040 && code <= 0x309f) || // Hiragana
+    (code !== undefined && code >= 0x30a0 && code <= 0x30ff) || // Katakana
+    (code !== undefined && code >= 0x4e00 && code <= 0x9fff)    // Kanji (CJK Unified Ideographs)
   );
 }
 
