@@ -1,8 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FFFFE5;
+  --background: #fff0dd82;
   --foreground: #171717;
+
+  /* Color Palette */
+  --color-base: #FFF0DD;
+  --color-neutral: #D1D3D8;
+  --color-primary: #E2A16F;
+  --color-primary-dark: #d18a54;
+  --color-secondary: #86B0BD;
+  --color-secondary-dark: #6a98a8;
 }
 
 @theme inline {
@@ -10,13 +18,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -30,7 +31,7 @@ body {
 }
 
 ::selection {
-  background-color: #ffd5004a;
+  background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
   color: black;
 }
 
@@ -46,7 +47,7 @@ ruby {
 }
 
 .sub-item-text {
-  background: #dfdfdf;
+  background: var(--color-neutral);
   font-size: large;
 }
 
