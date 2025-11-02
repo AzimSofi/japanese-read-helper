@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { API_ROUTES, PAGE_ROUTES } from "@/lib/constants";
+import { API_ROUTES, PAGE_ROUTES, CSS_VARS } from "@/lib/constants";
 
 export default function Home() {
     const [inputText, setInputText] = useState<string>("");
@@ -41,11 +41,24 @@ export default function Home() {
                             <textarea
                                 value={inputText}
                                 onChange={(e) => setInputText(e.target.value)}
-                                className="bg-gray-200 w-4xl h-64 m-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-4xl h-64 m-1 rounded-lg border border-gray-300 focus:outline-none focus:ring-2"
+                                style={{
+                                  backgroundColor: CSS_VARS.NEUTRAL,
+                                  '--tw-ring-color': CSS_VARS.SECONDARY,
+                                } as React.CSSProperties}
                             ></textarea>
                             <button
                                 type="submit"
-                                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded hover:cursor-pointer w-4xl"
+                                className="text-white font-bold py-2 px-4 rounded hover:cursor-pointer w-4xl transition-colors"
+                                style={{
+                                  background: `linear-gradient(to bottom, ${CSS_VARS.SECONDARY}, ${CSS_VARS.SECONDARY_DARK})`,
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = CSS_VARS.SECONDARY_DARK;
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = `linear-gradient(to bottom, ${CSS_VARS.SECONDARY}, ${CSS_VARS.SECONDARY_DARK})`;
+                                }}
                             >
                                 保存
                             </button>

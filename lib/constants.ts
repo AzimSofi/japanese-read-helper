@@ -68,3 +68,23 @@ export const PAGE_ROUTES = {
   OCR: '/ocr',
   VISUAL_NOVEL: '/visual-novel',
 } as const;
+
+// カラーパレット
+export const COLORS = {
+  BASE: '#FFF0DD',              // 背景・ハイライト
+  NEUTRAL: '#D1D3D8',           // サーフェス・境界線
+  PRIMARY: '#E2A16F',           // 重要アクション・AI処理
+  PRIMARY_DARK: '#d18a54',      // hoverフィードバック
+  SECONDARY: '#86B0BD',         // 通常操作・入力系
+  SECONDARY_DARK: '#6a98a8',    // hoverフィードバック
+} as const;
+
+// CSS変数（インラインスタイルで使用）
+export const CSS_VARS = {
+  BASE: 'var(--color-base)',
+  NEUTRAL: 'var(--color-neutral)',
+  PRIMARY: 'var(--color-primary)',
+  PRIMARY_DARK: 'var(--color-primary-dark)',
+  SECONDARY: 'var(--color-secondary)',
+  SECONDARY_DARK: 'var(--color-secondary-dark)',
+} as const;

@@ -5,6 +5,11 @@
 import { MARKDOWN_PATTERNS } from '@/lib/constants';
 
 /**
+ * 日本語の対話マーカー
+ */
+const DIALOGUE_MARKERS = ['」', '？」', '。」', '！」', '…」'];
+
+/**
  * 行が見出し行かどうかを確認します
  */
 export function isHeadingLine(line: string): boolean {
@@ -110,4 +115,18 @@ export function isStandaloneHeading(
   previousLine: string
 ): boolean {
   return previousLine === '' && lines[currentIndex + 1] === '';
+}
+
+/**
+ * これが孤立した対話行かどうかを確認します
+ * （見出しやサブアイテムのプレフィックスなしで、対話文字を含む行）
+ */
+export function isOrphanedDialogue(line: string): boolean {
+  // 見出しやサブアイテムの場合は孤立していない
+  if (isHeadingLine(line) || isSubItemLine(line)) {
+    return false;
+  }
+
+  // 日本語の対話マーカーを含む場合は孤立した対話の可能性がある
+  return DIALOGUE_MARKERS.some((marker) => line.includes(marker));
 }
