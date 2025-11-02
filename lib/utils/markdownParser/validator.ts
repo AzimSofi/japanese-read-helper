@@ -111,3 +111,18 @@ export function isStandaloneHeading(
 ): boolean {
   return previousLine === '' && lines[currentIndex + 1] === '';
 }
+
+/**
+ * これが孤立した対話行かどうかを確認します
+ * （見出しやサブアイテムのプレフィックスなしで、対話文字を含む行）
+ */
+export function isOrphanedDialogue(line: string): boolean {
+  // 見出しやサブアイテムの場合は孤立していない
+  if (isHeadingLine(line) || isSubItemLine(line)) {
+    return false;
+  }
+
+  // 日本語の対話マーカーを含む場合は孤立した対話の可能性がある
+  const dialogueMarkers = ['」', '？」', '。」', '！」', '…」'];
+  return dialogueMarkers.some((marker) => line.includes(marker));
+}
