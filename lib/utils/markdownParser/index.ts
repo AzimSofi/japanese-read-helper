@@ -14,6 +14,7 @@ import {
   isTwoSubItemPattern,
   isEmptyLineBeforeSubItems,
   isStandaloneHeading,
+  isOrphanedDialogue,
 } from './validator';
 import {
   removeHeadingPrefix,
@@ -171,7 +172,13 @@ export function parseMarkdown(
           }
           collectingMultiLineHeader = true;
         }
-        // エッジケース6e: 予期しない形式
+        // エッジケース6e: 孤立した対話行（切り捨てられた見出し）
+        // AIレスポンスが切り捨てられた場合に発生する可能性がある
+        else if (isOrphanedDialogue(line)) {
+          console.warn('孤立した対話を検出（切り捨てられた見出しの可能性）:', line);
+          // この行をスキップ - ParsedItemに追加しない
+        }
+        // エッジケース6f: 予期しない形式
         else {
           console.log('予期しない行形式:', line);
         }

@@ -5,7 +5,7 @@ import { parseMarkdown } from "@/lib/utils/markdownParser";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
-import { DEFAULT_DROPDOWN_STATE } from "@/lib/constants";
+import { DEFAULT_DROPDOWN_STATE, CSS_VARS } from "@/lib/constants";
 
 export default function Home() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function Home() {
   const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(DEFAULT_DROPDOWN_STATE);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
@@ -75,6 +76,8 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         setBookmarkText(data.text);
+        // プログレスバーを更新するためにトリガーをインクリメント
+        setRefreshTrigger(prev => prev + 1);
       } else {
         console.error(response);
       }
@@ -140,8 +143,19 @@ export default function Home() {
   if (availableFiles.length === 0 && !fileName) {
     return (
       <div className="mx-36 my-5">
-        <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">テキストファイルが見つかりません</h2>
+        <div
+          className="p-6 border rounded-lg"
+          style={{
+            backgroundColor: CSS_VARS.BASE,
+            borderColor: CSS_VARS.PRIMARY,
+          }}
+        >
+          <h2
+            className="text-xl font-bold mb-4"
+            style={{ color: CSS_VARS.PRIMARY }}
+          >
+            テキストファイルが見つかりません
+          </h2>
           <p className="mb-4">
             public/ ディレクトリに .txt ファイルを追加してください。
           </p>
@@ -163,6 +177,8 @@ export default function Home() {
       <Sidebar
         setDropdownAlwaysOpen={setDropdownAlwaysOpenState}
         dropdownAlwaysOpen={dropdownAlwaysOpenState}
+        fileName={fileName}
+        refreshTrigger={refreshTrigger}
       />
       {parseMarkdown(inputText).map((item, index) => {
         // 改行を削除して比較（複数行ヘッダー対応）
