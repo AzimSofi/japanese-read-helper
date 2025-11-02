@@ -27,7 +27,8 @@ export default function Sidebar({
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
       refetch();
     }
-  }, [refreshTrigger, refetch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshTrigger]);
 
   const scrollToBookmark = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
@@ -39,7 +40,7 @@ export default function Sidebar({
     }
   };
 
-  const showProgress = progress && progress.totalItems > 0 && !isLoading;
+  const showProgress = progress && progress.totalItems > 0;
 
   return (
     <div className="fixed top-20 left-4 z-40 text-xs flex flex-col gap-3">
