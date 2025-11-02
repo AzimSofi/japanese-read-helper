@@ -19,6 +19,7 @@ export default function Home() {
   const [dropdownAlwaysOpenState, setDropdownAlwaysOpenState] = useState<boolean>(DEFAULT_DROPDOWN_STATE);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState<boolean>(false);
   const [availableFiles, setAvailableFiles] = useState<string[]>([]);
+  const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
@@ -75,6 +76,8 @@ export default function Home() {
       if (response.ok) {
         const data = await response.json();
         setBookmarkText(data.text);
+        // プログレスバーを更新するためにトリガーをインクリメント
+        setRefreshTrigger(prev => prev + 1);
       } else {
         console.error(response);
       }
@@ -164,6 +167,7 @@ export default function Home() {
         setDropdownAlwaysOpen={setDropdownAlwaysOpenState}
         dropdownAlwaysOpen={dropdownAlwaysOpenState}
         fileName={fileName}
+        refreshTrigger={refreshTrigger}
       />
       {parseMarkdown(inputText).map((item, index) => {
         // 改行を削除して比較（複数行ヘッダー対応）
