@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useReadingProgress } from "@/app/hooks/useReadingProgress";
-import { COLORS } from "@/lib/constants";
+import { CSS_VARS } from "@/lib/constants";
 
 interface SidebarProps {
   setDropdownAlwaysOpen: (state: boolean) => void;
@@ -47,24 +47,37 @@ export default function Sidebar({
       {/* 表示/隠す ボタン */}
       <button
         onClick={() => setDropdownAlwaysOpen(!dropdownAlwaysOpen)}
-        className={`px-4 py-2.5 rounded-lg font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 border ${
-          dropdownAlwaysOpen
-            ? `bg-[${COLORS.BOOKMARK_HIGHLIGHT}] border-[${COLORS.SIDEBAR_BUTTON}] text-gray-700 hover:bg-[${COLORS.BOOKMARK_HIGHLIGHT}]/80`
-            : `bg-[${COLORS.SIDEBAR_BUTTON}] border-[${COLORS.SIDEBAR_BUTTON}] text-gray-600 hover:bg-[${COLORS.SIDEBAR_BUTTON}]/80`
-        }`}
+        className="px-4 py-2.5 rounded-lg font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 border"
+        style={{
+          backgroundColor: dropdownAlwaysOpen ? CSS_VARS.BASE : CSS_VARS.NEUTRAL,
+          borderColor: CSS_VARS.NEUTRAL,
+          color: dropdownAlwaysOpen ? '#374151' : '#4b5563',
+        }}
       >
         {dropdownAlwaysOpen ? "表示" : "隠す"}
       </button>
 
       {/* プログレスインジケーター */}
       {showProgress && (
-        <div className={`bg-[${COLORS.BOOKMARK_HIGHLIGHT}] rounded-lg shadow-lg border border-[${COLORS.SIDEBAR_BUTTON}] p-3 w-64`}>
+        <div
+          className="rounded-lg shadow-lg border p-3 w-64"
+          style={{
+            backgroundColor: CSS_VARS.BASE,
+            borderColor: CSS_VARS.NEUTRAL,
+          }}
+        >
           <div className="space-y-2">
             {/* プログレスバー */}
-            <div className={`relative h-6 bg-[${COLORS.SIDEBAR_BUTTON}] rounded-full overflow-hidden`}>
+            <div
+              className="relative h-6 rounded-full overflow-hidden"
+              style={{ backgroundColor: CSS_VARS.NEUTRAL }}
+            >
               <div
-                className={`absolute inset-y-0 left-0 bg-gradient-to-r from-[${COLORS.BOOKMARK_UNFILLED}] to-[#6a98a8] transition-all duration-300 ease-out flex items-center justify-center`}
-                style={{ width: `${progress.percentage}%` }}
+                className="absolute inset-y-0 left-0 transition-all duration-300 ease-out flex items-center justify-center"
+                style={{
+                  width: `${progress.percentage}%`,
+                  background: `linear-gradient(to right, ${CSS_VARS.SECONDARY}, ${CSS_VARS.SECONDARY_DARK})`,
+                }}
               >
                 {progress.percentage > 15 && (
                   <span className="text-white font-bold text-xs">
@@ -81,15 +94,43 @@ export default function Sidebar({
 
             {/* 統計情報 */}
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <div className={`bg-[${COLORS.BOOKMARK_UNFILLED}]/20 rounded-lg px-2 py-1.5 border border-[${COLORS.BOOKMARK_UNFILLED}]`}>
-                <div className={`text-[${COLORS.BOOKMARK_UNFILLED}] font-medium text-xs`}>文字数</div>
-                <div className="text-[#6a98a8] font-bold text-xs">
+              <div
+                className="rounded-lg px-2 py-1.5 border"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`,
+                  borderColor: CSS_VARS.SECONDARY,
+                }}
+              >
+                <div
+                  className="font-medium text-xs"
+                  style={{ color: CSS_VARS.SECONDARY }}
+                >
+                  文字数
+                </div>
+                <div
+                  className="font-bold text-xs"
+                  style={{ color: CSS_VARS.SECONDARY_DARK }}
+                >
                   {progress.currentCharCount.toLocaleString()} / {progress.totalCharCount.toLocaleString()}
                 </div>
               </div>
-              <div className={`bg-[${COLORS.BOOKMARK_FILLED}]/20 rounded-lg px-2 py-1.5 border border-[${COLORS.BOOKMARK_FILLED}]`}>
-                <div className={`text-[${COLORS.BOOKMARK_FILLED}] font-medium text-xs`}>文章数</div>
-                <div className="text-[#d18a54] font-bold text-xs">
+              <div
+                className="rounded-lg px-2 py-1.5 border"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 20%, transparent)`,
+                  borderColor: CSS_VARS.PRIMARY,
+                }}
+              >
+                <div
+                  className="font-medium text-xs"
+                  style={{ color: CSS_VARS.PRIMARY }}
+                >
+                  文章数
+                </div>
+                <div
+                  className="font-bold text-xs"
+                  style={{ color: CSS_VARS.PRIMARY_DARK }}
+                >
                   {progress.currentItemIndex} / {progress.totalItems}
                 </div>
               </div>
@@ -102,7 +143,12 @@ export default function Sidebar({
       <a
         href="#"
         onClick={scrollToBookmark}
-        className={`px-4 py-2.5 rounded-lg bg-[${COLORS.BOOKMARK_FILLED}]/20 border border-[${COLORS.BOOKMARK_FILLED}] text-[${COLORS.BOOKMARK_FILLED}] font-medium shadow-lg transition-all hover:bg-[${COLORS.BOOKMARK_FILLED}]/30 hover:shadow-xl hover:scale-105 active:scale-95 text-center`}
+        className="px-4 py-2.5 rounded-lg border font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 text-center"
+        style={{
+          backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 20%, transparent)`,
+          borderColor: CSS_VARS.PRIMARY,
+          color: CSS_VARS.PRIMARY,
+        }}
       >
         ブックマークへ
       </a>
