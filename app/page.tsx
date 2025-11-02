@@ -140,8 +140,8 @@ export default function Home() {
   if (availableFiles.length === 0 && !fileName) {
     return (
       <div className="mx-36 my-5">
-        <div className="p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">テキストファイルが見つかりません</h2>
+        <div className="p-6 bg-[#FFF0DD] border border-[#E2A16F] rounded-lg">
+          <h2 className="text-xl font-bold mb-4 text-[#E2A16F]">テキストファイルが見つかりません</h2>
           <p className="mb-4">
             public/ ディレクトリに .txt ファイルを追加してください。
           </p>
@@ -163,6 +163,7 @@ export default function Home() {
       <Sidebar
         setDropdownAlwaysOpen={setDropdownAlwaysOpenState}
         dropdownAlwaysOpen={dropdownAlwaysOpenState}
+        fileName={fileName}
       />
       {parseMarkdown(inputText).map((item, index) => {
         // 改行を削除して比較（複数行ヘッダー対応）
