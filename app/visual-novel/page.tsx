@@ -5,7 +5,7 @@ import { useState, useCallback } from "react";
 import { parseMarkdown } from "@/lib/utils/markdownParser";
 import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
 import { ai_instructions } from "@/lib/geminiService";
-import { VN_RETRY_CONFIG, AI_MODELS, API_ROUTES } from "@/lib/constants";
+import { VN_RETRY_CONFIG, AI_MODELS, API_ROUTES, CSS_VARS } from "@/lib/constants";
 
 export default function Home() {
   const aiInstructions: string = ai_instructions;
@@ -121,7 +121,10 @@ export default function Home() {
   };
 
   return (
-    <div className="p-2 bg-[#FFF0DD] flex flex-col">
+    <div
+      className="p-2 flex flex-col"
+      style={{ backgroundColor: CSS_VARS.BASE }}
+    >
       <span
         style={{
           height: "20rem",
@@ -137,15 +140,35 @@ export default function Home() {
       />
               <button
               onClick={handleFlushButtonClick}
-              className="bg-[#E2A16F] hover:bg-[#d18a54] text-white font-bold py-2 px-4 rounded hover:cursor-pointer"
+              className="text-white font-bold py-2 px-4 rounded hover:cursor-pointer transition-colors"
+              style={{
+                background: `linear-gradient(to bottom, ${CSS_VARS.PRIMARY}, ${CSS_VARS.PRIMARY_DARK})`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = CSS_VARS.PRIMARY_DARK;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = `linear-gradient(to bottom, ${CSS_VARS.PRIMARY}, ${CSS_VARS.PRIMARY_DARK})`;
+              }}
             >
               クリア
             </button>
       <button
         onClick={() => handleButtonClick()}
-        className={`bg-[#86B0BD] hover:bg-[#6a98a8] text-white font-bold py-2 px-4 rounded hover:cursor-pointer ${
+        className={`text-white font-bold py-2 px-4 rounded hover:cursor-pointer transition-colors ${
           isLoading ? "opacity-50 cursor-not-allowed" : ""
         }`}
+        style={{
+          background: `linear-gradient(to bottom, ${CSS_VARS.SECONDARY}, ${CSS_VARS.SECONDARY_DARK})`,
+        }}
+        onMouseEnter={(e) => {
+          if (!isLoading) {
+            e.currentTarget.style.background = CSS_VARS.SECONDARY_DARK;
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = `linear-gradient(to bottom, ${CSS_VARS.SECONDARY}, ${CSS_VARS.SECONDARY_DARK})`;
+        }}
         disabled={isLoading}
       >
         {isLoading ? "処理中..." : "最後のPタグ"}
