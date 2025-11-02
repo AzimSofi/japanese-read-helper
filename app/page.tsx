@@ -5,7 +5,7 @@ import { parseMarkdown } from "@/lib/utils/markdownParser";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
-import { DEFAULT_DROPDOWN_STATE } from "@/lib/constants";
+import { DEFAULT_DROPDOWN_STATE, CSS_VARS } from "@/lib/constants";
 
 export default function Home() {
   const router = useRouter();
@@ -143,8 +143,19 @@ export default function Home() {
   if (availableFiles.length === 0 && !fileName) {
     return (
       <div className="mx-36 my-5">
-        <div className="p-6 bg-[#FFF0DD] border border-[#E2A16F] rounded-lg">
-          <h2 className="text-xl font-bold mb-4 text-[#E2A16F]">テキストファイルが見つかりません</h2>
+        <div
+          className="p-6 border rounded-lg"
+          style={{
+            backgroundColor: CSS_VARS.BASE,
+            borderColor: CSS_VARS.PRIMARY,
+          }}
+        >
+          <h2
+            className="text-xl font-bold mb-4"
+            style={{ color: CSS_VARS.PRIMARY }}
+          >
+            テキストファイルが見つかりません
+          </h2>
           <p className="mb-4">
             public/ ディレクトリに .txt ファイルを追加してください。
           </p>
