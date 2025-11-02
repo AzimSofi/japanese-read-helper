@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #FFFFE5;
+  --background: #fff0dd82;
   --foreground: #171717;
 }
 
@@ -10,13 +10,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: light) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
@@ -30,7 +23,7 @@ body {
 }
 
 ::selection {
-  background-color: #ffd5004a;
+  background-color: #E2A16F4D;
   color: black;
 }
 
@@ -46,7 +39,7 @@ ruby {
 }
 
 .sub-item-text {
-  background: #dfdfdf;
+  background: #D1D3D8;
   font-size: large;
 }
 
