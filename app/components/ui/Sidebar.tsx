@@ -17,7 +17,7 @@ export default function Sidebar({
   fileName,
   refreshTrigger,
 }: SidebarProps) {
-  const { progress, isLoading, refetch } = useReadingProgress({
+  const { progress, refetch } = useReadingProgress({
     fileName: fileName || '',
     enabled: !!fileName,
   });
