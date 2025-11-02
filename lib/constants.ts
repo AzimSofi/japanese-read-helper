@@ -68,3 +68,11 @@ export const PAGE_ROUTES = {
   OCR: '/ocr',
   VISUAL_NOVEL: '/visual-novel',
 } as const;
+
+// カラーパレット
+export const COLORS = {
+  BOOKMARK_HIGHLIGHT: '#FFF0DD',
+  BOOKMARK_FILLED: '#E2A16F',
+  BOOKMARK_UNFILLED: '#86B0BD',
+  SIDEBAR_BUTTON: '#D1D3D8',
+} as const;
