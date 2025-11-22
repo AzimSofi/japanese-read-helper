@@ -48,7 +48,7 @@ export function useBookmark({
 
     try {
       const response = await fetch(
-        `${API_ROUTES.READ_BOOKMARK}?fileName=${fileName}`
+        `${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fileName)}`
       );
 
       if (!response.ok) {
