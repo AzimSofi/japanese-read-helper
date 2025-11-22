@@ -19,11 +19,25 @@ function removeControlCharacters(text: string): string {
 
 /**
  * publicディレクトリ内の完全なファイルパスを取得する
+ * サブディレクトリ対応: fileName が '/' を含む場合、それをパスとして扱う
+ * 例: "bookv1-rephrase/readable-code.txt" -> "public/bookv1-rephrase/readable-code.txt"
  */
 export function getPublicFilePath(fileName: string): string {
   const fullPath = path.join(process.cwd(), PUBLIC_DIR, fileName);
   console.log(`getPublicFilePath: fileName="${fileName}" -> fullPath="${fullPath}"`);
   return fullPath;
+}
+
+/**
+ * ディレクトリからブックマークファイルのパスを取得する
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
+ * @returns ブックマークファイルの完全パス
+ */
+export function getBookmarkFilePath(directory: string = ''): string {
+  if (directory) {
+    return path.join(process.cwd(), PUBLIC_DIR, directory, BOOKMARK_FILE);
+  }
+  return path.join(process.cwd(), PUBLIC_DIR, BOOKMARK_FILE);
 }
 
 /**
@@ -63,60 +77,82 @@ export async function writeTextFile(
 
 /**
  * ブックマークJSONファイルを読み込む
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
  * @returns ブックマークデータオブジェクト、ファイルが存在しない場合は空オブジェクト
  */
-export async function readBookmarkFile(): Promise<BookmarkData> {
-  const filePath = getPublicFilePath(BOOKMARK_FILE);
+export async function readBookmarkFile(directory: string = ''): Promise<BookmarkData> {
+  const filePath = getBookmarkFilePath(directory);
   try {
     const content = await fs.readFile(filePath, 'utf8');
     return JSON.parse(content);
   } catch (error) {
-    console.error('ブックマークファイルの読み込み中にエラーが発生しました:', error);
+    console.error(`ブックマークファイルの読み込み中にエラーが発生しました (directory: ${directory}):`, error);
     return {};
   }
 }
 
 /**
+ * ファイルパスからディレクトリとファイル名を分離する
+ * @param filePath - ファイルパス（例: "bookv1-rephrase/readable-code" または "readable-code"）
+ * @returns {directory: string, fileName: string}
+ */
+function splitFilePath(filePath: string): { directory: string; fileName: string } {
+  const lastSlash = filePath.lastIndexOf('/');
+  if (lastSlash === -1) {
+    return { directory: '', fileName: filePath };
+  }
+  return {
+    directory: filePath.substring(0, lastSlash),
+    fileName: filePath.substring(lastSlash + 1)
+  };
+}
+
+/**
  * 特定のファイルのブックマークを読み込む
- * @param fileName - テキストファイルの名前
+ * @param filePath - ファイルパス（例: "bookv1-rephrase/readable-code" または "readable-code"）
  * @returns ブックマークの内容、見つからない場合は空文字列
  */
-export async function readBookmark(fileName: string): Promise<string> {
-  const bookmarks = await readBookmarkFile();
+export async function readBookmark(filePath: string): Promise<string> {
+  const { directory, fileName } = splitFilePath(filePath);
+  const bookmarks = await readBookmarkFile(directory);
   return bookmarks[fileName] || '';
 }
 
 /**
  * ブックマークデータをJSONファイルに書き込む（非同期バージョン）
  * @param bookmarkData - 完全なブックマークデータオブジェクト
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
  */
 export async function writeBookmarkFile(
-  bookmarkData: BookmarkData
+  bookmarkData: BookmarkData,
+  directory: string = ''
 ): Promise<void> {
-  const filePath = getPublicFilePath(BOOKMARK_FILE);
+  const filePath = getBookmarkFilePath(directory);
   await fs.writeFile(filePath, JSON.stringify(bookmarkData, null, 2), 'utf8');
 }
 
 /**
  * 単一のブックマークエントリを更新する
- * @param fileName - テキストファイルの名前
+ * @param filePath - ファイルパス（例: "bookv1-rephrase/readable-code" または "readable-code"）
  * @param content - 保存するブックマークの内容
  */
 export async function updateBookmark(
-  fileName: string,
+  filePath: string,
   content: string
 ): Promise<void> {
-  const bookmarks = await readBookmarkFile();
+  const { directory, fileName } = splitFilePath(filePath);
+  const bookmarks = await readBookmarkFile(directory);
   bookmarks[fileName] = removeControlCharacters(content);
-  await writeBookmarkFile(bookmarks);
+  await writeBookmarkFile(bookmarks, directory);
 }
 
 /**
  * 同期バージョン - ブックマークファイルを読み込む
  * (同期操作が必要な既存のコードで使用)
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
  */
-export function readBookmarkFileSync(): BookmarkData {
-  const filePath = getPublicFilePath(BOOKMARK_FILE);
+export function readBookmarkFileSync(directory: string = ''): BookmarkData {
+  const filePath = getBookmarkFilePath(directory);
   try {
     console.log(`readBookmarkFileSync: 読み込み開始 filePath="${filePath}"`);
     const content = fsSync.readFileSync(filePath, 'utf8');
@@ -124,7 +160,7 @@ export function readBookmarkFileSync(): BookmarkData {
     console.log(`readBookmarkFileSync: 読み込み成功 keys=${Object.keys(parsed).length}`);
     return parsed;
   } catch (error) {
-    console.error('ブックマークファイルの読み込み中にエラーが発生しました（同期）:', error);
+    console.error(`ブックマークファイルの読み込み中にエラーが発生しました（同期, directory: ${directory}）:`, error);
     console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
     if (error instanceof Error && 'code' in error) {
       console.error('エラーコード:', (error as NodeJS.ErrnoException).code);
@@ -136,15 +172,16 @@ export function readBookmarkFileSync(): BookmarkData {
 /**
  * 同期バージョン - ブックマークファイルを書き込む
  * (同期操作が必要な既存のコードで使用)
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
  */
-export function writeBookmarkFileSync(bookmarkData: BookmarkData): void {
-  const filePath = getPublicFilePath(BOOKMARK_FILE);
+export function writeBookmarkFileSync(bookmarkData: BookmarkData, directory: string = ''): void {
+  const filePath = getBookmarkFilePath(directory);
   try {
     console.log(`writeBookmarkFileSync: 書き込み開始 filePath="${filePath}", keys=${Object.keys(bookmarkData).length}`);
     fsSync.writeFileSync(filePath, JSON.stringify(bookmarkData, null, 2), 'utf8');
     console.log(`writeBookmarkFileSync: 書き込み成功`);
   } catch (error) {
-    console.error('ブックマークファイルの書き込み中にエラーが発生しました（同期）:', error);
+    console.error(`ブックマークファイルの書き込み中にエラーが発生しました（同期, directory: ${directory}）:`, error);
     console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
     if (error instanceof Error && 'code' in error) {
       console.error('エラーコード:', (error as NodeJS.ErrnoException).code);
@@ -155,38 +192,89 @@ export function writeBookmarkFileSync(bookmarkData: BookmarkData): void {
 
 /**
  * 同期バージョン - 単一のブックマークを更新する
+ * @param filePath - ファイルパス（例: "bookv1-rephrase/readable-code" または "readable-code"）
+ * @param content - 保存するブックマークの内容
  */
-export function updateBookmarkSync(fileName: string, content: string): void {
-  const bookmarks = readBookmarkFileSync();
+export function updateBookmarkSync(filePath: string, content: string): void {
+  const { directory, fileName } = splitFilePath(filePath);
+  const bookmarks = readBookmarkFileSync(directory);
   bookmarks[fileName] = removeControlCharacters(content);
-  writeBookmarkFileSync(bookmarks);
+  writeBookmarkFileSync(bookmarks, directory);
 }
 
 /**
- * publicディレクトリ内のすべての.txtファイルのリストを取得する
- * @returns ファイル名のリスト（.txt拡張子なし）
+ * publicディレクトリ内のサブディレクトリ一覧を取得する
+ * @returns ディレクトリ名のリスト
  */
-export async function listTextFiles(): Promise<string[]> {
+export async function listDirectories(): Promise<string[]> {
   const publicPath = path.join(process.cwd(), PUBLIC_DIR);
   try {
-    const files = await fs.readdir(publicPath);
-    return files
-      .filter(file => file.endsWith('.txt'))
-      .map(file => file.replace('.txt', ''))
+    const entries = await fs.readdir(publicPath, { withFileTypes: true });
+    return entries
+      .filter(entry => entry.isDirectory())
+      .map(entry => entry.name)
       .sort();
   } catch (error) {
-    console.error('テキストファイルのリスト取得中にエラーが発生しました:', error);
+    console.error('ディレクトリのリスト取得中にエラーが発生しました:', error);
     return [];
   }
 }
 
 /**
- * 存在しないファイルのブックマークを削除する
+ * 特定のディレクトリ内の.txtファイルのリストを取得する
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
+ * @returns ファイル名のリスト（.txt拡張子なし、ディレクトリ名なし）
+ */
+export async function listTextFilesInDirectory(directory: string = ''): Promise<string[]> {
+  const dirPath = directory
+    ? path.join(process.cwd(), PUBLIC_DIR, directory)
+    : path.join(process.cwd(), PUBLIC_DIR);
+
+  try {
+    const entries = await fs.readdir(dirPath, { withFileTypes: true });
+    return entries
+      .filter(entry => entry.isFile() && entry.name.endsWith('.txt'))
+      .map(entry => entry.name.replace('.txt', ''))
+      .sort();
+  } catch (error) {
+    console.error(`ディレクトリ ${directory || 'root'} 内のテキストファイルのリスト取得中にエラーが発生しました:`, error);
+    return [];
+  }
+}
+
+/**
+ * publicディレクトリ内のすべての.txtファイルを構造化データとして取得する
+ * @returns {directories: string[], filesByDirectory: Record<string, string[]>}
+ */
+export async function listTextFiles(): Promise<{
+  directories: string[];
+  filesByDirectory: Record<string, string[]>;
+}> {
+  const directories = await listDirectories();
+  const filesByDirectory: Record<string, string[]> = {};
+
+  // 各ディレクトリ内のファイルを取得
+  for (const dir of directories) {
+    const files = await listTextFilesInDirectory(dir);
+    if (files.length > 0) {
+      filesByDirectory[dir] = files;
+    }
+  }
+
+  return {
+    directories,
+    filesByDirectory
+  };
+}
+
+/**
+ * 特定のディレクトリ内の存在しないファイルのブックマークを削除する
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
  * @returns クリーンアップされたブックマークの数
  */
-export async function cleanupBookmarks(): Promise<number> {
-  const bookmarks = await readBookmarkFile();
-  const textFiles = await listTextFiles();
+export async function cleanupBookmarksInDirectory(directory: string = ''): Promise<number> {
+  const bookmarks = await readBookmarkFile(directory);
+  const textFiles = await listTextFilesInDirectory(directory);
   const textFileSet = new Set(textFiles);
 
   let cleanedCount = 0;
@@ -197,25 +285,42 @@ export async function cleanupBookmarks(): Promise<number> {
       cleanedBookmarks[fileName] = content;
     } else {
       cleanedCount++;
-      console.log(`削除されたファイルのブックマークを削除: ${fileName}`);
+      console.log(`削除されたファイルのブックマークを削除 (${directory || 'root'}): ${fileName}`);
     }
   }
 
   if (cleanedCount > 0) {
-    await writeBookmarkFile(cleanedBookmarks);
+    await writeBookmarkFile(cleanedBookmarks, directory);
   }
 
   return cleanedCount;
 }
 
 /**
- * 存在するすべてのテキストファイルに対してブックマークエントリを初期化する
- * 既存のブックマークは保持し、新しいファイルには空文字列のエントリを追加する
+ * すべてのディレクトリの存在しないファイルのブックマークを削除する
+ * @returns クリーンアップされたブックマークの数
+ */
+export async function cleanupBookmarks(): Promise<number> {
+  const { directories } = await listTextFiles();
+  let totalCleaned = 0;
+
+  // 各ディレクトリのブックマークをクリーンアップ
+  for (const dir of directories) {
+    const cleaned = await cleanupBookmarksInDirectory(dir);
+    totalCleaned += cleaned;
+  }
+
+  return totalCleaned;
+}
+
+/**
+ * 特定のディレクトリ内の存在するすべてのテキストファイルに対してブックマークエントリを初期化する
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
  * @returns 追加されたブックマークの数
  */
-export async function initializeBookmarks(): Promise<number> {
-  const bookmarks = await readBookmarkFile();
-  const textFiles = await listTextFiles();
+export async function initializeBookmarksInDirectory(directory: string = ''): Promise<number> {
+  const bookmarks = await readBookmarkFile(directory);
+  const textFiles = await listTextFilesInDirectory(directory);
 
   let addedCount = 0;
   let updated = false;
@@ -225,24 +330,44 @@ export async function initializeBookmarks(): Promise<number> {
       bookmarks[fileName] = '';
       addedCount++;
       updated = true;
-      console.log(`新しいファイルのブックマークを初期化: ${fileName}`);
+      console.log(`新しいファイルのブックマークを初期化 (${directory || 'root'}): ${fileName}`);
     }
   }
 
   if (updated) {
-    await writeBookmarkFile(bookmarks);
+    await writeBookmarkFile(bookmarks, directory);
   }
 
   return addedCount;
 }
 
 /**
- * ブックマークを同期する：存在しないファイルのエントリを削除し、新しいファイルのエントリを追加
- * @returns {cleaned: number, added: number} クリーンアップと追加されたブックマークの数
+ * すべてのディレクトリの存在するすべてのテキストファイルに対してブックマークエントリを初期化する
+ * @returns 追加されたブックマークの数
  */
-export async function syncBookmarks(): Promise<{ cleaned: number; added: number }> {
-  const bookmarks = await readBookmarkFile();
-  const textFiles = await listTextFiles();
+export async function initializeBookmarks(): Promise<number> {
+  const { directories } = await listTextFiles();
+  let totalAdded = 0;
+
+  // 各ディレクトリのブックマークを初期化
+  for (const dir of directories) {
+    const added = await initializeBookmarksInDirectory(dir);
+    totalAdded += added;
+  }
+
+  return totalAdded;
+}
+
+/**
+ * 特定のディレクトリのブックマークを同期する
+ * @param directory - ディレクトリ名（空文字列の場合はルート）
+ * @returns {cleaned: number, added: number}
+ */
+export async function syncBookmarksInDirectory(
+  directory: string = ''
+): Promise<{ cleaned: number; added: number }> {
+  const bookmarks = await readBookmarkFile(directory);
+  const textFiles = await listTextFilesInDirectory(directory);
   const textFileSet = new Set(textFiles);
 
   let cleanedCount = 0;
@@ -255,7 +380,7 @@ export async function syncBookmarks(): Promise<{ cleaned: number; added: number 
       syncedBookmarks[fileName] = content;
     } else {
       cleanedCount++;
-      console.log(`削除されたファイルのブックマークを削除: ${fileName}`);
+      console.log(`削除されたファイルのブックマークを削除 (${directory || 'root'}): ${fileName}`);
     }
   }
 
@@ -264,13 +389,32 @@ export async function syncBookmarks(): Promise<{ cleaned: number; added: number 
     if (!(fileName in syncedBookmarks)) {
       syncedBookmarks[fileName] = '';
       addedCount++;
-      console.log(`新しいファイルのブックマークを初期化: ${fileName}`);
+      console.log(`新しいファイルのブックマークを初期化 (${directory || 'root'}): ${fileName}`);
     }
   }
 
   if (cleanedCount > 0 || addedCount > 0) {
-    await writeBookmarkFile(syncedBookmarks);
+    await writeBookmarkFile(syncedBookmarks, directory);
   }
 
   return { cleaned: cleanedCount, added: addedCount };
+}
+
+/**
+ * すべてのディレクトリのブックマークを同期する
+ * @returns {cleaned: number, added: number} クリーンアップと追加されたブックマークの数
+ */
+export async function syncBookmarks(): Promise<{ cleaned: number; added: number }> {
+  const { directories } = await listTextFiles();
+  let totalCleaned = 0;
+  let totalAdded = 0;
+
+  // 各ディレクトリのブックマークを同期
+  for (const dir of directories) {
+    const { cleaned, added } = await syncBookmarksInDirectory(dir);
+    totalCleaned += cleaned;
+    totalAdded += added;
+  }
+
+  return { cleaned: totalCleaned, added: totalAdded };
 }

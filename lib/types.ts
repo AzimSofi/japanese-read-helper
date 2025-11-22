@@ -24,8 +24,23 @@ export interface BookmarkResponse {
   text: string;
 }
 
+export interface TextFileListResponse {
+  directories: string[];
+  filesByDirectory: Record<string, string[]>;
+  files: string[]; // Flat array of all files (directory/filename format) for backward compatibility
+  bookmarkSync?: {
+    cleaned: number;
+    added: number;
+  };
+}
+
 export interface GeminiResponse {
   response: string;
+  message: string;
+}
+
+export interface ExplanationResponse {
+  explanation: string;
   message: string;
 }
 
@@ -49,6 +64,13 @@ export interface GeminiRequest {
   image?: File;
 }
 
+export interface ExplanationRequest {
+  sentence: string;
+  context: string;
+  fileName: string;
+  contextSize: number;
+}
+
 // コンポーネントのプロップ型
 export interface CollapsibleItemProps {
   head: string;
@@ -65,6 +87,7 @@ export interface SidebarProps {
 
 // クエリパラメータ型
 export interface PageQueryParams {
+  directory?: string;
   fileName?: string;
   dropdownAlwaysOpen?: string;
 }
@@ -72,4 +95,16 @@ export interface PageQueryParams {
 // ファイル保存型
 export interface BookmarkData {
   [fileName: string]: string;
+}
+
+// 説明キャッシュ型
+export interface CachedExplanation {
+  sentence: string;
+  explanation: string;
+  contextSize: number;
+  timestamp: number;
+}
+
+export interface ExplanationCache {
+  [key: string]: CachedExplanation;
 }

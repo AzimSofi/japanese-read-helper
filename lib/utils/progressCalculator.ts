@@ -38,10 +38,33 @@ function countJapaneseChars(text: string): number {
 }
 
 /**
- * Extracts headers from markdown text (lines starting with '<')
- * Handles multi-line headers that continue until '>>' is found
+ * Detects if text is in markdown format (bookv1-rephrase) or plain text (bookv2-furigana)
  */
-function extractHeaders(text: string): string[] {
+function detectFormat(text: string): 'markdown' | 'plaintext' {
+  // Check for markdown-specific patterns, excluding <ruby> tags
+  const hasHeadingPrefix = /^[<＜](?!ruby>|rt>)/m.test(text);
+  const hasSubItemSeparator = text.includes('>>');
+
+  return (hasHeadingPrefix || hasSubItemSeparator) ? 'markdown' : 'plaintext';
+}
+
+/**
+ * Extracts items from text based on format
+ * For markdown (bookv1-rephrase): Extracts headers (lines starting with '<')
+ * For plain text (bookv2-furigana): Extracts paragraphs (text blocks separated by blank lines)
+ */
+function extractItems(text: string): string[] {
+  const format = detectFormat(text);
+
+  if (format === 'plaintext') {
+    // bookv2-furigana: Split by paragraphs
+    return text
+      .split(/\n\s*\n/) // Split by blank lines (paragraphs)
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0);
+  }
+
+  // bookv1-rephrase: Extract markdown headers
   const lines = text.split('\n');
   const headers: string[] = [];
   let currentHeader = '';
@@ -85,18 +108,18 @@ function normalizeForComparison(text: string): string {
 /**
  * Calculates reading progress based on bookmark position
  * @param textContent - The full text content from the file
- * @param bookmarkText - The bookmarked header text
+ * @param bookmarkText - The bookmarked item text (header or paragraph)
  * @returns Progress metrics including item count, character count, and percentage
  */
 export function calculateReadingProgress(
   textContent: string,
   bookmarkText: string
 ): ReadingProgress {
-  // Extract all headers from the text
-  const headers = extractHeaders(textContent);
-  const totalItems = headers.length;
+  // Extract all items (headers or paragraphs) from the text
+  const items = extractItems(textContent);
+  const totalItems = items.length;
 
-  // If no headers or no bookmark, return zero progress
+  // If no items or no bookmark, return zero progress
   if (totalItems === 0 || !bookmarkText.trim()) {
     return {
       currentItemIndex: 0,
@@ -107,9 +130,9 @@ export function calculateReadingProgress(
     };
   }
 
-  // Calculate total Japanese character count across all headers
-  const totalCharCount = headers.reduce(
-    (sum, header) => sum + countJapaneseChars(header),
+  // Calculate total Japanese character count across all items
+  const totalCharCount = items.reduce(
+    (sum, item) => sum + countJapaneseChars(item),
     0
   );
 
@@ -117,9 +140,9 @@ export function calculateReadingProgress(
   const normalizedBookmark = normalizeForComparison(bookmarkText);
   let currentItemIndex = -1;
 
-  for (let i = 0; i < headers.length; i++) {
-    const normalizedHeader = normalizeForComparison(headers[i]);
-    if (normalizedHeader === normalizedBookmark) {
+  for (let i = 0; i < items.length; i++) {
+    const normalizedItem = normalizeForComparison(items[i]);
+    if (normalizedItem === normalizedBookmark) {
       currentItemIndex = i;
       break;
     }
@@ -137,9 +160,9 @@ export function calculateReadingProgress(
   }
 
   // Calculate character count up to and including the bookmarked item
-  const currentCharCount = headers
+  const currentCharCount = items
     .slice(0, currentItemIndex + 1)
-    .reduce((sum, header) => sum + countJapaneseChars(header), 0);
+    .reduce((sum, item) => sum + countJapaneseChars(item), 0);
 
   // Calculate percentage
   const percentage = totalCharCount > 0
