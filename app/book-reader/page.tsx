@@ -1,7 +1,7 @@
 "use client";
 
 import ParagraphItem from "@/app/components/ui/ParagraphItem";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import ReadingControls from "@/app/components/ui/ReadingControls";
@@ -9,14 +9,17 @@ import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
 import { CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, READER_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 
-// Disable static generation for this page (uses useSearchParams)
-export const dynamic = 'force-dynamic';
-
-export default function BookReader() {
-  const router = useRouter();
+// Component that reads search params
+function SearchParamsReader({ children }: { children: (params: { directory: string | null; fileName: string | null }) => React.ReactNode }) {
   const searchParams = useSearchParams();
-  const directoryParam = searchParams.get("directory");
-  const fileNameParam = searchParams.get("fileName");
+  const directory = searchParams.get("directory");
+  const fileName = searchParams.get("fileName");
+
+  return <>{children({ directory, fileName })}</>;
+}
+
+function BookReaderContent({ directoryParam, fileNameParam }: { directoryParam: string | null; fileNameParam: string | null }) {
+  const router = useRouter();
 
   // フルパス: "directory/fileName" 形式（APIに渡す際に使用）
   const fullFilePath = directoryParam && fileNameParam
@@ -111,7 +114,8 @@ export default function BookReader() {
 
           // ファイルが指定されていない場合、最初のファイルにリダイレクト
           if (!fileNameParam && data.files.length > 0) {
-            const params = new URLSearchParams(searchParams.toString());
+            const params = new URLSearchParams();
+            if (directoryParam) params.set('directory', directoryParam);
             params.set('fileName', data.files[0]);
             router.replace(`/book-reader?${params.toString()}`);
           }
@@ -122,7 +126,7 @@ export default function BookReader() {
     };
 
     fetchFileList();
-  }, []);
+  }, [fileNameParam, directoryParam, router]);
 
   // パラグラフに分割（メモ化）
   const paragraphs = useMemo(() => {
@@ -318,5 +322,18 @@ export default function BookReader() {
         );
       })}
     </div>
+  );
+}
+
+// Main export with Suspense boundary
+export default function BookReader() {
+  return (
+    <Suspense fallback={<div className="mx-2 md:mx-12 lg:mx-36 my-5 pb-24 md:pb-5">読み込み中...</div>}>
+      <SearchParamsReader>
+        {({ directory, fileName }) => (
+          <BookReaderContent directoryParam={directory} fileNameParam={fileName} />
+        )}
+      </SearchParamsReader>
+    </Suspense>
   );
 }
