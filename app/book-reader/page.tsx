@@ -9,6 +9,9 @@ import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
 import { CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, READER_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 
+// Disable static generation for this page (uses useSearchParams)
+export const dynamic = 'force-dynamic';
+
 export default function BookReader() {
   const router = useRouter();
   const searchParams = useSearchParams();

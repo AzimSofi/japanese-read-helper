@@ -10,16 +10,18 @@
  * - Otherwise → Use standard postgres library for local development
  */
 
+import type { SqlClient } from './schema';
+
 // Check if we're running on Vercel
 const isVercel = process.env.VERCEL || process.env.VERCEL_ENV;
 
 // Declare sql variable that will be exported
-let sql: any;
+let sql: SqlClient;
 
 if (isVercel) {
   // Production: Use Vercel Postgres
   const { sql: vercelSql } = await import('@vercel/postgres');
-  sql = vercelSql;
+  sql = vercelSql as unknown as SqlClient;
   console.log('🔌 Database: Using Vercel Postgres');
 } else {
   // Local development: Use standard postgres library
@@ -39,7 +41,7 @@ if (isVercel) {
     max: 10, // Maximum connections
     idle_timeout: 20, // Close idle connections after 20 seconds
     connect_timeout: 30, // Fail after 30 seconds if can't connect
-  });
+  }) as unknown as SqlClient;
 
   console.log('🔌 Database: Using local PostgreSQL');
 }

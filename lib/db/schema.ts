@@ -2,6 +2,26 @@
  * Database schema definitions for Vercel Postgres
  */
 
+/**
+ * Query result type that handles both Vercel Postgres and standard postgres
+ * - Vercel Postgres returns: {rows: T[]}
+ * - Standard postgres returns: T[] directly
+ */
+export type QueryResult<T> = T[] | { rows: T[] };
+
+/**
+ * SQL client type compatible with both libraries
+ * Using any for values parameter to accommodate both Vercel Postgres and standard postgres
+ */
+export type SqlClient = {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  <T>(strings: TemplateStringsArray, ...values: any[]): Promise<QueryResult<T>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  unsafe?: (query: string) => Promise<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  query?: (query: string) => Promise<any>;
+};
+
 export interface Bookmark {
   id?: number;
   file_name: string;
