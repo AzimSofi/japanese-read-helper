@@ -6,7 +6,8 @@ import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import ChevronUp from "@/app/components/icons/ChevronUp";
 import ChevronDown from "@/app/components/icons/ChevronDown";
 import { useSearchParams } from "next/navigation";
-import { CSS_VARS } from "@/lib/constants";
+import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
+import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
 interface CollapsibleItemProps {
   id?: string;
@@ -14,6 +15,8 @@ interface CollapsibleItemProps {
   subItems: string[];
   initialDropdownState?: boolean;
   onSubmitSuccess: () => void;
+  showFurigana?: boolean;
+  onSentenceClick?: (sentence: string) => void;
 }
 
 const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
@@ -22,8 +25,18 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   subItems,
   initialDropdownState = false,
   onSubmitSuccess,
+  showFurigana = false,
+  onSentenceClick,
 }) => {
-  const fileName: string = useSearchParams().get("fileName") || "text-1";
+  const searchParams = useSearchParams();
+  const directoryParam = searchParams.get("directory");
+  const fileNameParam = searchParams.get("fileName");
+
+  // Construct full file path (directory/fileName) to match how page.tsx handles it
+  const fileName: string = (directoryParam && fileNameParam
+    ? `${directoryParam}/${fileNameParam}`
+    : fileNameParam) || "text-1";
+
   const [isOpen, setIsOpen] = useState(initialDropdownState);
   const [loading, setLoading] = useState(false);
 
@@ -146,6 +159,76 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     }
   };
 
+  // 文を区切り文字で分割
+  const splitIntoSentences = (text: string): string[] => {
+    const delimiters: readonly string[] = EXPLANATION_CONFIG.SENTENCE_DELIMITERS;
+    const sentences: string[] = [];
+    let currentSentence = '';
+
+    for (let i = 0; i < text.length; i++) {
+      currentSentence += text[i];
+
+      if (delimiters.includes(text[i])) {
+        sentences.push(currentSentence.trim());
+        currentSentence = '';
+      }
+    }
+
+    if (currentSentence.trim()) {
+      sentences.push(currentSentence.trim());
+    }
+
+    return sentences.filter(s => s.length > 0);
+  };
+
+  // 振り仮名付きテキストをレンダリング
+  const renderTextWithFurigana = (text: string, isClickable: boolean = false) => {
+    if (!isClickable) {
+      const segments = parseFurigana(text);
+      const html = segmentsToHTML(segments, showFurigana);
+      return <span dangerouslySetInnerHTML={{ __html: html }} />;
+    }
+
+    // クリック可能な場合は文ごとに分割
+    const sentences = splitIntoSentences(text);
+
+    return (
+      <>
+        {sentences.map((sentence, index) => {
+          const segments = parseFurigana(sentence);
+          const html = segmentsToHTML(segments, showFurigana);
+
+          return (
+            <span
+              key={index}
+              dangerouslySetInnerHTML={{ __html: html }}
+              onClick={() => onSentenceClick?.(sentence)}
+              className={onSentenceClick ? "cursor-pointer hover:bg-opacity-50 transition-colors rounded px-1" : ""}
+              style={
+                onSentenceClick
+                  ? {
+                      backgroundColor: 'transparent',
+                      transition: 'background-color 0.2s',
+                    }
+                  : {}
+              }
+              onMouseEnter={(e) => {
+                if (onSentenceClick) {
+                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (onSentenceClick) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }
+              }}
+            />
+          );
+        })}
+      </>
+    );
+  };
+
   return (
     <div className="flex collapsibleItem" id={id}>
       <div
@@ -158,7 +241,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           className={"head-text font-bold text-lg whitespace-pre-wrap"}
           ref={headRef}
         >
-          {head}
+          {renderTextWithFurigana(head, true)}
         </div>
         {/* <div className="ml-4 mt-2">
           <div className="ml-4 mt-2">
@@ -213,7 +296,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                       </div>
                     ))}
                   </div>*/ ""
-                  : subItem}
+                  : renderTextWithFurigana(subItem, false)}
               </div>
             ))}
           </div>
