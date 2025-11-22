@@ -56,6 +56,25 @@ export function parseMarkdown(
     return [];
   }
 
+  // Detect format type: markdown (bookv1-rephrase) vs plain text (bookv2-furigana)
+  // Check for markdown-specific patterns, excluding <ruby> tags
+  const hasHeadingPrefix = /^[<＜](?!ruby>|rt>)/m.test(text); // Lines starting with < or ＜ but not <ruby> or <rt>
+  const hasSubItemSeparator = text.includes('>>');
+  const hasMarkdownFormat = hasHeadingPrefix || hasSubItemSeparator;
+
+  // For plain text files (like bookv2-furigana), split by paragraphs and create simple items
+  if (!hasMarkdownFormat) {
+    return text
+      .split(/\n\s*\n/) // Split by blank lines (paragraphs)
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0) // Remove empty paragraphs
+      .map(paragraph => ({
+        head: paragraph,
+        subItems: [], // No subitems for plain text files
+      }));
+  }
+
+  // Original markdown parsing logic for bookv1-rephrase format
   const splitByLines = text.split('\n');
   const parsedData: ParsedItem[] = [];
   let currentHeadItem: ParsedItem | null = null;
