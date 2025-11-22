@@ -7,12 +7,23 @@
     "dev-lan": "next dev --hostname 192.168.1.15 --port 3001",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:start": "docker-compose up -d",
+    "db:stop": "docker-compose down",
+    "db:restart": "docker-compose restart",
+    "db:logs": "docker-compose logs -f db",
+    "db:reset": "docker-compose down -v && docker-compose up -d",
+    "db:init": "curl http://localhost:3333/api/init-db",
+    "db:migrate": "curl http://localhost:3333/api/migrate-text-files"
   },
   "dependencies": {
     "@google/genai": "^1.13.0",
+    "@vercel/postgres": "^0.10.0",
+    "kuroshiro": "^1.2.0",
+    "kuroshiro-analyzer-kuromoji": "^1.1.0",
     "marked": "^16.1.2",
     "next": "15.4.5",
+    "postgres": "^3.4.7",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
