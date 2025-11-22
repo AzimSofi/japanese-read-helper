@@ -25,9 +25,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   /* zoom: 125%; Adjust zoom level */
-  width: 1200px;
-  max-width: 90%;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
+  padding: 0;
+}
+
+/* Add padding only on desktop */
+@media (min-width: 768px) {
+  body {
+    padding: 0 1rem;
+  }
 }
 
 ::selection {

@@ -1,11 +1,12 @@
 /**
  * AI処理済みテキストを書き込むためのAPIルート
  * 大きなテキストをチャンクに分割し、Gemini AIで処理する
+ * Now uses Vercel Postgres database instead of file system
  */
 
 import { NextResponse } from 'next/server';
 import { generateGeminiContent, ai_instructions } from '@/lib/geminiService';
-import { writeTextFile } from '@/lib/services/fileService';
+import { upsertTextEntry } from '@/lib/db/queries';
 import { DEFAULT_TEXT_FILES, MAX_CHUNK_SIZE, AI_MODELS } from '@/lib/constants';
 import type { TextRequest, WriteResponse } from '@/lib/types';
 
@@ -70,8 +71,14 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       combinedAiResponse += aiResponse;
     }
 
-    // Save combined result
-    await writeTextFile(DEFAULT_TEXT_FILES.TEMP, combinedAiResponse);
+    // Split fileName into directory and file parts
+    // e.g., "temp/text" -> directory: "temp", file: "text"
+    const parts = DEFAULT_TEXT_FILES.TEMP.split('/');
+    const directory = parts.length > 1 ? parts[0] : 'public';
+    const file = parts.length > 1 ? parts.slice(1).join('/') : DEFAULT_TEXT_FILES.TEMP;
+
+    // Save combined result to database
+    await upsertTextEntry(file, combinedAiResponse, directory);
 
     console.log('サーバー側ログ: テキストを保存しました。');
     return NextResponse.json(
