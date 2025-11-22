@@ -2,7 +2,7 @@
 
 import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
 import { parseMarkdown } from "@/lib/utils/markdownParser";
-import { useEffect, useState, useMemo, useCallback, useRef } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
@@ -10,15 +10,40 @@ import Pagination from "@/app/components/ui/Pagination";
 import { DEFAULT_DROPDOWN_STATE, CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, PAGINATION_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 
-// Disable static generation for this page (uses useSearchParams)
-export const dynamic = 'force-dynamic';
-
-export default function Home() {
-  const router = useRouter();
+// Component that reads search params
+function SearchParamsReader({ children }: {
+  children: (params: {
+    directory: string | null;
+    fileName: string | null;
+    dropdownAlwaysOpen: string | null;
+    page: string | null;
+    paramsString: string;
+  }) => React.ReactNode
+}) {
   const searchParams = useSearchParams();
-  const directoryParam = searchParams.get("directory");
-  const fileNameParam = searchParams.get("fileName");
-  const dropdownAlwaysOpenParam = searchParams.get("dropdownAlwaysOpen");
+  const directory = searchParams.get("directory");
+  const fileName = searchParams.get("fileName");
+  const dropdownAlwaysOpen = searchParams.get("dropdownAlwaysOpen");
+  const page = searchParams.get("page");
+  const paramsString = searchParams.toString();
+
+  return <>{children({ directory, fileName, dropdownAlwaysOpen, page, paramsString })}</>;
+}
+
+function HomeContent({
+  directoryParam,
+  fileNameParam,
+  dropdownAlwaysOpenParam,
+  pageParam,
+  searchParamsString
+}: {
+  directoryParam: string | null;
+  fileNameParam: string | null;
+  dropdownAlwaysOpenParam: string | null;
+  pageParam: string | null;
+  searchParamsString: string;
+}) {
+  const router = useRouter();
 
   // フルパス: "directory/fileName" 形式（APIに渡す際に使用）
   const fullFilePath = directoryParam && fileNameParam
@@ -42,7 +67,6 @@ export default function Home() {
   const [sentenceContext, setSentenceContext] = useState<string>("");
 
   // ページネーション状態
-  const pageParam = searchParams.get("page");
   const [currentPage, setCurrentPage] = useState<number>(pageParam ? parseInt(pageParam, 10) : 1);
 
   // ブックマーク自動ナビゲーション追跡用ref
@@ -105,7 +129,7 @@ export default function Home() {
 
           // ファイルが指定されていない場合、最初のファイルにリダイレクト
           if (!fileNameParam && data.files.length > 0) {
-            const params = new URLSearchParams(searchParams.toString());
+            const params = new URLSearchParams(searchParamsString);
             params.set('fileName', data.files[0]);
             router.replace(`/?${params.toString()}`);
           }
@@ -116,7 +140,7 @@ export default function Home() {
     };
 
     fetchFileList();
-  }, []);
+  }, [fileNameParam, searchParamsString, router]);
 
   // パースされたデータと文のリストをメモ化（大きいファイルの場合のパフォーマンス改善）
   const parsedData = useMemo(() => {
@@ -138,12 +162,12 @@ export default function Home() {
   // ページネーション：ページ変更ハンドラー
   const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParamsString);
     params.set('page', page.toString());
     router.replace(`/?${params.toString()}`, { scroll: false });
     // ページトップにスクロール
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [searchParams, router]);
+  }, [searchParamsString, router]);
 
   // URL パラメータのページ番号の変更を監視
   useEffect(() => {
@@ -288,7 +312,7 @@ export default function Home() {
     };
 
     loadAllData();
-  }, [fileName, dropdownAlwaysOpenParam]);
+  }, [fileName, dropdownAlwaysOpenParam, exampleText]);
 
   // ブックマークがある場合、そのページに自動的に移動（初回ロード時のみ）
   useEffect(() => {
@@ -310,7 +334,7 @@ export default function Home() {
         hasAutoNavigatedRef.current = true; // 自動ナビゲーション完了をマーク
       }
     }
-  }, [bookmarkText, isInitialLoadComplete, inputText, handlePageChange]);
+  }, [bookmarkText, isInitialLoadComplete, inputText, handlePageChange, pageParam]);
 
   // ファイルがない場合の表示
   if (availableFiles.length === 0 && !fileName) {
@@ -398,5 +422,24 @@ export default function Home() {
         maxButtons={PAGINATION_CONFIG.MAX_PAGE_BUTTONS}
       />
     </div>
+  );
+}
+
+// Main export with Suspense boundary
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="mx-2 md:mx-12 lg:mx-36 my-5 pb-24 md:pb-5">読み込み中...</div>}>
+      <SearchParamsReader>
+        {({ directory, fileName, dropdownAlwaysOpen, page, paramsString }) => (
+          <HomeContent
+            directoryParam={directory}
+            fileNameParam={fileName}
+            dropdownAlwaysOpenParam={dropdownAlwaysOpen}
+            pageParam={page}
+            searchParamsString={paramsString}
+          />
+        )}
+      </SearchParamsReader>
+    </Suspense>
   );
 }
