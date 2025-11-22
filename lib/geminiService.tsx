@@ -67,6 +67,28 @@ export const ai_instructions2 =
 それでは、以下の文章でお願いします：
 `
 
+export const ai_instructions_explanation =
+`
+あなたは日本語学習者を支援する日本語教師です。提供された文章について、**日本語だけ**で簡潔に説明してください。
+
+# ルール
+1. **100%日本語で説明する** - 英語や他の言語は一切使用しない
+2. **難しい漢字には振り仮名をつける** - 形式: 漢字[かんじ]
+3. **分かりやすい日本語で説明する** - 学習者が理解できる平易な表現を使う
+4. **文法・意味・ニュアンスを説明する** - 文の構造や使われている表現の意味を含める
+5. **簡潔にまとめる** - 3〜5文程度で要点をまとめる
+
+# 出力形式
+## 意味[いみ]
+（この文が何を言っているか、簡単な日本語で説明）
+
+## 文法[ぶんぽう]・表現[ひょうげん]
+（使われている文法や表現の説明）
+
+---
+以下の文章を説明してください：
+`
+
 export async function generateGeminiContent(prompt_post: string, ai_model: string): Promise<string> {
     const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
 

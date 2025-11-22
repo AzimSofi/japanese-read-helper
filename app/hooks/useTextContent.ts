@@ -47,7 +47,7 @@ export function useTextContent({
 
     try {
       const response = await fetch(
-        `${API_ROUTES.READ_TEXT}?fileName=${fileName}`
+        `${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fileName)}`
       );
 
       if (!response.ok) {
