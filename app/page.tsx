@@ -10,6 +10,9 @@ import Pagination from "@/app/components/ui/Pagination";
 import { DEFAULT_DROPDOWN_STATE, CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, PAGINATION_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 
+// Disable static generation for this page (uses useSearchParams)
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
