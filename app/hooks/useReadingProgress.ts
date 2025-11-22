@@ -56,8 +56,8 @@ export function useReadingProgress({
   const isLoading = isLoadingText || isLoadingBookmark;
   const error =
     textError && bookmarkError
-      ? `${textError}; ${bookmarkError}`
-      : textError || bookmarkError;
+      ? `${textError.message}; ${bookmarkError.message}`
+      : textError?.message || bookmarkError?.message || null;
 
   return {
     progress,

@@ -1,9 +1,10 @@
 /**
  * ブックマークデータを更新するためのAPIルート
+ * Now uses Vercel Postgres database instead of file system
  */
 
 import { NextResponse } from 'next/server';
-import { updateBookmarkSync } from '@/lib/services/fileService';
+import { upsertBookmark } from '@/lib/db/queries';
 import type { BookmarkRequest, WriteResponse } from '@/lib/types';
 
 export async function POST(request: Request): Promise<NextResponse<WriteResponse>> {
@@ -24,8 +25,22 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       );
     }
 
+    // バリデーション（ディレクトリトラバーサル攻撃を防ぐ）
+    if (target.includes('..')) {
+      return NextResponse.json(
+        { message: '無効なファイル名です' },
+        { status: 400 }
+      );
+    }
+
+    // Split fileName into directory and file parts
+    // e.g., "bookv1-rephrase/readable-code" -> directory: "bookv1-rephrase", file: "readable-code"
+    const parts = target.split('/');
+    const directory = parts.length > 1 ? parts[0] : 'public';
+    const file = parts.length > 1 ? parts.slice(1).join('/') : target;
+
     console.log(`ブックマーク保存: fileName="${target}", content length=${content.length}`);
-    updateBookmarkSync(target, content);
+    await upsertBookmark(file, content, directory);
     console.log(`ブックマーク保存成功: fileName="${target}"`);
 
     return NextResponse.json({ success: true, message: 'ブックマークを更新しました' });
