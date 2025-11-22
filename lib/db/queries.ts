@@ -1,5 +1,5 @@
 import { sql } from './connection';
-import type { Bookmark, TextEntry } from './schema';
+import type { Bookmark, TextEntry, QueryResult } from './schema';
 
 /**
  * Database query functions for bookmarks and text entries
@@ -10,9 +10,9 @@ import type { Bookmark, TextEntry } from './schema';
  * @vercel/postgres returns {rows: [...]}
  * postgres library returns [...] directly
  */
-function normalizeResult(result: any): any[] {
+function normalizeResult<T>(result: QueryResult<T>): T[] {
   // If result has a rows property, return it (Vercel Postgres)
-  if (result && Array.isArray(result.rows)) {
+  if (result && 'rows' in result && Array.isArray(result.rows)) {
     return result.rows;
   }
   // Otherwise, result is already the array (postgres library)
@@ -35,7 +35,7 @@ export async function getBookmark(
   directory: string = 'public'
 ): Promise<string> {
   try {
-    const result = await sql`
+    const result = await sql<Pick<Bookmark, 'bookmark_text'>>`
       SELECT bookmark_text
       FROM bookmarks
       WHERE file_name = ${fileName} AND directory = ${directory}
@@ -83,7 +83,7 @@ export async function getAllBookmarks(
   directory: string = 'public'
 ): Promise<Record<string, string>> {
   try {
-    const result = await sql`
+    const result = await sql<Pick<Bookmark, 'file_name' | 'bookmark_text'>>`
       SELECT file_name, bookmark_text
       FROM bookmarks
       WHERE directory = ${directory}
@@ -91,7 +91,7 @@ export async function getAllBookmarks(
 
     const rows = normalizeResult(result);
     const bookmarks: Record<string, string> = {};
-    rows.forEach((row: any) => {
+    rows.forEach((row) => {
       bookmarks[row.file_name] = row.bookmark_text;
     });
 
@@ -129,12 +129,12 @@ export async function initializeBookmarksForFiles(
 ): Promise<void> {
   try {
     // Get existing bookmarks
-    const existing = await sql`
+    const existing = await sql<Pick<Bookmark, 'file_name'>>`
       SELECT file_name FROM bookmarks WHERE directory = ${directory}
     `;
 
     const rows = normalizeResult(existing);
-    const existingFiles = new Set(rows.map((row: any) => row.file_name));
+    const existingFiles = new Set(rows.map((row) => row.file_name));
 
     // Insert empty bookmarks for files that don't have one
     for (const fileName of fileNames) {
@@ -187,7 +187,7 @@ export async function getTextEntry(
   directory: string = 'public'
 ): Promise<string> {
   try {
-    const result = await sql`
+    const result = await sql<Pick<TextEntry, 'content'>>`
       SELECT content
       FROM text_entries
       WHERE file_name = ${fileName} AND directory = ${directory}
@@ -254,7 +254,7 @@ export async function getAllTextEntries(): Promise<{
   filesByDirectory: Record<string, string[]>;
 }> {
   try {
-    const result = await sql`
+    const result = await sql<Pick<TextEntry, 'directory' | 'file_name'>>`
       SELECT DISTINCT directory, file_name
       FROM text_entries
       ORDER BY directory, file_name
@@ -264,7 +264,7 @@ export async function getAllTextEntries(): Promise<{
     const filesByDirectory: Record<string, string[]> = {};
     const directoriesSet = new Set<string>();
 
-    rows.forEach((row: any) => {
+    rows.forEach((row) => {
       const dir = row.directory;
       const fileName = row.file_name;
 
@@ -293,7 +293,7 @@ export async function getTextEntriesInDirectory(
   directory: string
 ): Promise<string[]> {
   try {
-    const result = await sql`
+    const result = await sql<Pick<TextEntry, 'file_name'>>`
       SELECT file_name
       FROM text_entries
       WHERE directory = ${directory}
@@ -301,7 +301,7 @@ export async function getTextEntriesInDirectory(
     `;
 
     const rows = normalizeResult(result);
-    return rows.map((row: any) => row.file_name);
+    return rows.map((row) => row.file_name);
   } catch (error) {
     console.error('Error fetching text entries in directory:', error);
     throw error;
