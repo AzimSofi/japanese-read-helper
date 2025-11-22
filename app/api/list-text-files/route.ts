@@ -1,37 +1,43 @@
 /**
- * publicディレクトリ内のすべてのテキストファイルをリストするAPIルート
- * ファイルリストを取得する際、ブックマークを同期する（削除されたファイルのエントリを削除し、新しいファイルのエントリを追加）
+ * publicディレクトリ内のすべてのテキストファイルを構造化データとしてリストするAPIルート
+ * All text files now stored in and listed from Vercel Postgres database
  */
 
 import { NextResponse } from 'next/server';
-import { listTextFiles, syncBookmarks } from '@/lib/services/fileService';
+import { getAllTextEntries, initializeBookmarksForFiles } from '@/lib/db/queries';
+import type { TextFileListResponse } from '@/lib/types';
 
-export interface TextFileListResponse {
-  files: string[];
-  bookmarkSync?: {
-    cleaned: number;
-    added: number;
-  };
-}
-
-export async function GET(): Promise<NextResponse<TextFileListResponse>> {
+export async function GET(): Promise<NextResponse<any>> {
   try {
-    // テキストファイルのリストを取得
-    const textFiles = await listTextFiles();
+    // Get all text files from database
+    const { directories, filesByDirectory } = await getAllTextEntries();
 
-    // ブックマークを同期（存在しないファイルのブックマークを削除し、新しいファイルのエントリを追加）
-    const { cleaned, added } = await syncBookmarks();
-
-    if (cleaned > 0 || added > 0) {
-      console.log(`ブックマーク同期完了: ${cleaned}個削除, ${added}個追加`);
+    // Initialize bookmarks for any files that don't have them yet
+    for (const directory of directories) {
+      const files = filesByDirectory[directory] || [];
+      await initializeBookmarksForFiles(files, directory);
     }
 
+    // Flatten files into directory/filename format for backward compatibility
+    const flatFiles: string[] = [];
+    directories.forEach(dir => {
+      const files = filesByDirectory[dir] || [];
+      files.forEach(file => {
+        flatFiles.push(`${dir}/${file}`);
+      });
+    });
+
     return NextResponse.json({
-      files: textFiles,
-      ...((cleaned > 0 || added > 0) ? { bookmarkSync: { cleaned, added } } : {})
+      directories,
+      filesByDirectory,
+      files: flatFiles, // Add flat array for backward compatibility
     });
   } catch (error) {
     console.error('Error reading text files:', error);
-    return NextResponse.json({ files: [] });
+    return NextResponse.json({
+      directories: [],
+      filesByDirectory: {},
+      files: []
+    });
   }
 }
