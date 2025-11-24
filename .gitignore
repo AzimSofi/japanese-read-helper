@@ -47,3 +47,32 @@ next-env.d.ts
 
 # ocrの機能
 public/image/*
+
+# misc
+temp
+.claude
+CLAUDE.md
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+/lib/generated/prisma
+
+# Book content - copyrighted material (not committed to repo)
+# Users should add their own books via API or database seeding
+public/**/*.txt
+public/**/bookmark.json
+public/**/temp.json
+public/**/images/
+
+# Keep directory structure with .gitkeep files
+!public/**/.gitkeep
