@@ -1,0 +1,135 @@
+// Prisma schema for Japanese Read Helper
+// Database schema for books, images, bookmarks, and processing history
+
+generator client {
+  provider   = "prisma-client-js"
+  output     = "../lib/generated/prisma"
+  engineType = "client"  // Prisma v7: TypeScript-based engine with adapter
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Book metadata - tracks processed EPUB files
+model Book {
+  id                String   @id @default(cuid())
+  title             String   // Book title from EPUB metadata
+  author            String   // Author name from EPUB metadata
+  fileName          String   @unique // Safe filename (sanitized title)
+  textFilePath      String   // Path to text file (local: /public/..., prod: blob URL)
+  originalEpubName  String   // Original EPUB filename
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // Relations
+  images            BookImage[]
+  processingHistory ProcessingHistory[]
+  userBookmarks     UserBookmark[]
+
+  @@index([fileName])
+}
+
+// Book images extracted from EPUB
+model BookImage {
+  id          String   @id @default(cuid())
+  bookId      String
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  fileName    String   // illustration-001.jpg
+  imagePath   String   // Local: /public/..., Prod: blob URL
+  orderIndex  Int      // Order in book (for proper sequencing)
+  chapterName String?  // Which chapter this image appears in
+  altText     String?  // Alt text for accessibility
+
+  createdAt   DateTime @default(now())
+
+  @@index([bookId, orderIndex])
+  @@index([bookId])
+}
+
+// Processing history - tracks when and how books were processed
+model ProcessingHistory {
+  id              String   @id @default(cuid())
+  bookId          String
+  book            Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  processedAt     DateTime @default(now())
+  filterMode      String   // "all" or "n3"
+  hiraganaStyle   String   // "full" or "long-vowel"
+  chaptersCount   Int      // Number of chapters processed
+  fileSize        Int      // Output file size in KB
+  imageCount      Int      @default(0) // Number of images extracted
+
+  @@index([bookId])
+  @@index([processedAt])
+}
+
+// User bookmarks - replaces bookmark.json files
+model UserBookmark {
+  id          String   @id @default(cuid())
+  bookId      String
+  book        Book     @relation(fields: [bookId], references: [id], onDelete: Cascade)
+
+  userId      String?  @default("default") // For multi-user support later
+  bookmarkText String  @db.Text // The text where bookmark is placed
+  position    Int?    // Optional: paragraph index for faster lookup
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([bookId, userId])
+  @@index([bookId])
+}
+
+// Legacy bookmark system for text files (separate from UserBookmark)
+// Used by lib/db/queries.ts for file-based bookmarks
+model Bookmark {
+  id           Int      @id @default(autoincrement())
+  fileName     String   @map("file_name") // File name without .txt extension
+  directory    String   // Subdirectory (e.g., 'bookv2-furigana', 'public')
+  bookmarkText String   @map("bookmark_text") @db.Text // The bookmark text content
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at")
+
+  @@unique([fileName, directory])
+  @@index([fileName, directory])
+  @@map("bookmarks")
+}
+
+// Text file content storage
+// Stores Japanese text content from files in the public/ directory
+model TextEntry {
+  id        Int      @id @default(autoincrement())
+  fileName  String   @map("file_name") // File name without .txt extension
+  directory String   // Subdirectory (e.g., 'bookv2-furigana', 'public')
+  content   String   @db.Text // The actual Japanese text content
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([fileName, directory])
+  @@index([fileName, directory])
+  @@map("text_entries")
+}
+
+// Vocabulary diary - tracks interesting words that users save while reading
+model VocabularyEntry {
+  id            String   @id @default(cuid())
+  word          String   // The selected word or phrase
+  reading       String?  // Furigana/reading if available
+  sentence      String   @db.Text // The sentence context where the word appeared
+
+  // Source location for linking back to the book
+  fileName      String   @map("file_name") // File name without .txt extension
+  directory     String   // Subdirectory (e.g., 'bookv2-furigana')
+  paragraphText String?  @map("paragraph_text") @db.Text // Full paragraph head text for precise location
+
+  // User notes
+  notes         String?  @db.Text
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@index([createdAt])
+  @@index([word])
+  @@index([fileName, directory])
+  @@map("vocabulary_entries")
+}
