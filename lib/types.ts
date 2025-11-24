@@ -69,6 +69,7 @@ export interface ExplanationRequest {
   context: string;
   fileName: string;
   contextSize: number;
+  mode: import('./constants').ExplanationMode;
 }
 
 // コンポーネントのプロップ型
@@ -97,14 +98,88 @@ export interface BookmarkData {
   [fileName: string]: string;
 }
 
+// Book metadata types (from EPUB converter JSON)
+export interface BookImage {
+  fileName: string;          // e.g., "illustration-001.jpg"
+  imagePath: string;         // Full path to image file
+  orderIndex: number;        // Order in the book
+  originalName: string;      // Original name in EPUB (e.g., "image/k001.jpg")
+  altText: string | null;    // Alt text for accessibility
+}
+
+export interface ProcessingHistory {
+  filterMode: string;        // "all" or "n3"
+  hiraganaStyle: string;     // "full" or "long-vowel"
+  chaptersCount: number;     // Number of chapters
+  fileSize: number;          // File size in KB
+  imageCount: number;        // Number of images
+}
+
+export interface BookMetadata {
+  title: string;
+  author: string;
+  fileName: string;
+  textFilePath: string;
+  originalEpubName: string;
+  processingHistory: ProcessingHistory;
+  images: BookImage[];
+}
+
+// Image mapping: original name (without "image/" prefix) → actual filename
+export type ImageMap = Record<string, string>;
+
 // 説明キャッシュ型
 export interface CachedExplanation {
   sentence: string;
   explanation: string;
   contextSize: number;
+  mode: import('./constants').ExplanationMode;
   timestamp: number;
 }
 
 export interface ExplanationCache {
   [key: string]: CachedExplanation;
+}
+
+// 単語帳機能の型
+export interface VocabularyEntry {
+  id: string;
+  word: string;
+  reading: string | null;
+  sentence: string;
+  fileName: string;
+  directory: string;
+  paragraphText: string | null;
+  notes: string | null;
+  createdAt: Date | string;
+  updatedAt: Date | string;
+}
+
+export interface VocabularyListResponse {
+  success: boolean;
+  entries: VocabularyEntry[];
+  count: number;
+  message?: string;
+}
+
+export interface VocabularyCreateRequest {
+  word: string;
+  reading?: string;
+  sentence: string;
+  fileName: string;
+  directory: string;
+  paragraphText?: string;
+  notes?: string;
+}
+
+export interface VocabularyUpdateRequest {
+  notes?: string;
+  word?: string;
+  reading?: string;
+}
+
+export interface VocabularyResponse {
+  success: boolean;
+  entry?: VocabularyEntry;
+  message: string;
 }

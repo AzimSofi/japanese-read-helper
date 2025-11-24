@@ -11,6 +11,12 @@ const compat = new FlatCompat({
 
 const eslintConfig = [
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    ignores: [
+      "lib/generated/prisma/**/*",
+      "scripts/migrate-bookmarks.ts",
+    ],
+  },
 ];
 
 export default eslintConfig;

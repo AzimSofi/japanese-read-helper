@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
-import { ai_instructions_explanation } from "@/lib/geminiService";
-import { AI_MODELS } from "@/lib/constants";
+import {
+  ai_instructions_quick,
+  ai_instructions_story,
+  ai_instructions_nuance,
+  ai_instructions_speaker,
+  ai_instructions_narrative,
+} from "@/lib/geminiService";
+import { AI_MODELS, EXPLANATION_MODES } from "@/lib/constants";
 import type { ExplanationRequest, ExplanationResponse } from "@/lib/types";
 
 /**
@@ -13,9 +19,9 @@ export async function POST(request: Request) {
 
   try {
     const body: ExplanationRequest = await request.json();
-    const { sentence, context, fileName, contextSize } = body;
+    const { sentence, context, fileName, contextSize, mode } = body;
 
-    console.log(`[${new Date().toISOString()}] 説明リクエスト受信 - ファイル: ${fileName}, コンテキストサイズ: ${contextSize}. 経過時間: ${Date.now() - startTime}ms`);
+    console.log(`[${new Date().toISOString()}] 説明リクエスト受信 - ファイル: ${fileName}, モード: ${mode}, コンテキストサイズ: ${contextSize}. 経過時間: ${Date.now() - startTime}ms`);
 
     if (!sentence) {
       return NextResponse.json(
@@ -24,16 +30,27 @@ export async function POST(request: Request) {
       );
     }
 
+    // モードに応じた instruction を選択
+    const instructionMap = {
+      [EXPLANATION_MODES.QUICK]: ai_instructions_quick,
+      [EXPLANATION_MODES.STORY]: ai_instructions_story,
+      [EXPLANATION_MODES.NUANCE]: ai_instructions_nuance,
+      [EXPLANATION_MODES.SPEAKER]: ai_instructions_speaker,
+      [EXPLANATION_MODES.NARRATIVE]: ai_instructions_narrative,
+    };
+
+    const selectedInstruction = instructionMap[mode] || ai_instructions_quick;
+
     // プロンプトを構築（コンテキスト付き）
     const prompt = context
-      ? `${ai_instructions_explanation}
+      ? `${selectedInstruction}
 
 【コンテキスト（前後の文）】
 ${context}
 
 【説明が必要な文】
 ${sentence}`
-      : `${ai_instructions_explanation}
+      : `${selectedInstruction}
 
 ${sentence}`;
 
@@ -43,7 +60,7 @@ ${sentence}`;
     const aiCallStartTime = Date.now();
     const response = await ai.models.generateContent({
       model: AI_MODELS.GEMINI_2_5_FLASH_LITE,
-      contents: prompt,
+      contents: [{ text: prompt }],
     });
 
     console.log(`[${new Date().toISOString()}] Gemini API レスポンス受信。AI呼び出し時間: ${Date.now() - aiCallStartTime}ms。合計経過時間: ${Date.now() - startTime}ms`);
