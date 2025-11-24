@@ -1,31 +1,34 @@
 /**
  * ブックマークデータを読み込むためのAPIルート
- * Now uses Vercel Postgres database instead of file system
+ * Now uses Prisma with PostgreSQL database
  */
 
 import { NextResponse } from 'next/server';
-import { getBookmark } from '@/lib/db/queries';
+import { getBookmark } from '@/lib/db/bookQueries';
 import { DEFAULT_FILE_NAME } from '@/lib/constants';
 import type { BookmarkResponse } from '@/lib/types';
+
+// Mark as dynamic to prevent static generation during build
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse<BookmarkResponse>> {
   const { searchParams } = new URL(request.url);
   const fileName = searchParams.get('fileName') || DEFAULT_FILE_NAME;
 
   // バリデーション（ディレクトリトラバーサル攻撃を防ぐ）
-  if (fileName.includes('..')) {
+  // Note: No default file set - app will auto-redirect to first available file
+  if (!fileName || fileName.includes('..')) {
     console.error(`無効なファイル名: "${fileName}"`);
     return NextResponse.json({ text: '' }, { status: 400 });
   }
 
   try {
-    // Split fileName into directory and file parts
-    // e.g., "bookv1-rephrase/readable-code" -> directory: "bookv1-rephrase", file: "readable-code"
+    // Extract just the filename without directory prefix
+    // e.g., "bookv1-rephrase/readable-code" -> "readable-code"
     const parts = fileName.split('/');
-    const directory = parts.length > 1 ? parts[0] : 'public';
     const file = parts.length > 1 ? parts.slice(1).join('/') : fileName;
 
-    const bookmarkContent = await getBookmark(file, directory);
+    const bookmarkContent = await getBookmark(file);
     return NextResponse.json({ text: bookmarkContent });
   } catch (error) {
     console.error('ブックマークの読み込み中にエラーが発生しました:', error);
