@@ -17,6 +17,7 @@ export async function GET(request: Request): Promise<NextResponse<TextResponse>>
 
     // ファイル名のバリデーション（ディレクトリトラバーサル攻撃を防ぐ）
     // サブディレクトリ対応のため "/" は許可する（例: "bookv1-rephrase/readable-code"）
+    // Note: No default file set - app will auto-redirect to first available file
     if (!fileName || fileName.includes('..')) {
       console.error(`無効なファイル名: "${fileName}"`);
       return NextResponse.json(
