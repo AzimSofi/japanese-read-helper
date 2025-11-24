@@ -8,6 +8,7 @@ import ReadingControls from "@/app/components/ui/ReadingControls";
 import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
 import { CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, READER_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
+import { useBookMetadata } from "@/app/hooks/useBookMetadata";
 
 // Component that reads search params
 function SearchParamsReader({ children }: { children: (params: { directory: string | null; fileName: string | null }) => React.ReactNode }) {
@@ -44,6 +45,9 @@ function BookReaderContent({ directoryParam, fileNameParam }: { directoryParam: 
   const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(false);
   const [selectedSentence, setSelectedSentence] = useState<string>("");
   const [sentenceContext, setSentenceContext] = useState<string>("");
+
+  // Book metadata and image mapping
+  const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
 
   // localStorageから設定を読み込み
   useEffect(() => {
@@ -318,6 +322,7 @@ function BookReaderContent({ directoryParam, fileNameParam }: { directoryParam: 
             onSentenceClick={handleSentenceClick}
             fontSize={fontSize}
             lineHeight={lineHeight}
+            imageMap={imageMap}
           />
         );
       })}

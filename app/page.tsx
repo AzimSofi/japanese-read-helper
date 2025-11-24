@@ -6,9 +6,11 @@ import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "rea
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
 import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
+import VocabularySaveDialog from "@/app/components/ui/VocabularySaveDialog";
 import Pagination from "@/app/components/ui/Pagination";
 import { DEFAULT_DROPDOWN_STATE, CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, PAGINATION_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
+import { useBookMetadata } from "@/app/hooks/useBookMetadata";
 
 // Component that reads search params
 function SearchParamsReader({ children }: {
@@ -66,11 +68,22 @@ function HomeContent({
   const [selectedSentence, setSelectedSentence] = useState<string>("");
   const [sentenceContext, setSentenceContext] = useState<string>("");
 
+  // 単語ダイアログ状態
+  const [vocabularyDialogOpen, setVocabularyDialogOpen] = useState<boolean>(false);
+  const [selectedVocabularyData, setSelectedVocabularyData] = useState<{
+    word: string;
+    sentence: string;
+    paragraphText: string;
+  } | null>(null);
+
   // ページネーション状態
   const [currentPage, setCurrentPage] = useState<number>(pageParam ? parseInt(pageParam, 10) : 1);
 
   // ブックマーク自動ナビゲーション追跡用ref
   const hasAutoNavigatedRef = useRef<boolean>(false);
+
+  // Book metadata and image mapping
+  const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
 
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
@@ -127,11 +140,17 @@ function HomeContent({
           const data = await response.json();
           setAvailableFiles(data.files);
 
-          // ファイルが指定されていない場合、最初のファイルにリダイレクト
-          if (!fileNameParam && data.files.length > 0) {
+          // ファイルが指定されていない場合、最初のディレクトリの最初のファイルにリダイレクト
+          if (!fileNameParam && data.directories && data.directories.length > 0) {
             const params = new URLSearchParams(searchParamsString);
-            params.set('fileName', data.files[0]);
-            router.replace(`/?${params.toString()}`);
+            const firstDir = data.directories[0];
+            const firstFile = data.filesByDirectory[firstDir]?.[0];
+
+            if (firstFile) {
+              params.set('directory', firstDir);
+              params.set('fileName', firstFile);
+              router.replace(`/?${params.toString()}`);
+            }
           }
         }
       } catch (e) {
@@ -239,6 +258,16 @@ function HomeContent({
     setSelectedSentence(sentence);
     setIsSidebarOpen(true);
   };
+
+  // 単語選択時の処理（単語ダイアログを開く）
+  const handleVocabularySelect = useCallback((data: {
+    word: string;
+    sentence: string;
+    paragraphText: string;
+  }) => {
+    setSelectedVocabularyData(data);
+    setVocabularyDialogOpen(true);
+  }, []);
 
   // ブックマークを再取得する関数（onSubmitSuccessから呼び出し用）
   const refetchBookmark = async () => {
@@ -388,13 +417,29 @@ function HomeContent({
         showFurigana={showFurigana}
       />
 
-      {/* 上部のページネーションコントロール */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={parsedData.totalPages}
-        onPageChange={handlePageChange}
-        maxButtons={PAGINATION_CONFIG.MAX_PAGE_BUTTONS}
+      <VocabularySaveDialog
+        isOpen={vocabularyDialogOpen}
+        word={selectedVocabularyData?.word || ''}
+        sentence={selectedVocabularyData?.sentence || ''}
+        fileName={fileNameParam || ''}
+        directory={directoryParam || ''}
+        paragraphText={selectedVocabularyData?.paragraphText || ''}
+        onClose={() => setVocabularyDialogOpen(false)}
+        onSave={() => {
+          // Dialog will close automatically after save
+          setVocabularyDialogOpen(false);
+        }}
       />
+
+      {/* 上部のページネーションコントロール */}
+      <div className="mt-20">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={parsedData.totalPages}
+          onPageChange={handlePageChange}
+          maxButtons={PAGINATION_CONFIG.MAX_PAGE_BUTTONS}
+        />
+      </div>
 
       {parsedData.paginatedItems.map((item, index) => {
         // 改行を削除して比較（複数行ヘッダー対応）
@@ -410,6 +455,10 @@ function HomeContent({
             onSubmitSuccess={refetchBookmark}
             showFurigana={showFurigana}
             onSentenceClick={handleSentenceClick}
+            onVocabularySelect={handleVocabularySelect}
+            imageMap={imageMap}
+            bookDirectory={directoryParam || ""}
+            bookFileName={fileNameParam || ""}
           />
         );
       })}

@@ -5,16 +5,21 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { STORAGE_KEYS, EXPLANATION_CONFIG } from '@/lib/constants';
+import { STORAGE_KEYS, EXPLANATION_CONFIG, DEFAULT_EXPLANATION_MODE, EXPLANATION_MODES } from '@/lib/constants';
 import type { ExplanationCache, CachedExplanation } from '@/lib/types';
+import type { ExplanationMode } from '@/lib/constants';
 
 interface UseExplanationCacheReturn {
-  getCache: (fileName: string, sentence: string) => CachedExplanation | null;
-  setCache: (fileName: string, sentence: string, explanation: string, contextSize: number) => void;
+  getCache: (fileName: string, sentence: string, mode: ExplanationMode) => CachedExplanation | null;
+  setCache: (fileName: string, sentence: string, explanation: string, contextSize: number, mode: ExplanationMode) => void;
   clearCache: () => void;
   getCacheSize: () => number;
   contextSize: number;
   setContextSize: (size: number) => void;
+  mode: ExplanationMode;
+  setMode: (mode: ExplanationMode) => void;
+  contextSizeExpanded: boolean;
+  setContextSizeExpanded: (expanded: boolean) => void;
 }
 
 /**
@@ -25,6 +30,10 @@ export function useExplanationCache(): UseExplanationCacheReturn {
   const [cache, setCacheState] = useState<ExplanationCache>({});
   const [contextSize, setContextSizeState] = useState<number>(
     EXPLANATION_CONFIG.DEFAULT_CONTEXT_SIZE
+  );
+  const [mode, setModeState] = useState<ExplanationMode>(DEFAULT_EXPLANATION_MODE);
+  const [contextSizeExpanded, setContextSizeExpandedState] = useState<boolean>(
+    EXPLANATION_CONFIG.CONTEXT_SIZE_EXPANDED_DEFAULT
   );
 
   // localStorageからキャッシュを読み込み
@@ -46,24 +55,34 @@ export function useExplanationCache(): UseExplanationCacheReturn {
           setContextSizeState(size);
         }
       }
+
+      const storedMode = localStorage.getItem(STORAGE_KEYS.EXPLANATION_MODE);
+      if (storedMode && Object.values(EXPLANATION_MODES).includes(storedMode as ExplanationMode)) {
+        setModeState(storedMode as ExplanationMode);
+      }
+
+      const storedExpanded = localStorage.getItem(STORAGE_KEYS.CONTEXT_SIZE_EXPANDED);
+      if (storedExpanded !== null) {
+        setContextSizeExpandedState(storedExpanded === 'true');
+      }
     } catch (error) {
       console.error('キャッシュの読み込み中にエラーが発生しました:', error);
     }
   }, []);
 
-  // キャッシュキーを生成
-  const generateCacheKey = useCallback((fileName: string, sentence: string): string => {
+  // キャッシュキーを生成（モード別にキャッシュを分離）
+  const generateCacheKey = useCallback((fileName: string, sentence: string, mode: ExplanationMode): string => {
     // 文をハッシュ化（簡易版）
     const hash = sentence.split('').reduce((acc, char) => {
       return ((acc << 5) - acc) + char.charCodeAt(0);
     }, 0);
-    return `${EXPLANATION_CONFIG.CACHE_KEY_PREFIX}${fileName}_${hash}`;
+    return `${EXPLANATION_CONFIG.CACHE_KEY_PREFIX}${fileName}_${mode}_${hash}`;
   }, []);
 
   // キャッシュから取得
   const getCache = useCallback(
-    (fileName: string, sentence: string): CachedExplanation | null => {
-      const key = generateCacheKey(fileName, sentence);
+    (fileName: string, sentence: string, mode: ExplanationMode): CachedExplanation | null => {
+      const key = generateCacheKey(fileName, sentence, mode);
       return cache[key] || null;
     },
     [cache, generateCacheKey]
@@ -71,14 +90,15 @@ export function useExplanationCache(): UseExplanationCacheReturn {
 
   // キャッシュに保存
   const setCache = useCallback(
-    (fileName: string, sentence: string, explanation: string, contextSize: number) => {
-      const key = generateCacheKey(fileName, sentence);
+    (fileName: string, sentence: string, explanation: string, contextSize: number, mode: ExplanationMode) => {
+      const key = generateCacheKey(fileName, sentence, mode);
       const newCache: ExplanationCache = {
         ...cache,
         [key]: {
           sentence,
           explanation,
           contextSize,
+          mode,
           timestamp: Date.now(),
         },
       };
@@ -129,6 +149,22 @@ export function useExplanationCache(): UseExplanationCacheReturn {
     }
   }, []);
 
+  // 説明モードを設定
+  const setMode = useCallback((newMode: ExplanationMode) => {
+    setModeState(newMode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.EXPLANATION_MODE, newMode);
+    }
+  }, []);
+
+  // コンテキストサイズの展開状態を設定
+  const setContextSizeExpanded = useCallback((expanded: boolean) => {
+    setContextSizeExpandedState(expanded);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.CONTEXT_SIZE_EXPANDED, expanded.toString());
+    }
+  }, []);
+
   return {
     getCache,
     setCache,
@@ -136,5 +172,9 @@ export function useExplanationCache(): UseExplanationCacheReturn {
     getCacheSize,
     contextSize,
     setContextSize,
+    mode,
+    setMode,
+    contextSizeExpanded,
+    setContextSizeExpanded,
   };
 }

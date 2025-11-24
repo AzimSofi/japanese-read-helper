@@ -28,14 +28,24 @@ export default function TopNavigation() {
   const showFileSelector = pathname === '/' || pathname === '/book-reader';
 
   const [showFurigana, setShowFurigana] = useState<boolean>(false);
+  const [vocabularyMode, setVocabularyMode] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
-  // localStorageから振り仮名表示設定を読み込み
+  // localStorageから振り仮名表示設定と単語帳モード設定を読み込み
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(STORAGE_KEYS.FURIGANA_ENABLED);
       if (stored !== null) {
         setShowFurigana(stored === 'true');
+      }
+      const vocabStored = localStorage.getItem(STORAGE_KEYS.VOCABULARY_MODE);
+      if (vocabStored !== null) {
+        setVocabularyMode(vocabStored === 'true');
+      }
+      const collapsedStored = localStorage.getItem('topnav_collapsed');
+      if (collapsedStored !== null) {
+        setIsCollapsed(collapsedStored === 'true');
       }
     }
   }, []);
@@ -60,6 +70,26 @@ export default function TopNavigation() {
       localStorage.setItem(STORAGE_KEYS.FURIGANA_ENABLED, newValue.toString());
       // カスタムイベントを発火して他のコンポーネントに通知
       window.dispatchEvent(new CustomEvent('furiganaChanged', { detail: { enabled: newValue } }));
+    }
+  };
+
+  // 単語帳モードをトグル（localStorageに保存 + カスタムイベント発火）
+  const toggleVocabularyMode = () => {
+    const newValue = !vocabularyMode;
+    setVocabularyMode(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.VOCABULARY_MODE, newValue.toString());
+      // カスタムイベントを発火して他のコンポーネントに通知
+      window.dispatchEvent(new CustomEvent('vocabularyModeChanged', { detail: { enabled: newValue } }));
+    }
+  };
+
+  // トップナビゲーションの折りたたみをトグル
+  const toggleTopNavCollapse = () => {
+    const newValue = !isCollapsed;
+    setIsCollapsed(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('topnav_collapsed', newValue.toString());
     }
   };
 
@@ -116,13 +146,17 @@ export default function TopNavigation() {
     <>
       {/* トップナビゲーションバー */}
       <div
-        className="backdrop-blur-sm py-3 fixed top-0 left-0 w-full px-4 md:px-6 z-50 text-xs shadow-md border-b"
+        className="backdrop-blur-sm fixed top-0 left-0 w-full px-4 md:px-6 z-50 text-xs shadow-md border-b transition-all duration-300"
         style={{
           backgroundColor: `color-mix(in srgb, ${CSS_VARS.BASE} 95%, transparent)`,
           borderColor: CSS_VARS.NEUTRAL,
+          paddingTop: isCollapsed ? '0.25rem' : '0.75rem',
+          paddingBottom: isCollapsed ? '0.25rem' : '0.75rem',
         }}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between md:justify-center gap-3">
+          {!isCollapsed && (
+            <>
           {/* モバイル：ハンバーガーメニューアイコン */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -254,6 +288,21 @@ export default function TopNavigation() {
               {showFurigana ? '振り仮名 ON' : '振り仮名 OFF'}
             </button>
 
+            {/* 単語帳モードトグルボタン */}
+            <button
+              onClick={toggleVocabularyMode}
+              className="px-4 py-2 rounded-lg font-medium shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95 border"
+              style={{
+                backgroundColor: vocabularyMode
+                  ? `color-mix(in srgb, ${CSS_VARS.PRIMARY} 30%, transparent)`
+                  : CSS_VARS.NEUTRAL,
+                borderColor: vocabularyMode ? CSS_VARS.PRIMARY : CSS_VARS.NEUTRAL,
+                color: vocabularyMode ? CSS_VARS.PRIMARY : '#6b7280',
+              }}
+            >
+              {vocabularyMode ? '📝 単語帳 ON' : '単語帳 OFF'}
+            </button>
+
             {/* ページナビゲーション */}
             <div className="flex items-center gap-2">
               <a
@@ -311,6 +360,31 @@ export default function TopNavigation() {
               >
                 読書
               </a>
+              <a
+                href="/vocabulary"
+                className="px-4 py-2 rounded-lg border font-medium shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 30%, transparent)`,
+                  borderColor: CSS_VARS.PRIMARY,
+                  color: CSS_VARS.PRIMARY,
+                }}
+              >
+                📝 単語帳
+              </a>
+              <button
+                onClick={async () => {
+                  await fetch('/api/auth/logout', { method: 'POST' });
+                  window.location.href = '/login';
+                }}
+                className="px-4 py-2 rounded-lg border font-medium shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: '#fef2f2',
+                  borderColor: '#ef4444',
+                  color: '#ef4444',
+                }}
+              >
+                ログアウト
+              </button>
             </div>
           </div>
 
@@ -318,6 +392,89 @@ export default function TopNavigation() {
           {showFileSelector && (
             <div className="md:hidden text-xs font-medium truncate max-w-[180px]">
               {currentFile || 'ファイル未選択'}
+            </div>
+          )}
+            </>
+          )}
+
+          {/* 折りたたみトグルボタン */}
+          <button
+            onClick={toggleTopNavCollapse}
+            className="p-1 rounded-lg hover:bg-gray-100 transition-all ml-auto"
+            aria-label={isCollapsed ? 'ナビゲーションを展開' : 'ナビゲーションを折りたたむ'}
+            style={{ color: CSS_VARS.PRIMARY }}
+          >
+            <svg
+              className="w-4 h-4 transition-transform duration-300"
+              style={{ transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)' }}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5 15l7-7 7 7"
+              />
+            </svg>
+          </button>
+
+          {/* 折りたたみ時の浮遊ミニツールバー */}
+          {isCollapsed && (
+            <div className="flex items-center gap-2 ml-4">
+              {/* 単語帳モードトグル */}
+              <button
+                onClick={toggleVocabularyMode}
+                className="p-2 rounded-lg border shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: vocabularyMode
+                    ? `color-mix(in srgb, ${CSS_VARS.PRIMARY} 30%, transparent)`
+                    : CSS_VARS.BASE,
+                  borderColor: CSS_VARS.PRIMARY,
+                  color: CSS_VARS.PRIMARY,
+                }}
+                title={vocabularyMode ? '単語帳モード ON' : '単語帳モード OFF'}
+                aria-label={vocabularyMode ? '単語帳モード ON' : '単語帳モード OFF'}
+              >
+                <span className="text-lg">
+                  {vocabularyMode ? '📝' : '📄'}
+                </span>
+              </button>
+
+              {/* 振り仮名トグル */}
+              <button
+                onClick={toggleFurigana}
+                className="p-2 rounded-lg border shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: showFurigana
+                    ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`
+                    : CSS_VARS.BASE,
+                  borderColor: CSS_VARS.SECONDARY,
+                  color: CSS_VARS.SECONDARY,
+                }}
+                title={showFurigana ? '振り仮名 ON' : '振り仮名 OFF'}
+                aria-label={showFurigana ? '振り仮名 ON' : '振り仮名 OFF'}
+              >
+                <span className="text-sm font-bold">
+                  {showFurigana ? 'あ' : 'A'}
+                </span>
+              </button>
+
+              {/* 単語帳ページへのリンク */}
+              <a
+                href="/vocabulary"
+                className="p-2 rounded-lg border shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: CSS_VARS.BASE,
+                  borderColor: CSS_VARS.PRIMARY,
+                  color: CSS_VARS.PRIMARY,
+                }}
+                title="単語帳ページへ"
+                aria-label="単語帳ページへ"
+              >
+                <span className="text-lg">📖</span>
+              </a>
             </div>
           )}
         </div>
@@ -480,6 +637,24 @@ export default function TopNavigation() {
                 >
                   {showFurigana ? '振り仮名 ON' : '振り仮名 OFF'}
                 </button>
+
+                {/* 単語帳モードトグル */}
+                <button
+                  onClick={() => {
+                    toggleVocabularyMode();
+                    closeMobileMenu();
+                  }}
+                  className="w-full px-4 py-3 rounded-lg font-medium shadow-sm transition-all active:scale-95 border text-sm"
+                  style={{
+                    backgroundColor: vocabularyMode
+                      ? `color-mix(in srgb, ${CSS_VARS.PRIMARY} 30%, transparent)`
+                      : CSS_VARS.NEUTRAL,
+                    borderColor: vocabularyMode ? CSS_VARS.PRIMARY : CSS_VARS.NEUTRAL,
+                    color: vocabularyMode ? CSS_VARS.PRIMARY : '#6b7280',
+                  }}
+                >
+                  {vocabularyMode ? '📝 単語帳 ON' : '単語帳 OFF'}
+                </button>
               </div>
 
               {/* ページナビゲーションセクション */}
@@ -546,6 +721,32 @@ export default function TopNavigation() {
                 >
                   読書
                 </a>
+                <a
+                  href="/vocabulary"
+                  className="block w-full px-4 py-3 rounded-lg border font-medium shadow-sm transition-all active:scale-95 text-center text-sm"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 30%, transparent)`,
+                    borderColor: CSS_VARS.PRIMARY,
+                    color: CSS_VARS.PRIMARY,
+                  }}
+                  onClick={closeMobileMenu}
+                >
+                  📝 単語帳
+                </a>
+                <button
+                  onClick={async () => {
+                    await fetch('/api/auth/logout', { method: 'POST' });
+                    window.location.href = '/login';
+                  }}
+                  className="block w-full px-4 py-3 rounded-lg border font-medium shadow-sm transition-all active:scale-95 text-center text-sm"
+                  style={{
+                    backgroundColor: '#fef2f2',
+                    borderColor: '#ef4444',
+                    color: '#ef4444',
+                  }}
+                >
+                  ログアウト
+                </button>
               </div>
             </div>
           </div>
