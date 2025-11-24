@@ -126,7 +126,7 @@ npm run db:init     # Initialize tables
 **Option A: Via Swagger UI** (Recommended for single files)
 - Navigate to `http://localhost:3333/api-docs`
 - Click "Authorize" and enter your `ADMIN_API_KEY`
-- Use `POST /api/admin/text-entries` to upload book content
+- Use `POST /api/admin?action=text-entries` to upload book content
 
 **Option B: Via EPUB Script** (Recommended for EPUB files)
 ```bash
@@ -136,7 +136,7 @@ python3 scripts/epub-to-text-furigana.py book.epub --output-mode api
 
 **Option C: Via Direct API Call**
 ```bash
-curl -X POST http://localhost:3333/api/admin/text-entries \
+curl -X POST 'http://localhost:3333/api/admin?action=text-entries' \
   -H "Content-Type: application/json" \
   -H "x-api-key: your_key_here" \
   -d '{"fileName":"my-book","directory":"bookv2-furigana","content":"< 日本語のテキスト"}'
@@ -146,7 +146,9 @@ curl -X POST http://localhost:3333/api/admin/text-entries \
 
 All admin endpoints require the `x-api-key` header with your `ADMIN_API_KEY`.
 
-#### `POST /api/admin/text-entries`
+The `/api/admin` route uses action-based routing with query parameters:
+
+#### `POST /api/admin?action=text-entries`
 Upload or update a single text entry.
 
 **Request:**
@@ -158,7 +160,7 @@ Upload or update a single text entry.
 }
 ```
 
-#### `POST /api/admin/bookmarks`
+#### `POST /api/admin?action=bookmarks`
 Set a bookmark position for a file.
 
 **Request:**
@@ -170,7 +172,7 @@ Set a bookmark position for a file.
 }
 ```
 
-#### `POST /api/admin/bulk-seed`
+#### `POST /api/admin?action=bulk-seed`
 Upload multiple text entries at once.
 
 **Request:**

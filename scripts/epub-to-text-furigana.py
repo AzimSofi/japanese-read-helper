@@ -195,7 +195,7 @@ def upload_to_api(fileName, directory, content, api_url=None, api_key=None):
         print("Please set it with: export ADMIN_API_KEY=your-api-key")
         return False
 
-    endpoint = f"{api_url}/api/admin/text-entries"
+    endpoint = f"{api_url}/api/admin?action=text-entries"
 
     payload = {
         'fileName': fileName,
