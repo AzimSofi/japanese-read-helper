@@ -5,6 +5,7 @@ import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import ChevronUp from "@/app/components/icons/ChevronUp";
 import ChevronDown from "@/app/components/icons/ChevronDown";
+import BookImage from "@/app/components/ui/BookImage";
 import { useSearchParams } from "next/navigation";
 import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
@@ -17,6 +18,14 @@ interface CollapsibleItemProps {
   onSubmitSuccess: () => void;
   showFurigana?: boolean;
   onSentenceClick?: (sentence: string) => void;
+  imageMap?: Record<string, string>;
+  bookDirectory?: string;
+  bookFileName?: string;
+  onVocabularySelect?: (data: {
+    word: string;
+    sentence: string;
+    paragraphText: string;
+  }) => void;
 }
 
 const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
@@ -27,10 +36,15 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   onSubmitSuccess,
   showFurigana = false,
   onSentenceClick,
+  imageMap,
+  bookDirectory,
+  bookFileName,
+  onVocabularySelect,
 }) => {
   const searchParams = useSearchParams();
   const directoryParam = searchParams.get("directory");
   const fileNameParam = searchParams.get("fileName");
+  const highlightWord = searchParams.get("highlight");
 
   // Construct full file path (directory/fileName) to match how page.tsx handles it
   const fileName: string = (directoryParam && fileNameParam
@@ -39,6 +53,39 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
 
   const [isOpen, setIsOpen] = useState(initialDropdownState);
   const [loading, setLoading] = useState(false);
+  const [vocabularyMode, setVocabularyMode] = useState(false);
+  const [shouldHighlight, setShouldHighlight] = useState(false);
+
+  // Listen for vocabulary mode changes
+  useEffect(() => {
+    const handleVocabularyModeChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ enabled: boolean }>;
+      setVocabularyMode(customEvent.detail.enabled);
+    };
+
+    // Initialize from localStorage
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('vocabulary_mode');
+      if (stored !== null) {
+        setVocabularyMode(stored === 'true');
+      }
+    }
+
+    window.addEventListener('vocabularyModeChanged', handleVocabularyModeChange);
+    return () => window.removeEventListener('vocabularyModeChanged', handleVocabularyModeChange);
+  }, []);
+
+  // Handle word highlighting when navigating from vocabulary page
+  useEffect(() => {
+    if (highlightWord && head.includes(highlightWord)) {
+      setShouldHighlight(true);
+      // Remove highlight after 3 seconds
+      const timer = setTimeout(() => {
+        setShouldHighlight(false);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightWord, head]);
 
   const toggleOpen = () => {
     setIsOpen(!isOpen);
@@ -159,6 +206,44 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     }
   };
 
+  // Extract text from a Range while excluding <rt> (furigana) elements
+  const extractTextWithoutRuby = (range: Range): string => {
+    // Clone the selection content to avoid modifying the actual DOM
+    const fragment = range.cloneContents();
+
+    // Remove all <rt> elements (furigana) from the cloned fragment
+    const rtElements = fragment.querySelectorAll('rt');
+    rtElements.forEach(rt => rt.remove());
+
+    // Now get the text content (with <rt> removed)
+    return fragment.textContent || '';
+  };
+
+  // Handle text selection in vocabulary mode
+  const handleTextSelection = () => {
+    if (!vocabularyMode || !onVocabularySelect) return;
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0) return;
+
+    const range = selection.getRangeAt(0);
+
+    // Use DOM traversal to extract text without furigana
+    const cleanedText = extractTextWithoutRuby(range).trim();
+
+    if (!cleanedText) return;
+
+    // Call the vocabulary select handler with the cleaned word and context
+    onVocabularySelect({
+      word: cleanedText,
+      sentence: head, // Use the full head as sentence context
+      paragraphText: head, // Full paragraph for location reference
+    });
+
+    // Clear selection
+    selection.removeAllRanges();
+  };
+
   // 文を区切り文字で分割
   const splitIntoSentences = (text: string): string[] => {
     const delimiters: readonly string[] = EXPLANATION_CONFIG.SENTENCE_DELIMITERS;
@@ -202,10 +287,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             <span
               key={index}
               dangerouslySetInnerHTML={{ __html: html }}
-              onClick={() => onSentenceClick?.(sentence)}
-              className={onSentenceClick ? "cursor-pointer hover:bg-opacity-50 transition-colors rounded px-1" : ""}
+              onClick={() => !vocabularyMode && onSentenceClick?.(sentence)}
+              className={onSentenceClick && !vocabularyMode ? "cursor-pointer hover:bg-opacity-50 transition-colors rounded px-1" : ""}
               style={
-                onSentenceClick
+                onSentenceClick && !vocabularyMode
                   ? {
                       backgroundColor: 'transparent',
                       transition: 'background-color 0.2s',
@@ -213,12 +298,12 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                   : {}
               }
               onMouseEnter={(e) => {
-                if (onSentenceClick) {
+                if (onSentenceClick && !vocabularyMode) {
                   e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`;
                 }
               }}
               onMouseLeave={(e) => {
-                if (onSentenceClick) {
+                if (onSentenceClick && !vocabularyMode) {
                   e.currentTarget.style.backgroundColor = 'transparent';
                 }
               }}
@@ -229,19 +314,107 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     );
   };
 
+  // 画像プレースホルダーを検出
+  const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/g;
+  const hasImage = IMAGE_PATTERN.test(head);
+
+  // テキストと画像を分割して処理
+  const parseContentWithImages = (content: string) => {
+    const parts: Array<{ type: 'text' | 'image'; content: string }> = [];
+    let lastIndex = 0;
+    const regex = /\[IMAGE:([^\]]+)\]/g;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      // 画像の前のテキスト
+      if (match.index > lastIndex) {
+        const textBefore = content.substring(lastIndex, match.index);
+        if (textBefore.trim()) {
+          parts.push({ type: 'text', content: textBefore });
+        }
+      }
+
+      // 画像プレースホルダー
+      const imageName = match[1];
+      parts.push({ type: 'image', content: imageName });
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // 画像の後のテキスト
+    if (lastIndex < content.length) {
+      const textAfter = content.substring(lastIndex);
+      if (textAfter.trim()) {
+        parts.push({ type: 'text', content: textAfter });
+      }
+    }
+
+    return parts;
+  };
+
+  // 画像を含むコンテンツをレンダリング
+  const renderHeadWithImages = () => {
+    if (!hasImage) {
+      // 画像がない場合は通常のテキストレンダリング
+      return renderTextWithFurigana(head, true);
+    }
+
+    // 画像がある場合はパーツごとにレンダリング
+    const parts = parseContentWithImages(head);
+
+    return (
+      <div className="head-content">
+        {parts.map((part, index) => {
+          if (part.type === 'text') {
+            return (
+              <div key={index} className="whitespace-pre-wrap">
+                {renderTextWithFurigana(part.content, true)}
+              </div>
+            );
+          } else {
+            // 画像のパスを構築 - imageMapで実際のファイル名を検索
+            const originalName = part.content;
+            const actualFileName = imageMap?.[originalName] || imageMap?.[`image/${originalName}`] || originalName;
+            const imagePath = `/${bookDirectory}/${bookFileName}/images/${actualFileName}`;
+
+            return (
+              <BookImage
+                key={index}
+                fileName={actualFileName}
+                imagePath={imagePath}
+                altText={`Illustration from ${bookFileName}`}
+              />
+            );
+          }
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="flex collapsibleItem" id={id}>
       <div
-        className="p-2 my-1 w-full"
-        style={id === "bookmark" ? { backgroundColor: CSS_VARS.BASE } : {}}
+        className="p-2 my-1 w-full transition-all duration-500"
+        style={
+          shouldHighlight
+            ? {
+                backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 40%, transparent)`,
+                boxShadow: '0 0 20px rgba(226, 161, 111, 0.5)',
+              }
+            : id === "bookmark"
+            ? { backgroundColor: CSS_VARS.BASE }
+            : {}
+        }
         id="collapsible-item"
         ref={itemRef}
       >
         <div
           className={"head-text font-bold text-lg whitespace-pre-wrap"}
           ref={headRef}
+          onMouseUp={handleTextSelection}
+          style={vocabularyMode ? { userSelect: 'text', cursor: 'text' } : {}}
         >
-          {renderTextWithFurigana(head, true)}
+          {renderHeadWithImages()}
         </div>
         {/* <div className="ml-4 mt-2">
           <div className="ml-4 mt-2">
