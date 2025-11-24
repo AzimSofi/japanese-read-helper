@@ -43,7 +43,8 @@ body {
   color: black;
 }
 
-.collapsibleItem, p {
+.collapsibleItem,
+.collapsibleItem p {
   font-size: 1.3rem !important;
   font-family: Noto Serif JP;
   font-weight: 500;
@@ -52,6 +53,14 @@ body {
 
 ruby {
   /* font-size: 1.5rem; */
+}
+
+/* Prevent furigana (ruby annotations) from being selected */
+rt {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .sub-item-text {

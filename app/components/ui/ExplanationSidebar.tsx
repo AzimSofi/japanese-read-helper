@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { CSS_VARS, API_ROUTES, EXPLANATION_CONFIG } from '@/lib/constants';
+import { marked } from 'marked';
+import { CSS_VARS, API_ROUTES, EXPLANATION_CONFIG, EXPLANATION_MODE_CONFIG } from '@/lib/constants';
 import { useExplanationCache } from '@/app/hooks/useExplanationCache';
 import { parseFurigana, segmentsToHTML, stripFurigana } from '@/lib/utils/furiganaParser';
 import type { ExplanationRequest, ExplanationResponse } from '@/lib/types';
+import type { ExplanationMode } from '@/lib/constants';
 
 interface ExplanationSidebarProps {
   isOpen: boolean;
@@ -28,6 +30,7 @@ export default function ExplanationSidebar({
   const [error, setError] = React.useState<string | null>(null);
   const [isCached, setIsCached] = React.useState<boolean>(false);
   const [cacheTimestamp, setCacheTimestamp] = React.useState<number | null>(null);
+  const [forceRegenerate, setForceRegenerate] = React.useState<boolean>(false);
 
   // スワイプ操作用の状態
   const [touchStart, setTouchStart] = React.useState<number>(0);
@@ -40,6 +43,10 @@ export default function ExplanationSidebar({
     setCache,
     contextSize,
     setContextSize,
+    mode,
+    setMode,
+    contextSizeExpanded,
+    setContextSizeExpanded,
   } = useExplanationCache();
 
   // ESCキーでサイドバーを閉じる
@@ -104,17 +111,19 @@ export default function ExplanationSidebar({
     }
 
     const fetchExplanation = async () => {
-      // キャッシュをチェック
-      const cached = getCache(fileName, sentence);
-      if (cached) {
-        setExplanation(cached.explanation);
-        setIsCached(true);
-        setCacheTimestamp(cached.timestamp);
-        setIsLoading(false);
-        return;
+      // forceRegenerateがfalseの場合のみキャッシュをチェック
+      if (!forceRegenerate) {
+        const cached = getCache(fileName, sentence, mode);
+        if (cached) {
+          setExplanation(cached.explanation);
+          setIsCached(true);
+          setCacheTimestamp(cached.timestamp);
+          setIsLoading(false);
+          return;
+        }
       }
 
-      // キャッシュがない場合はAPIを呼び出し
+      // キャッシュがない場合、または強制再生成の場合はAPIを呼び出し
       setIsLoading(true);
       setError(null);
       setIsCached(false);
@@ -126,6 +135,7 @@ export default function ExplanationSidebar({
           context,
           fileName,
           contextSize,
+          mode,
         };
 
         const response = await fetch(API_ROUTES.EXPLAIN_SENTENCE, {
@@ -143,19 +153,29 @@ export default function ExplanationSidebar({
         const data: ExplanationResponse = await response.json();
         setExplanation(data.explanation);
 
-        // キャッシュに保存
-        setCache(fileName, sentence, data.explanation, contextSize);
+        // キャッシュに保存（強制再生成の場合は上書き）
+        setCache(fileName, sentence, data.explanation, contextSize, mode);
+
+        // 強制再生成フラグをリセット
+        if (forceRegenerate) {
+          setForceRegenerate(false);
+        }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
         setError(errorMessage);
         console.error('説明の取得中にエラーが発生しました:', err);
+
+        // エラー時もフラグをリセット
+        if (forceRegenerate) {
+          setForceRegenerate(false);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchExplanation();
-  }, [isOpen, sentence, context, fileName, contextSize, getCache, setCache]);
+  }, [isOpen, sentence, context, fileName, contextSize, mode, forceRegenerate, getCache, setCache]);
 
   // 振り仮名を処理して表示
   const renderTextWithFurigana = (text: string) => {
@@ -183,18 +203,11 @@ export default function ExplanationSidebar({
     return 'たった今';
   };
 
-  // マークダウンをHTMLに変換（簡易版）
+  // マークダウンをHTMLに変換
   const renderMarkdown = (text: string): string => {
-    // 振り仮名を削除
-    let html = stripFurigana(text);
-
-    // ## 見出しをHTMLに変換
-    html = html.replace(/^## (.+)$/gm, '<h3 style="font-size: 0.95rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: ' + CSS_VARS.PRIMARY + ';">$1</h3>');
-
-    // 改行を<br>に変換
-    html = html.replace(/\n/g, '<br>');
-
-    return html;
+    // 振り仮名を削除してからマークダウンをパース
+    const textWithoutFurigana = stripFurigana(text);
+    return marked.parse(textWithoutFurigana) as string;
   };
 
   return (
@@ -235,13 +248,26 @@ export default function ExplanationSidebar({
           {/* ヘッダー */}
           <div className="flex justify-between items-start mb-6">
             <div className="flex-1">
-              <h2 className="text-xl font-bold mb-2" style={{ color: CSS_VARS.PRIMARY }}>
+              <h2 className="text-lg font-bold mb-2" style={{ color: CSS_VARS.PRIMARY }}>
                 文の説明
               </h2>
               {isCached && cacheTimestamp && (
-                <p className="text-xs" style={{ color: CSS_VARS.SECONDARY }}>
-                  キャッシュ: {getTimeAgo(cacheTimestamp)}
-                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs" style={{ color: CSS_VARS.SECONDARY, fontSize: '0.75rem' }}>
+                    キャッシュ: {getTimeAgo(cacheTimestamp)}
+                  </span>
+                  <button
+                    onClick={() => setForceRegenerate(true)}
+                    className="px-2 py-1 rounded text-xs font-medium transition-all hover:scale-110 active:scale-95"
+                    style={{
+                      backgroundColor: `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`,
+                      color: CSS_VARS.SECONDARY,
+                    }}
+                    title="新しい説明を生成する"
+                  >
+                    🔄 再生成
+                  </button>
+                </div>
               )}
             </div>
             <button
@@ -265,47 +291,84 @@ export default function ExplanationSidebar({
               borderColor: CSS_VARS.SECONDARY,
             }}
           >
-            <h3 className="text-sm font-bold mb-2" style={{ color: CSS_VARS.SECONDARY }}>
+            <h3 className="text-xs font-bold mb-2" style={{ color: CSS_VARS.SECONDARY }}>
               選択された文
             </h3>
-            <p className="text-base leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>
+            <p className="text-sm leading-relaxed" style={{ whiteSpace: 'pre-wrap' }}>
               {renderTextWithFurigana(sentence)}
             </p>
           </div>
 
-          {/* コンテキストサイズ調整 */}
-          <div
-            className="rounded-lg border p-2 mb-4"
-            style={{
-              backgroundColor: CSS_VARS.BASE,
-              borderColor: CSS_VARS.NEUTRAL,
-            }}
-          >
-            <label className="block text-xs font-medium mb-1" style={{ color: '#374151' }}>
-              コンテキストサイズ: {contextSize}文
-            </label>
-            <input
-              type="range"
-              min={EXPLANATION_CONFIG.MIN_CONTEXT_SIZE}
-              max={EXPLANATION_CONFIG.MAX_CONTEXT_SIZE}
-              value={contextSize}
-              onChange={(e) => setContextSize(parseInt(e.target.value, 10))}
-              className="w-full h-1.5 rounded-lg appearance-none cursor-pointer"
-              style={{
-                background: `linear-gradient(to right, ${CSS_VARS.SECONDARY} 0%, ${CSS_VARS.SECONDARY} ${
-                  ((contextSize - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE) /
-                    (EXPLANATION_CONFIG.MAX_CONTEXT_SIZE - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE)) *
-                  100
-                }%, ${CSS_VARS.NEUTRAL} ${
-                  ((contextSize - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE) /
-                    (EXPLANATION_CONFIG.MAX_CONTEXT_SIZE - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE)) *
-                  100
-                }%, ${CSS_VARS.NEUTRAL} 100%)`,
-              }}
-            />
-            <div className="flex justify-between text-[10px] mt-0.5" style={{ color: '#9ca3af' }}>
-              <span>{EXPLANATION_CONFIG.MIN_CONTEXT_SIZE}</span>
-              <span>{EXPLANATION_CONFIG.MAX_CONTEXT_SIZE}</span>
+          {/* 説明モード選択 */}
+          <div className="mb-4">
+            <div className="flex flex-wrap gap-2 mb-2">
+              {Object.entries(EXPLANATION_MODE_CONFIG).map(([modeKey, config]) => {
+                const isActive = mode === modeKey;
+                return (
+                  <button
+                    key={modeKey}
+                    onClick={() => setMode(modeKey as ExplanationMode)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105 active:scale-95 border"
+                    style={{
+                      backgroundColor: isActive
+                        ? CSS_VARS.PRIMARY
+                        : `color-mix(in srgb, ${CSS_VARS.NEUTRAL} 50%, transparent)`,
+                      borderColor: isActive ? CSS_VARS.PRIMARY : CSS_VARS.NEUTRAL,
+                      color: isActive ? '#ffffff' : '#4b5563',
+                      fontWeight: isActive ? '700' : '500',
+                    }}
+                    title={config.description}
+                  >
+                    {config.icon} {config.label}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* コンテキストサイズ調整（展開可能） */}
+            <div>
+              <button
+                onClick={() => setContextSizeExpanded(!contextSizeExpanded)}
+                className="text-xs font-medium transition-all hover:scale-105 flex items-center gap-1"
+                style={{ color: CSS_VARS.SECONDARY }}
+              >
+                ⚙️ コンテキスト: {contextSize}文
+                <span style={{
+                  transform: contextSizeExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 200ms',
+                  display: 'inline-block'
+                }}>
+                  ▼
+                </span>
+              </button>
+
+              {contextSizeExpanded && (
+                <div className="mt-2">
+                  <input
+                    type="range"
+                    min={EXPLANATION_CONFIG.MIN_CONTEXT_SIZE}
+                    max={EXPLANATION_CONFIG.MAX_CONTEXT_SIZE}
+                    value={contextSize}
+                    onChange={(e) => setContextSize(parseInt(e.target.value, 10))}
+                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, ${CSS_VARS.SECONDARY} 0%, ${CSS_VARS.SECONDARY} ${
+                        ((contextSize - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE) /
+                          (EXPLANATION_CONFIG.MAX_CONTEXT_SIZE - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE)) *
+                        100
+                      }%, ${CSS_VARS.NEUTRAL} ${
+                        ((contextSize - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE) /
+                          (EXPLANATION_CONFIG.MAX_CONTEXT_SIZE - EXPLANATION_CONFIG.MIN_CONTEXT_SIZE)) *
+                        100
+                      }%, ${CSS_VARS.NEUTRAL} 100%)`,
+                    }}
+                  />
+                  <div className="flex justify-between text-[10px] mt-0.5" style={{ color: '#9ca3af' }}>
+                    <span>{EXPLANATION_CONFIG.MIN_CONTEXT_SIZE}</span>
+                    <span>{EXPLANATION_CONFIG.MAX_CONTEXT_SIZE}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -317,7 +380,7 @@ export default function ExplanationSidebar({
               borderColor: CSS_VARS.PRIMARY,
             }}
           >
-            <h3 className="text-sm font-bold mb-3" style={{ color: CSS_VARS.PRIMARY }}>
+            <h3 className="text-xs font-bold mb-3" style={{ color: CSS_VARS.PRIMARY }}>
               AI による説明
             </h3>
 

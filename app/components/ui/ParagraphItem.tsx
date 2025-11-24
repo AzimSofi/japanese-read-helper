@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
+import BookImage from "@/app/components/ui/BookImage";
 import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
@@ -16,6 +17,7 @@ interface ParagraphItemProps {
   onSentenceClick?: (sentence: string) => void;
   fontSize: number;
   lineHeight: number;
+  imageMap?: Record<string, string>; // Map from original names to renamed files
 }
 
 const ParagraphItem: React.FC<ParagraphItemProps> = ({
@@ -28,6 +30,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   onSentenceClick,
   fontSize,
   lineHeight,
+  imageMap,
 }) => {
   const [loading, setLoading] = useState(false);
 
@@ -51,6 +54,44 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     } finally {
       setLoading(false);
     }
+  };
+
+  // 画像プレースホルダーを検出
+  const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/g;
+  const hasImage = IMAGE_PATTERN.test(text);
+
+  // テキストと画像を分割して処理
+  const parseContentWithImages = (content: string) => {
+    const parts: Array<{ type: 'text' | 'image'; content: string }> = [];
+    let lastIndex = 0;
+    const regex = /\[IMAGE:([^\]]+)\]/g;
+    let match;
+
+    while ((match = regex.exec(content)) !== null) {
+      // 画像の前のテキスト
+      if (match.index > lastIndex) {
+        const textBefore = content.substring(lastIndex, match.index);
+        if (textBefore.trim()) {
+          parts.push({ type: 'text', content: textBefore });
+        }
+      }
+
+      // 画像プレースホルダー
+      const imageName = match[1];
+      parts.push({ type: 'image', content: imageName });
+
+      lastIndex = regex.lastIndex;
+    }
+
+    // 画像の後のテキスト
+    if (lastIndex < content.length) {
+      const textAfter = content.substring(lastIndex);
+      if (textAfter.trim()) {
+        parts.push({ type: 'text', content: textAfter });
+      }
+    }
+
+    return parts;
   };
 
   // 文を区切り文字で分割
@@ -115,6 +156,48 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     );
   };
 
+  // 画像を含むコンテンツをレンダリング
+  const renderContentWithImages = () => {
+    if (!hasImage) {
+      // 画像がない場合は通常のテキストレンダリング
+      return (
+        <div className="paragraph-text whitespace-pre-wrap">
+          {renderTextWithFurigana(text, true)}
+        </div>
+      );
+    }
+
+    // 画像がある場合はパーツごとにレンダリング
+    const parts = parseContentWithImages(text);
+
+    return (
+      <div className="paragraph-content">
+        {parts.map((part, index) => {
+          if (part.type === 'text') {
+            return (
+              <div key={index} className="paragraph-text whitespace-pre-wrap">
+                {renderTextWithFurigana(part.content, true)}
+              </div>
+            );
+          } else {
+            // 画像のパスを構築 - imageMapで実際のファイル名を検索
+            const originalName = part.content;
+            const actualFileName = imageMap?.[originalName] || imageMap?.[`image/${originalName}`] || originalName;
+            const imagePath = `/${fileName}/images/${actualFileName}`;
+            return (
+              <BookImage
+                key={index}
+                fileName={actualFileName}
+                imagePath={imagePath}
+                altText={`Illustration from ${fileName}`}
+              />
+            );
+          }
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="flex paragraph-item relative" id={id}>
       <div
@@ -126,9 +209,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
           lineHeight: lineHeight,
         }}
       >
-        <div className="paragraph-text whitespace-pre-wrap">
-          {renderTextWithFurigana(text, true)}
-        </div>
+        {renderContentWithImages()}
       </div>
 
       <form onSubmit={handleBookmarkClick}>
