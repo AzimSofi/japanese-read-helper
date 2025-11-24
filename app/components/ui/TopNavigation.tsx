@@ -9,7 +9,7 @@
 import { useEffect, useState } from 'react';
 import { useTextFileList } from '@/app/hooks/useTextFileList';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import { CSS_VARS, STORAGE_KEYS } from '@/lib/constants';
+import { CSS_VARS, STORAGE_KEYS, API_ROUTES } from '@/lib/constants';
 
 export default function TopNavigation() {
   const router = useRouter();
@@ -373,7 +373,7 @@ export default function TopNavigation() {
               </a>
               <button
                 onClick={async () => {
-                  await fetch('/api/auth/logout', { method: 'POST' });
+                  await fetch(API_ROUTES.AUTH_LOGOUT, { method: 'POST' });
                   window.location.href = '/login';
                 }}
                 className="px-4 py-2 rounded-lg border font-medium shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95"
@@ -735,7 +735,7 @@ export default function TopNavigation() {
                 </a>
                 <button
                   onClick={async () => {
-                    await fetch('/api/auth/logout', { method: 'POST' });
+                    await fetch(API_ROUTES.AUTH_LOGOUT, { method: 'POST' });
                     window.location.href = '/login';
                   }}
                   className="block w-full px-4 py-3 rounded-lg border font-medium shadow-sm transition-all active:scale-95 text-center text-sm"

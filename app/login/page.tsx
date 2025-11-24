@@ -2,7 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { CSS_VARS } from '@/lib/constants';
+import { CSS_VARS, API_ROUTES } from '@/lib/constants';
 
 export default function LoginPage() {
   const [password, setPassword] = useState('');
@@ -17,7 +17,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch(API_ROUTES.AUTH_LOGIN, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
