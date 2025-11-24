@@ -1,0 +1,12 @@
+# EPUB to Text with Furigana Converter - Python Dependencies
+
+# EPUB parsing
+ebooklib>=0.18
+
+# HTML parsing
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+
+# Japanese morphological analysis for furigana generation
+mecab-python3>=1.0.6
+unidic-lite>=1.0.8
