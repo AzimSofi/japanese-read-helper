@@ -8,8 +8,6 @@ import { getBookmark } from '@/lib/db/bookQueries';
 import { DEFAULT_FILE_NAME } from '@/lib/constants';
 import type { BookmarkResponse } from '@/lib/types';
 
-export const runtime = 'edge';
-
 // Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
 
