@@ -21,11 +21,11 @@ Set \`ADMIN_API_KEY\` in your \`.env.local\` file.
 
 ## Workflow
 
-1. **Upload Text Entry**: POST \`/api/admin/text-entries\` with fileName and content
-2. **Set Bookmark** (optional): POST \`/api/admin/bookmarks\` with fileName and bookmarkText
-3. **Bulk Upload**: POST \`/api/admin/bulk-seed\` with array of entries
+1. **Upload Text Entry**: POST \`/api/admin?action=text-entries\` with fileName and content
+2. **Set Bookmark** (optional): POST \`/api/admin?action=bookmarks\` with fileName and bookmarkText
+3. **Bulk Upload**: POST \`/api/admin?action=bulk-seed\` with array of entries
 
-Bookmarks are automatically initialized with empty strings when text entries are created.
+The \`/api/admin\` endpoint uses action-based routing with query parameters. Bookmarks are automatically initialized with empty strings when text entries are created.
     `,
     contact: {
       name: 'Japanese Read Helper',
