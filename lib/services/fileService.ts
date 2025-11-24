@@ -44,21 +44,39 @@ export function getBookmarkFilePath(directory: string = ''): string {
  * publicディレクトリからテキストファイルを読み込む
  * @param fileName - ファイル名（.txt拡張子なし）
  * @returns ファイルの内容（文字列）、ファイルが存在しない場合は空文字列
+ *
+ * Supports both old flat structure (directory/file.txt)
+ * and new nested structure (directory/file/file.txt)
  */
 export async function readTextFile(fileName: string): Promise<string> {
-  const filePath = getPublicFilePath(`${fileName}.txt`);
+  // Try old flat structure first
+  const flatPath = getPublicFilePath(`${fileName}.txt`);
+
   try {
-    console.log(`readTextFile: 読み込み開始 filePath="${filePath}"`);
-    const content = await fs.readFile(filePath, 'utf8');
-    console.log(`readTextFile: 読み込み成功 length=${content.length}`);
+    console.log(`readTextFile: 読み込み開始 (flat) filePath="${flatPath}"`);
+    const content = await fs.readFile(flatPath, 'utf8');
+    console.log(`readTextFile: 読み込み成功 (flat) length=${content.length}`);
     return content;
   } catch (error) {
-    console.error(`ファイル ${fileName} の読み込み中にエラーが発生しました:`, error);
-    console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
-    if (error instanceof Error && 'code' in error) {
-      console.error('エラーコード:', (error as NodeJS.ErrnoException).code);
+    // If flat structure fails, try new nested structure
+    // Extract the base filename from the path (last segment)
+    const parts = fileName.split('/');
+    const baseFileName = parts[parts.length - 1];
+    const nestedPath = getPublicFilePath(`${fileName}/${baseFileName}.txt`);
+
+    try {
+      console.log(`readTextFile: 読み込み開始 (nested) filePath="${nestedPath}"`);
+      const content = await fs.readFile(nestedPath, 'utf8');
+      console.log(`readTextFile: 読み込み成功 (nested) length=${content.length}`);
+      return content;
+    } catch (nestedError) {
+      console.error(`ファイル ${fileName} の読み込み中にエラーが発生しました (both structures tried):`, nestedError);
+      console.error('エラー詳細:', nestedError instanceof Error ? nestedError.message : String(nestedError));
+      if (nestedError instanceof Error && 'code' in nestedError) {
+        console.error('エラーコード:', (nestedError as NodeJS.ErrnoException).code);
+      }
+      return '';
     }
-    return '';
   }
 }
 
@@ -232,10 +250,29 @@ export async function listTextFilesInDirectory(directory: string = ''): Promise<
 
   try {
     const entries = await fs.readdir(dirPath, { withFileTypes: true });
-    return entries
-      .filter(entry => entry.isFile() && entry.name.endsWith('.txt'))
-      .map(entry => entry.name.replace('.txt', ''))
-      .sort();
+    const files: string[] = [];
+
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        // Look for .txt file inside book directory (new structure)
+        const bookDir = path.join(dirPath, entry.name);
+        try {
+          const bookFiles = await fs.readdir(bookDir);
+          const txtFile = bookFiles.find(f => f.endsWith('.txt'));
+          if (txtFile) {
+            files.push(txtFile.replace('.txt', ''));
+          }
+        } catch {
+          // Skip directories that can't be read
+          continue;
+        }
+      } else if (entry.isFile() && entry.name.endsWith('.txt')) {
+        // Also support old flat structure for backward compatibility
+        files.push(entry.name.replace('.txt', ''));
+      }
+    }
+
+    return files.sort();
   } catch (error) {
     console.error(`ディレクトリ ${directory || 'root'} 内のテキストファイルのリスト取得中にエラーが発生しました:`, error);
     return [];

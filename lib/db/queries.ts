@@ -276,8 +276,15 @@ export async function getAllTextEntries(): Promise<{
       filesByDirectory[dir].push(fileName);
     });
 
+    // Custom sort: prioritize bookv2-furigana, then alphabetical
+    const directories = Array.from(directoriesSet).sort((a, b) => {
+      if (a === 'bookv2-furigana') return -1;
+      if (b === 'bookv2-furigana') return 1;
+      return a.localeCompare(b);
+    });
+
     return {
-      directories: Array.from(directoriesSet).sort(),
+      directories,
       filesByDirectory,
     };
   } catch (error) {
@@ -304,6 +311,103 @@ export async function getTextEntriesInDirectory(
     return rows.map((row) => row.file_name);
   } catch (error) {
     console.error('Error fetching text entries in directory:', error);
+    throw error;
+  }
+}
+
+/**
+ * Clean up text entries for files that no longer exist
+ * Similar to cleanupBookmarks but for text entries
+ */
+export async function cleanupTextEntries(
+  existingFileNames: string[],
+  directory: string = 'public'
+): Promise<number> {
+  try {
+    const result = await sql`
+      DELETE FROM text_entries
+      WHERE directory = ${directory}
+      AND file_name != ALL(${existingFileNames})
+      RETURNING id
+    `;
+
+    const rows = normalizeResult(result);
+    return rows.length;
+  } catch (error) {
+    console.error('Error cleaning up text entries:', error);
+    throw error;
+  }
+}
+
+/**
+ * Sync text entries with filesystem
+ * @param autoAdd - If true, automatically add new files from filesystem
+ * @returns {removed: number, added: number}
+ */
+export async function syncTextEntries(
+  autoAdd: boolean = false
+): Promise<{ removed: number; added: number }> {
+  try {
+    // Import fileService dynamically to avoid circular dependencies
+    const { listTextFiles, readTextFile } = await import('@/lib/services/fileService');
+
+    // Get all files from filesystem
+    const { directories, filesByDirectory } = await listTextFiles();
+
+    let totalRemoved = 0;
+    let totalAdded = 0;
+
+    // Process each directory
+    for (const directory of directories) {
+      const filesInDir = filesByDirectory[directory] || [];
+
+      // Remove entries for deleted files
+      const removed = await cleanupTextEntries(filesInDir, directory);
+      totalRemoved += removed;
+
+      // Optionally add new files from filesystem
+      if (autoAdd) {
+        // Get existing entries in this directory
+        const existingFiles = await getTextEntriesInDirectory(directory);
+        const existingSet = new Set(existingFiles);
+
+        // Add missing files
+        for (const fileName of filesInDir) {
+          if (!existingSet.has(fileName)) {
+            const filePath = directory ? `${directory}/${fileName}` : fileName;
+            const content = await readTextFile(filePath);
+            if (content) {
+              await upsertTextEntry(fileName, content, directory);
+              totalAdded++;
+              console.log(`Added new text entry: ${directory}/${fileName}`);
+            }
+          }
+        }
+      }
+    }
+
+    return { removed: totalRemoved, added: totalAdded };
+  } catch (error) {
+    console.error('Error syncing text entries:', error);
+    throw error;
+  }
+}
+
+/**
+ * Reset all text entries (nuclear option)
+ * Drops all entries from the database
+ */
+export async function resetTextEntries(): Promise<number> {
+  try {
+    const result = await sql`
+      DELETE FROM text_entries
+      RETURNING id
+    `;
+
+    const rows = normalizeResult(result);
+    return rows.length;
+  } catch (error) {
+    console.error('Error resetting text entries:', error);
     throw error;
   }
 }

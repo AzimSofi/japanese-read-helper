@@ -1,11 +1,14 @@
 /**
  * ブックマークデータを更新するためのAPIルート
- * Now uses Vercel Postgres database instead of file system
+ * Now uses Prisma with PostgreSQL database
  */
 
 import { NextResponse } from 'next/server';
-import { upsertBookmark } from '@/lib/db/queries';
+import { upsertBookmark } from '@/lib/db/bookQueries';
 import type { BookmarkRequest, WriteResponse } from '@/lib/types';
+
+// Mark as dynamic to prevent static generation during build
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<NextResponse<WriteResponse>> {
   if (request.headers.get('content-type') !== 'application/json') {
@@ -33,14 +36,13 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       );
     }
 
-    // Split fileName into directory and file parts
-    // e.g., "bookv1-rephrase/readable-code" -> directory: "bookv1-rephrase", file: "readable-code"
+    // Extract just the filename without directory prefix
+    // e.g., "bookv1-rephrase/readable-code" -> "readable-code"
     const parts = target.split('/');
-    const directory = parts.length > 1 ? parts[0] : 'public';
     const file = parts.length > 1 ? parts.slice(1).join('/') : target;
 
     console.log(`ブックマーク保存: fileName="${target}", content length=${content.length}`);
-    await upsertBookmark(file, content, directory);
+    await upsertBookmark(file, content);
     console.log(`ブックマーク保存成功: fileName="${target}"`);
 
     return NextResponse.json({ success: true, message: 'ブックマークを更新しました' });
