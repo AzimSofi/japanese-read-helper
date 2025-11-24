@@ -1,10 +1,15 @@
 {
   "functions": {
     "app/api/gemini-api/route.tsx": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
     },
     "app/api/write-public-txt-ai/route.ts": {
-      "maxDuration": 60
+      "maxDuration": 60,
+      "memory": 1024
+    },
+    "app/api/**/route.{ts,tsx}": {
+      "memory": 512
     }
   }
 }
