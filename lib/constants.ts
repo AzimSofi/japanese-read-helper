@@ -71,9 +71,9 @@ export const API_ROUTES = {
   LIST_TEXT_FILES: '/api/list-text-files',
   EXPLAIN_SENTENCE: '/api/explain-sentence',
   VOCABULARY: '/api/vocabulary',
-  AUTH_LOGIN: '/api/auth/login',
-  AUTH_LOGOUT: '/api/auth/logout',
-  AUTH_SESSION: '/api/auth/session',
+  AUTH_LOGIN: '/api/auth?action=login',
+  AUTH_LOGOUT: '/api/auth?action=logout',
+  AUTH_SESSION: '/api/auth?action=session',
   // Text entries management
   TEXT_ENTRIES: '/api/text-entries',
   TEXT_ENTRIES_SYNC: '/api/text-entries/sync',
