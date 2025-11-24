@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { verifySession } from '@/lib/auth/session';
 
+export const runtime = 'edge';
+
 export async function GET() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get('session');
