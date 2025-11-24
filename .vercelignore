@@ -1,0 +1,6 @@
+# Exclude Next.js cache from deployment
+.next/cache
+
+# Exclude development files
+scripts/
+node_modules/.cache
