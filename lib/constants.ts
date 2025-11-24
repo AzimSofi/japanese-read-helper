@@ -14,7 +14,8 @@ export const DEFAULT_TEXT_FILES = {
 } as const;
 
 // デフォルト値（サブディレクトリ対応）
-export const DEFAULT_FILE_NAME = 'bookv1-rephrase/readable-code';
+// Note: No default file is set. App auto-redirects to first available file.
+export const DEFAULT_FILE_NAME = null;
 export const DEFAULT_DROPDOWN_STATE = false;
 
 // テキスト処理
@@ -69,6 +70,14 @@ export const API_ROUTES = {
   WRITE_BOOKMARK: '/api/write-bookmark',
   LIST_TEXT_FILES: '/api/list-text-files',
   EXPLAIN_SENTENCE: '/api/explain-sentence',
+  VOCABULARY: '/api/vocabulary',
+  AUTH_LOGIN: '/api/auth/login',
+  AUTH_LOGOUT: '/api/auth/logout',
+  AUTH_SESSION: '/api/auth/session',
+  // Text entries management
+  TEXT_ENTRIES: '/api/text-entries',
+  TEXT_ENTRIES_SYNC: '/api/text-entries/sync',
+  TEXT_ENTRIES_RESET: '/api/text-entries/reset',
 } as const;
 
 // ページルート
@@ -79,6 +88,8 @@ export const PAGE_ROUTES = {
   OCR: '/ocr',
   VISUAL_NOVEL: '/visual-novel',
   BOOK_READER: '/book-reader',
+  VOCABULARY: '/vocabulary',
+  LOGIN: '/login',
 } as const;
 
 // 文説明機能の設定
@@ -88,7 +99,49 @@ export const EXPLANATION_CONFIG = {
   DEFAULT_CONTEXT_SIZE: 50,
   CACHE_KEY_PREFIX: 'explanation_',
   SENTENCE_DELIMITERS: ['。', '！', '？'],
+  CONTEXT_SIZE_EXPANDED_DEFAULT: false,
 } as const;
+
+// 説明モードの設定
+export const EXPLANATION_MODES = {
+  QUICK: 'quick',           // 簡潔
+  STORY: 'story',           // 物語
+  NUANCE: 'nuance',         // 詳細
+  SPEAKER: 'speaker',       // 話者
+  NARRATIVE: 'narrative',   // 文体
+} as const;
+
+export type ExplanationMode = typeof EXPLANATION_MODES[keyof typeof EXPLANATION_MODES];
+
+export const EXPLANATION_MODE_CONFIG = {
+  [EXPLANATION_MODES.QUICK]: {
+    label: '簡潔',
+    icon: '🎯',
+    description: '短く要点のみ',
+  },
+  [EXPLANATION_MODES.STORY]: {
+    label: '物語',
+    icon: '📖',
+    description: '物語の流れと感想',
+  },
+  [EXPLANATION_MODES.NUANCE]: {
+    label: '詳細',
+    icon: '🔍',
+    description: 'ニュアンス分析',
+  },
+  [EXPLANATION_MODES.SPEAKER]: {
+    label: '話者',
+    icon: '👥',
+    description: '登場人物の特定',
+  },
+  [EXPLANATION_MODES.NARRATIVE]: {
+    label: '文体',
+    icon: '📝',
+    description: '文章構造の分析',
+  },
+} as const;
+
+export const DEFAULT_EXPLANATION_MODE = EXPLANATION_MODES.QUICK;
 
 // 読書ページの設定
 export const READER_CONFIG = {
@@ -112,8 +165,11 @@ export const STORAGE_KEYS = {
   FURIGANA_ENABLED: 'furigana_enabled',
   EXPLANATION_CONTEXT_SIZE: 'explanation_context_size',
   EXPLANATION_CACHE: 'explanation_cache',
+  EXPLANATION_MODE: 'explanation_mode',
+  CONTEXT_SIZE_EXPANDED: 'context_size_expanded',
   READER_FONT_SIZE: 'reader_font_size',
   READER_LINE_HEIGHT: 'reader_line_height',
+  VOCABULARY_MODE: 'vocabulary_mode',
 } as const;
 
 // カラーパレット
