@@ -207,7 +207,7 @@ export default function ExplanationSidebar({
   const renderMarkdown = (text: string): string => {
     // 振り仮名を削除してからマークダウンをパース
     const textWithoutFurigana = stripFurigana(text);
-    return marked.parse(textWithoutFurigana) as string;
+    return marked.parseSync(textWithoutFurigana);
   };
 
   return (

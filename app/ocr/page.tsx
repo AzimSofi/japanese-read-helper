@@ -91,11 +91,11 @@ export default function Home() {
               保存
             </button>
             {/* <p className="border p-2 my-1">
-              {marked.parse(response) || "no response"}
+              {marked.parseSync(response) || "no response"}
             </p> */}
             <div className="w-1/2 response" style={{ lineHeight: "2rem" }}>
               <div
-                dangerouslySetInnerHTML={{ __html: marked.parse(response) }}
+                dangerouslySetInnerHTML={{ __html: marked.parseSync(response) }}
               />
             </div>
           </div>
