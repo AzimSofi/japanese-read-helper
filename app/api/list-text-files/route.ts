@@ -7,8 +7,6 @@ import { NextResponse } from 'next/server';
 import { getAllTextEntries, initializeBookmarksForFiles } from '@/lib/db/queries';
 import type { TextFileListResponse } from '@/lib/types';
 
-export const runtime = 'edge';
-
 export async function GET(): Promise<NextResponse<TextFileListResponse>> {
   try {
     // Get all text files from database

@@ -8,8 +8,6 @@ import { getTextEntry } from '@/lib/db/queries';
 import { DEFAULT_FILE_NAME } from '@/lib/constants';
 import type { TextResponse } from '@/lib/types';
 
-export const runtime = 'edge';
-
 export async function GET(request: Request): Promise<NextResponse<TextResponse>> {
   try {
     const { searchParams } = new URL(request.url);

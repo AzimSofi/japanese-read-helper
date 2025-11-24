@@ -2,8 +2,6 @@ import { sql } from '@/lib/db/connection';
 import { NextResponse } from 'next/server';
 import { CREATE_TABLES_SQL } from '@/lib/db/schema';
 
-export const runtime = 'edge';
-
 /**
  * Initialize database tables
  * Call this endpoint once after setting up Vercel Postgres
