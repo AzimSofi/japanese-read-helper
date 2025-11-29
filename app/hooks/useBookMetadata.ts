@@ -56,14 +56,14 @@ export function useBookMetadata(
         const map: ImageMap = {};
 
         data.images?.forEach((image) => {
-          // Strip "image/" prefix from originalName if present
-          const originalName = image.originalName.replace(/^image\//, '');
+          // Strip "image/" or "images/" prefix from originalName if present
+          const originalName = image.originalName.replace(/^images?\//, '');
 
           // Map original name → renamed filename
           map[originalName] = image.fileName;
 
-          // Also add mapping with "image/" prefix for backward compatibility
-          if (image.originalName.startsWith('image/')) {
+          // Also add mapping with original path for backward compatibility
+          if (image.originalName.startsWith('image/') || image.originalName.startsWith('images/')) {
             map[image.originalName] = image.fileName;
           }
         });

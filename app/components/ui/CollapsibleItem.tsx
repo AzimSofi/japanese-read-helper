@@ -495,17 +495,19 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
         </button> 
       </form>
-      <span onClick={toggleOpen} className="cursor-pointer select-none"
-        style={{
-            marginLeft: '0.35rem',
-            marginTop: '1.3rem',
-            background: "none",
-            border: "none",
-            padding: 0,
-        }}
-      >
-        {isOpen ? <ChevronUp /> : <ChevronDown />}
-      </span>
+      {subItems.length > 0 && (
+        <span onClick={toggleOpen} className="cursor-pointer select-none"
+          style={{
+              marginLeft: '0.35rem',
+              marginTop: '1.3rem',
+              background: "none",
+              border: "none",
+              padding: 0,
+          }}
+        >
+          {isOpen ? <ChevronUp /> : <ChevronDown />}
+        </span>
+      )}
 
     </div>
   );
