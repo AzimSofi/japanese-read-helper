@@ -73,6 +73,7 @@ public/**/*.txt
 public/**/bookmark.json
 public/**/temp.json
 public/**/images/
+public/bookv2-furigana/*
 
 # Keep directory structure with .gitkeep files
 !public/**/.gitkeep
