@@ -1,15 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
 import { parseMarkdown } from "@/lib/utils/markdownParser";
 import { useEffect, useState, useMemo, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
-import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
 import VocabularySaveDialog from "@/app/components/ui/VocabularySaveDialog";
 import Pagination from "@/app/components/ui/Pagination";
-import TTSPlayerBar from "@/app/components/ui/TTSPlayerBar";
 import { useTTSPlayer } from "@/app/hooks/useTTS";
+
+// Lazy load heavy components - only load when needed
+const ExplanationSidebar = dynamic(
+  () => import("@/app/components/ui/ExplanationSidebar"),
+  { ssr: false }
+);
+const TTSPlayerBar = dynamic(
+  () => import("@/app/components/ui/TTSPlayerBar"),
+  { ssr: false }
+);
 import { DEFAULT_DROPDOWN_STATE, CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, PAGINATION_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 import { useBookMetadata } from "@/app/hooks/useBookMetadata";
