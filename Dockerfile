@@ -48,4 +48,5 @@ EXPOSE 3333
 ENV PORT=3333
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Limit V8 heap to 256MB for 512MB Lightsail instance
+CMD ["node", "--max-old-space-size=256", "server.js"]
