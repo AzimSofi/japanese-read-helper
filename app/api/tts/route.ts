@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
-import { TextToSpeechClient } from "@google-cloud/text-to-speech";
 import { TTS_CONFIG } from "@/lib/constants";
 import type { TTSRequest, TTSResponse } from "@/lib/types";
 import { cleanTextForTTS } from "@/lib/utils/ttsTextCleaner";
 
-// Google Cloud TTS クライアント（認証情報は環境変数から自動取得）
-let ttsClient: TextToSpeechClient | null = null;
+// Type import only - actual module loaded lazily
+import type { TextToSpeechClient as TTSClientType } from "@google-cloud/text-to-speech";
 
-function getTTSClient(): TextToSpeechClient {
+// Google Cloud TTS クライアント - lazy loaded to save memory
+// The SDK is ~10MB and only loads when TTS is actually used
+let ttsClient: TTSClientType | null = null;
+
+async function getTTSClient(): Promise<TTSClientType> {
   if (!ttsClient) {
-    // GOOGLE_APPLICATION_CREDENTIALS 環境変数から認証情報を読み込む
-    // または GOOGLE_CLOUD_PROJECT と API キーを使用
+    // Dynamically import the heavy Google Cloud SDK only when needed
+    const { TextToSpeechClient } = await import("@google-cloud/text-to-speech");
     ttsClient = new TextToSpeechClient();
   }
   return ttsClient;
@@ -51,7 +54,7 @@ export async function POST(request: Request) {
       ? TTS_CONFIG.VOICES.MALE
       : TTS_CONFIG.VOICES.FEMALE;
 
-    const client = getTTSClient();
+    const client = await getTTSClient();
 
     const [response] = await client.synthesizeSpeech({
       input: { text: cleanedText },
