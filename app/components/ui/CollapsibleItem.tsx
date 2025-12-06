@@ -6,6 +6,7 @@ import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import ChevronUp from "@/app/components/icons/ChevronUp";
 import ChevronDown from "@/app/components/icons/ChevronDown";
 import BookImage from "@/app/components/ui/BookImage";
+import TTSButton from "@/app/components/ui/TTSButton";
 import { useSearchParams } from "next/navigation";
 import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
@@ -26,6 +27,8 @@ interface CollapsibleItemProps {
     sentence: string;
     paragraphText: string;
   }) => void;
+  /** 長押し時に連続再生を開始するコールバック */
+  onStartContinuousPlay?: () => void;
 }
 
 const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
@@ -40,6 +43,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   bookDirectory,
   bookFileName,
   onVocabularySelect,
+  onStartContinuousPlay,
 }) => {
   const searchParams = useSearchParams();
   const directoryParam = searchParams.get("directory");
@@ -475,14 +479,24 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           </div>
         )}
       </div>
+      {/* TTS Button */}
+      <div
+        style={{
+          position: "absolute",
+          marginLeft: '0.5rem',
+          marginTop: '0.1rem',
+        }}
+      >
+        <TTSButton text={head} onLongPress={onStartContinuousPlay} />
+      </div>
+      {/* Bookmark Button */}
       <form onSubmit={handleSubmit}>
         <button
-          // onClick={() => console.log("Bookmark機能は未実装")}
           disabled={loading}
           type="submit"
           style={{
             position: "absolute",
-            marginLeft: '0.5rem',
+            marginLeft: '2rem',
             marginTop: '0.3rem',
             background: "none",
             border: "none",
@@ -493,13 +507,13 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           aria-label="Bookmark"
         >
           {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
-        </button> 
+        </button>
       </form>
       {subItems.length > 0 && (
         <span onClick={toggleOpen} className="cursor-pointer select-none"
           style={{
               marginLeft: '0.35rem',
-              marginTop: '1.3rem',
+              marginTop: '1.5rem',
               background: "none",
               border: "none",
               padding: 0,
