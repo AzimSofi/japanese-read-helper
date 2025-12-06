@@ -50,8 +50,8 @@ export const MARKDOWN_PATTERNS = {
 export const FURIGANA_PATTERNS = {
   // 漢字[ふりがな]形式
   BRACKET_PATTERN: /(.+?)\[(.+?)\]/g,
-  // HTML rubyタグ形式
-  RUBY_PATTERN: /<ruby>(.+?)<rt>(.+?)<\/rt><\/ruby>/g,
+  // HTML rubyタグ形式（<rb>タグあり/なし両対応）
+  RUBY_PATTERN: /<ruby>(?:<rb>)?(.+?)(?:<\/rb>)?<rt>(.+?)<\/rt><\/ruby>/g,
 } as const;
 
 // 辞書解析パターン
@@ -78,6 +78,8 @@ export const API_ROUTES = {
   TEXT_ENTRIES: '/api/text-entries',
   TEXT_ENTRIES_SYNC: '/api/text-entries/sync',
   TEXT_ENTRIES_RESET: '/api/text-entries/reset',
+  // TTS
+  TTS: '/api/tts',
 } as const;
 
 // ページルート
@@ -170,7 +172,29 @@ export const STORAGE_KEYS = {
   READER_FONT_SIZE: 'reader_font_size',
   READER_LINE_HEIGHT: 'reader_line_height',
   VOCABULARY_MODE: 'vocabulary_mode',
+  // TTS設定
+  TTS_SPEED: 'tts_speed',
+  TTS_VOICE_GENDER: 'tts_voice_gender',
+  TTS_ENABLED: 'tts_enabled',
+  TTS_LAST_POSITION: 'tts_last_position', // {fileName}_{directory}
 } as const;
+
+// TTS（Text-to-Speech）設定
+export const TTS_CONFIG = {
+  MIN_SPEED: 0.5,
+  MAX_SPEED: 2.0,
+  DEFAULT_SPEED: 1.0,
+  SPEED_STEP: 0.1,
+  DEFAULT_VOICE_GENDER: 'FEMALE' as const,
+  // Google Cloud TTS日本語音声
+  VOICES: {
+    FEMALE: 'ja-JP-Neural2-B',
+    MALE: 'ja-JP-Neural2-C',
+  },
+  LANGUAGE_CODE: 'ja-JP',
+} as const;
+
+export type TTSVoiceGender = 'FEMALE' | 'MALE';
 
 // カラーパレット
 export const COLORS = {
