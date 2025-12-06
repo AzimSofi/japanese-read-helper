@@ -1,10 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
 import { NextResponse } from "next/server";
+import { getAIClient } from "@/lib/geminiService";
+
+// 5MB limit to prevent OOM on 512MB Lightsail instance
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const startTime = Date.now();
 
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  const ai = getAIClient();
   let response;
 
   console.log(`[${new Date().toISOString()}] リクエスト受信。経過時間: ${Date.now() - startTime}ms`);
@@ -29,6 +32,14 @@ export async function POST(request: Request) {
 
     const imageFile = formData.get("image") as File;
     if (imageFile) {
+      // Validate image size to prevent OOM
+      if (imageFile.size > MAX_IMAGE_SIZE) {
+        return NextResponse.json(
+          { response: "", message: "画像が大きすぎます。最大5MBまでです。" },
+          { status: 413 }
+        );
+      }
+
       const imageArrayBuffer = await imageFile.arrayBuffer();
       const base64ImageData = Buffer.from(imageArrayBuffer).toString("base64");
       console.log(`[${new Date().toISOString()}] 画像を処理しました。経過時間: ${Date.now() - startTime}ms`);

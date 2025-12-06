@@ -19,8 +19,11 @@ const globalForPrisma = global as unknown as {
 };
 
 // Create connection pool (reuse in development)
+// Optimized for 512MB Lightsail instance - minimal pool
 const pool = globalForPrisma.pool || new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
+  max: 3, // Match postgres pool
+  idleTimeoutMillis: 5000,
 });
 if (process.env.NODE_ENV !== 'production') globalForPrisma.pool = pool;
 

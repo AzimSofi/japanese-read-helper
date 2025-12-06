@@ -1,4 +1,22 @@
+// Note: This file exports both client-safe constants (ai_instructions_*)
+// and server-only functions (getAIClient, generateGeminiContent).
+// The server-only functions should only be imported in API routes.
+
 import { GoogleGenAI } from "@google/genai";
+
+// Singleton instance - reuse across requests to reduce memory churn
+let aiClient: GoogleGenAI | null = null;
+
+/**
+ * Get the singleton AI client instance.
+ * SERVER-ONLY: Only import this in API routes, not client components.
+ */
+export function getAIClient(): GoogleGenAI {
+  if (!aiClient) {
+    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  }
+  return aiClient;
+}
 
 export const ai_instructions_picture = 
 `
@@ -199,12 +217,12 @@ export const ai_instructions_narrative =
 export const ai_instructions_explanation = ai_instructions_story;
 
 export async function generateGeminiContent(prompt_post: string, ai_model: string): Promise<string> {
-    const ai = new GoogleGenAI({apiKey: process.env.GEMINI_API_KEY});
+    const ai = getAIClient();
 
     const response = await ai.models.generateContent({
         model: ai_model,
         contents: prompt_post,
       });
-      
+
     return response.text || "";
 }

@@ -61,15 +61,17 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
     }
 
     // Process each chunk with AI
-    let combinedAiResponse = '';
+    // Use array + join instead of string concatenation for better memory efficiency
+    const aiResponses: string[] = [];
     for (const chunk of textChunks) {
       const chunkText = chunk.join('\n');
       const aiResponse = await generateGeminiContent(
         ai_instructions + chunkText,
         AI_MODELS.GEMINI_FLASH
       );
-      combinedAiResponse += aiResponse;
+      aiResponses.push(aiResponse);
     }
+    const combinedAiResponse = aiResponses.join('');
 
     // Split fileName into directory and file parts
     // e.g., "temp/text" -> directory: "temp", file: "text"
