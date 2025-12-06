@@ -37,6 +37,8 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/lib/generated/prisma ./lib/generated/prisma
+# Copy @swc/helpers that standalone build sometimes misses
+COPY --from=builder /app/node_modules/@swc ./node_modules/@swc
 
 # Set ownership
 RUN chown -R nextjs:nodejs /app
