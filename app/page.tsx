@@ -8,6 +8,8 @@ import Sidebar from "@/app/components/ui/Sidebar";
 import ExplanationSidebar from "@/app/components/ui/ExplanationSidebar";
 import VocabularySaveDialog from "@/app/components/ui/VocabularySaveDialog";
 import Pagination from "@/app/components/ui/Pagination";
+import TTSPlayerBar from "@/app/components/ui/TTSPlayerBar";
+import { useTTSPlayer } from "@/app/hooks/useTTS";
 import { DEFAULT_DROPDOWN_STATE, CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, PAGINATION_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 import { useBookMetadata } from "@/app/hooks/useBookMetadata";
@@ -84,6 +86,39 @@ function HomeContent({
 
   // Book metadata and image mapping
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
+
+  // TTS用のアイテムリスト（parsedDataから取得するがメモ化は別途）
+  const ttsItems = useMemo(() => {
+    if (!inputText) return [];
+    const items = parseMarkdown(inputText);
+    return items.map(item => item.head);
+  }, [inputText]);
+
+  // TTS連続再生フック
+  const ttsPlayer = useTTSPlayer({
+    items: ttsItems,
+    fileName: fileNameParam || undefined,
+    directory: directoryParam || undefined,
+    onItemChange: useCallback((index: number) => {
+      // 再生中のアイテムがあるページに自動ナビゲート
+      const targetPage = Math.floor(index / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+      setCurrentPage(prev => {
+        if (targetPage !== prev) {
+          // URLも更新
+          const params = new URLSearchParams(searchParamsString);
+          params.set('page', targetPage.toString());
+          router.replace(`/?${params.toString()}`, { scroll: false });
+          return targetPage;
+        }
+        return prev;
+      });
+    }, [searchParamsString, router]),
+  });
+
+  // CollapsibleItemから連続再生を開始するハンドラー
+  const handleStartContinuousPlay = useCallback((globalIndex: number) => {
+    ttsPlayer.playItemContinuous(globalIndex);
+  }, [ttsPlayer]);
 
   const exampleText = `
   <膨大な資料を短時間で読み解くための 「仮説」と「異常値」>>大量の資料を短い時間で理解するために使う
@@ -444,11 +479,13 @@ function HomeContent({
       {parsedData.paginatedItems.map((item, index) => {
         // 改行を削除して比較（複数行ヘッダー対応）
         const isBookmarked = bookmarkText && normalizeForComparison(item.head).includes(normalizeForComparison(bookmarkText));
+        // グローバルインデックス（全アイテム中の位置）
+        const globalIndex = (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE + index;
 
         return (
           <CollapsibleItem
             {...(isBookmarked ? { id: "bookmark" } : {})}
-            key={(currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE + index}
+            key={globalIndex}
             head={item.head}
             subItems={item.subItems}
             initialDropdownState={dropdownAlwaysOpenState}
@@ -459,6 +496,7 @@ function HomeContent({
             imageMap={imageMap}
             bookDirectory={directoryParam || ""}
             bookFileName={fileNameParam || ""}
+            onStartContinuousPlay={() => handleStartContinuousPlay(globalIndex)}
           />
         );
       })}
@@ -470,6 +508,9 @@ function HomeContent({
         onPageChange={handlePageChange}
         maxButtons={PAGINATION_CONFIG.MAX_PAGE_BUTTONS}
       />
+
+      {/* TTS連続再生バー */}
+      <TTSPlayerBar player={ttsPlayer} />
     </div>
   );
 }

@@ -183,3 +183,31 @@ export interface VocabularyResponse {
   entry?: VocabularyEntry;
   message: string;
 }
+
+// TTS（Text-to-Speech）型
+export interface TTSRequest {
+  text: string;
+  speed?: number;
+  voiceGender?: import('./constants').TTSVoiceGender;
+}
+
+export interface TTSResponse {
+  audioContent: string; // base64エンコードされた音声データ
+  message: string;
+}
+
+export interface TTSState {
+  isPlaying: boolean;
+  isPaused: boolean;
+  isLoading: boolean;
+  currentIndex: number; // 連続再生時の現在位置
+  speed: number;
+  voiceGender: import('./constants').TTSVoiceGender;
+}
+
+export interface TTSPlaybackPosition {
+  fileName: string;
+  directory: string;
+  itemIndex: number;
+  timestamp: number;
+}
