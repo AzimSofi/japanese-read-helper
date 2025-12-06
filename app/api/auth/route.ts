@@ -72,9 +72,12 @@ async function handleLogin(request: Request) {
       success: true
     });
 
+    // COOKIE_SECURE=false allows HTTP in production (e.g., before SSL setup)
+    const isSecure = process.env.COOKIE_SECURE !== 'false' && process.env.NODE_ENV === 'production';
+
     response.cookies.set('session', sessionToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: isSecure,
       sameSite: 'lax',
       maxAge: 60 * 60 * 24 * 7 // 7 days
     });
