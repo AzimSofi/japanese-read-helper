@@ -9,6 +9,7 @@ services:
       - DATABASE_URL=postgresql://postgres:${DB_PASSWORD:-securepassword}@db:5432/japanese_helper
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_APPLICATION_CREDENTIALS=${GOOGLE_APPLICATION_CREDENTIALS:-}
+      - AUTH_PASSWORD_HASH=${AUTH_PASSWORD_HASH}
       - NODE_ENV=production
     ports:
       - "3333:3333"
