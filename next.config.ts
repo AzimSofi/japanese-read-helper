@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Standalone output for Docker deployment
+  output: 'standalone',
+
   webpack: (config, { isServer }) => {
     // Exclude scripts directory from being watched
     config.watchOptions = {
@@ -24,7 +26,7 @@ const nextConfig: NextConfig = {
   },
 
   // Prevent Prisma from being bundled multiple times in serverless functions
-  serverComponentsExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
+  serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
 };
 
 export default nextConfig;
