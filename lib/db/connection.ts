@@ -17,14 +17,27 @@ if (!connectionString) {
 }
 
 // Create postgres connection
-const sql = postgres(connectionString, {
-  // Connection pool settings
-  max: 10, // Maximum connections
-  idle_timeout: 20, // Close idle connections after 20 seconds
-  connect_timeout: 30, // Fail after 30 seconds if can't connect
-}) as unknown as SqlClient;
+// Optimized for 512MB Lightsail instance - minimal pool to save memory
+const postgresClient = postgres(connectionString, {
+  max: 3, // REDUCED from 10 - each connection ~5MB
+  idle_timeout: 5, // Close idle connections quickly
+  connect_timeout: 10,
+  max_lifetime: 60 * 2, // 2 minute max - cycle connections
+});
 
-console.log('🔌 Database: Connected to PostgreSQL');
+// Cast to SqlClient for type compatibility
+const sql = postgresClient as unknown as SqlClient;
+
+console.log('🔌 Database: Connected to PostgreSQL (pool: 3)');
+
+// Graceful shutdown - use the original client for cleanup
+if (typeof process !== 'undefined') {
+  process.on('SIGTERM', async () => {
+    console.log('🔌 Shutting down database connections...');
+    await postgresClient.end();
+    process.exit(0);
+  });
+}
 
 // Export the configured database client
 export { sql };

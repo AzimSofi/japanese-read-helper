@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { GoogleGenAI } from "@google/genai";
 import {
+  getAIClient,
   ai_instructions_quick,
   ai_instructions_story,
   ai_instructions_nuance,
@@ -54,8 +54,8 @@ ${sentence}`
 
 ${sentence}`;
 
-    // Gemini APIを呼び出し
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    // Gemini APIを呼び出し (singleton client)
+    const ai = getAIClient();
 
     const aiCallStartTime = Date.now();
     const response = await ai.models.generateContent({
