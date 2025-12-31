@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAIClient } from "@/lib/geminiService";
+import { getAIClient } from "@/lib/ai";
 
 // 5MB limit to prevent OOM on 512MB Lightsail instance
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;

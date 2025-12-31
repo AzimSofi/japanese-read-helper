@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { generateGeminiContent, ai_instructions } from '@/lib/geminiService';
+import { generateGeminiContent, ai_instructions } from '@/lib/ai';
 import { upsertTextEntry } from '@/lib/db/queries';
 import { DEFAULT_TEXT_FILES, MAX_CHUNK_SIZE, AI_MODELS } from '@/lib/constants';
 import type { TextRequest, WriteResponse } from '@/lib/types';

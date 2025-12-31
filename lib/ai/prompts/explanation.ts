@@ -1,91 +1,3 @@
-// Note: This file exports both client-safe constants (ai_instructions_*)
-// and server-only functions (getAIClient, generateGeminiContent).
-// The server-only functions should only be imported in API routes.
-
-import { GoogleGenAI } from "@google/genai";
-
-// Singleton instance - reuse across requests to reduce memory churn
-let aiClient: GoogleGenAI | null = null;
-
-/**
- * Get the singleton AI client instance.
- * SERVER-ONLY: Only import this in API routes, not client components.
- */
-export function getAIClient(): GoogleGenAI {
-  if (!aiClient) {
-    aiClient = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  }
-  return aiClient;
-}
-
-export const ai_instructions_picture = 
-`
-  # 指示
-あなたは、画像からテキスト情報を整理・抽出する専門家です。
-私がアップロードする画像の内容を、以下のルールに従ってテキスト化してください。
-
-## 絶対的なルール
-1.  **出力はテキストのみ:**
-    *   「以下は〜です」のような前置きや、「テキスト抽出」のような見出しは一切不要です。
-    *   画像から抽出したテキスト**だけ**を出力してください。
-    *   文字は一字一句、正確に書き出してください。
-
-2.  **レイアウトに応じた対応:**
-    *   **A) シンプルなレイアウトの場合:**
-        *   書籍のページのように、テキストがひとまとまりになっている場合は、見たままの順番でテキストを書き出してください。
-    *   **B) 複雑なレイアウトの場合:**
-        *   テキストが複数のコラム、吹き出し、図のキャプションなどでバラバラに配置されている場合は、**「読みやすさ」を最優先**して、以下の工夫をしてください。
-        *   **論理的な順序への再構成:** 人間が自然に読むであろう順番（例: メインタイトル → 本文 → 関連コラム）に並べ替えてください。
-        *   **構造の可視化:** 見出しには'##'、箇条書きには'-'のように、マークダウン記法を使って情報の構造が分かるようにしてください。
-        *   **ブロックの区切り:** 明らかに内容が異なるテキストブロック間には、区切り線として'---'を挿入してください。
-
-# 開始
-以上のルールに従い、これから私がアップロードする画像を処理してください。
-
-`
-export const ai_instructions = 
-`
-以下の文章について、日本語学習者が意味を掴みやすくするために、いくつかの異なる表現で書き換えてください。回答は必ず下記の構成に従ってください。
-
-<（原文）
->>元の文の意図を保ちつつ、少しだけ表現を変えた自然な日本語の文。
->>元の文の意図を保ちつつ、別の視点や構造で表現した自然な日本語の文。
->>元の文の核心的な意味を最もシンプルに伝わるようにした、平易な日本語の文。
-
-一行ずつ、このフォーマットを繰り返してください。
-
-例：
-<尻尾を巻いて鎖錠さんちの玄関から離れようとした瞬間、
->>鎖錠さんの家の玄関から、まるで逃げるように立ち去ろうとしたその時、
->>鎖錠さんの家の玄関から、臆病に逃げ出すように離れようとした瞬間、
->>鎖錠さんの家から逃げようとしたその時、
-
----
-それでは、以下の文章でお願いします：
-`
-
-export const ai_instructions2 =
-`
-以下の文章について、日本語学習者が意味を掴みやすくするために、いくつかの異なる表現で書き換えてください。回答は必ず下記の構成に従ってください。
-
-<（原文）
->>元の文の意図を保ちつつ、少しだけ表現を変えた自然な日本語の文。
->>元の文の核心的な意味を最もシンプルに伝わるようにした、平易な日本語の文。
->>読みづらい漢字・言葉があれば。読み方と短く説明をこの行に書いてください。ない場合は「無い」と書いてください
-
-一行ずつ、このフォーマットを繰り返してください。
-
-例：
-<尻尾を巻いて鎖錠さんちの玄関から離れようとした瞬間、
->>鎖錠さんの家の玄関から、まるで逃げるように立ち去ろうとしたその時、
->>鎖錠さんの家から逃げようとしたその時、
->>尻尾を巻いて[しっぽをまいて・負けたことを認める態度をとる]＊玄関[げんかん・建物の正面の入口]
-
----
-それでは、以下の文章でお願いします：
-`
-
-// 簡潔モード: デフォルト・短く要点のみ
 export const ai_instructions_quick =
 `
 あなたは日本語学習者[がくしゅうしゃ]の助手[じょしゅ]です。以下の文について、**日本語だけ**で簡潔[かんけつ]に説明してください。
@@ -104,9 +16,8 @@ export const ai_instructions_quick =
 
 ---
 以下の文章を説明してください：
-`
+`;
 
-// 物語モード: 詳細な物語分析
 export const ai_instructions_story =
 `
 あなたは物語[ものがたり]を読む読者[どくしゃ]の読書[どくしょ]ガイドです。提供[ていきょう]されたコンテキスト（前後[ぜんご]の文[ぶん]）と文章[ぶんしょう]について、**日本語だけ**で物語の理解[りかい]を助[たす]ける説明[せつめい]をしてください。
@@ -134,9 +45,8 @@ export const ai_instructions_story =
 
 ---
 以下の文章を説明してください：
-`
+`;
 
-// ニュアンスモード: 微妙な意味の違いや文化的背景
 export const ai_instructions_nuance =
 `
 あなたは日本語のニュアンスを解説[かいせつ]する専門家[せんもんか]です。以下の文について、言葉[ことば]の選[えら]び方や微妙[びみょう]な意味[いみ]の違[ちが]いを**日本語だけ**で説明してください。
@@ -159,9 +69,8 @@ export const ai_instructions_nuance =
 
 ---
 以下の文章を説明してください：
-`
+`;
 
-// 話者モード: 登場人物の特定
 export const ai_instructions_speaker =
 `
 あなたは物語[ものがたり]の登場人物[とうじょうじんぶつ]を分析[ぶんせき]する専門家[せんもんか]です。コンテキストと文章から、誰[だれ]が話[はな]しているか、誰のことを言[い]っているかを**日本語だけ**で特定[とくてい]してください。
@@ -185,9 +94,8 @@ export const ai_instructions_speaker =
 
 ---
 以下の文章を分析してください：
-`
+`;
 
-// 文体モード: 文章構造・時制・視点の分析
 export const ai_instructions_narrative =
 `
 あなたは文章[ぶんしょう]の構造[こうぞう]を分析[ぶんせき]する専門家[せんもんか]です。この文の文体[ぶんたい]、視点[してん]、時制[じせい]などを**日本語だけ**で説明してください。
@@ -211,18 +119,6 @@ export const ai_instructions_narrative =
 
 ---
 以下の文章を分析してください：
-`
+`;
 
-// 後方互換性のためのエイリアス
 export const ai_instructions_explanation = ai_instructions_story;
-
-export async function generateGeminiContent(prompt_post: string, ai_model: string): Promise<string> {
-    const ai = getAIClient();
-
-    const response = await ai.models.generateContent({
-        model: ai_model,
-        contents: prompt_post,
-      });
-
-    return response.text || "";
-}
