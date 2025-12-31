@@ -15,7 +15,8 @@
     "db:logs": "docker-compose logs -f db",
     "db:reset": "docker-compose down -v && docker-compose up -d",
     "db:init": "curl http://localhost:3333/api/init-db",
-    "db:migrate": "curl http://localhost:3333/api/migrate-text-files"
+    "db:migrate": "curl http://localhost:3333/api/migrate-text-files",
+    "batch-rephrase": "npx tsx scripts/batch-rephrase.ts"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.4.0",
@@ -23,8 +24,10 @@
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
     "bcryptjs": "^3.0.3",
+    "dotenv": "^16.4.5",
     "jose": "^6.1.2",
     "marked": "^16.1.2",
+    "nanoid": "^5.1.6",
     "next": "15.4.5",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
@@ -48,6 +51,7 @@
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.30.2",
     "tailwindcss": "^4",
+    "tsx": "^4.19.0",
     "typescript": "^5"
   }
 }
