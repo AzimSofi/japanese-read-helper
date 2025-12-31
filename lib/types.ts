@@ -211,3 +211,28 @@ export interface TTSPlaybackPosition {
   itemIndex: number;
   timestamp: number;
 }
+
+// Ruby Registry types (for character name lookups)
+export interface RubyEntry {
+  kanji: string;
+  reading: string;
+  source: 'epub' | 'user';
+  note: string;
+}
+
+export interface RubySuggestion {
+  kanji: string;
+  occurrences: number;
+}
+
+export interface RubyRegistry {
+  bookTitle: string;
+  entries: RubyEntry[];
+  suggestions: RubySuggestion[];
+}
+
+export interface RubyRegistryResponse {
+  success: boolean;
+  registry?: RubyRegistry;
+  message: string;
+}

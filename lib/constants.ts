@@ -80,6 +80,8 @@ export const API_ROUTES = {
   TEXT_ENTRIES_RESET: '/api/text-entries/reset',
   // TTS
   TTS: '/api/tts',
+  // Ruby Registry
+  RUBY_REGISTRY: '/api/ruby-registry',
 } as const;
 
 // ページルート
@@ -92,6 +94,7 @@ export const PAGE_ROUTES = {
   BOOK_READER: '/book-reader',
   VOCABULARY: '/vocabulary',
   LOGIN: '/login',
+  RUBY_REGISTRY: '/ruby-registry',
 } as const;
 
 // 文説明機能の設定
@@ -172,6 +175,8 @@ export const STORAGE_KEYS = {
   READER_FONT_SIZE: 'reader_font_size',
   READER_LINE_HEIGHT: 'reader_line_height',
   VOCABULARY_MODE: 'vocabulary_mode',
+  AI_EXPLANATION_ENABLED: 'ai_explanation_enabled',
+  SHOW_REPHRASE: 'show_rephrase',
   // TTS設定
   TTS_SPEED: 'tts_speed',
   TTS_VOICE_GENDER: 'tts_voice_gender',
@@ -214,4 +219,25 @@ export const CSS_VARS = {
   PRIMARY_DARK: 'var(--color-primary-dark)',
   SECONDARY: 'var(--color-secondary)',
   SECONDARY_DARK: 'var(--color-secondary-dark)',
+} as const;
+
+// Minimal Reader Theme
+export const READER_THEME = {
+  SURFACE: '#FFF0DD',
+  SURFACE_MUTED: '#FFF8F0',
+  FAB_BG: '#E2A16F',
+  FAB_ICON: '#FFFFFF',
+  PROGRESS_TRACK: '#D1D3D8',
+  PROGRESS_FILL: '#86B0BD',
+  TRANSITION_FAST: '150ms',
+  TRANSITION_NORMAL: '300ms',
+} as const;
+
+// Library page settings
+export const LIBRARY_CONFIG = {
+  GRID_COLUMNS: {
+    MOBILE: 2,
+    TABLET: 3,
+    DESKTOP: 4,
+  },
 } as const;
