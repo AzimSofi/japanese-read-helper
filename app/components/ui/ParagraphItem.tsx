@@ -183,7 +183,12 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
             // 画像のパスを構築 - imageMapで実際のファイル名を検索
             const originalName = part.content;
             const actualFileName = imageMap?.[originalName] || imageMap?.[`image/${originalName}`] || originalName;
-            const imagePath = `/${fileName}/images/${actualFileName}`;
+            // fileName format is like "bookv2-furigana/book-name/file-name-rephrase"
+            // For rephrase files, strip the "-rephrase" suffix and the file name part
+            // to get the directory path where images are stored
+            const pathParts = fileName?.split('/') || [];
+            const basePath = pathParts.slice(0, -1).join('/'); // Remove file name, keep directory
+            const imagePath = `/${basePath}/images/${actualFileName}`;
             return (
               <BookImage
                 key={index}

@@ -18,6 +18,8 @@ interface CollapsibleItemProps {
   initialDropdownState?: boolean;
   onSubmitSuccess: () => void;
   showFurigana?: boolean;
+  /** AI解説機能の有効/無効（無効時はテキスト選択可能） */
+  aiExplanationEnabled?: boolean;
   onSentenceClick?: (sentence: string) => void;
   imageMap?: Record<string, string>;
   bookDirectory?: string;
@@ -38,6 +40,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   initialDropdownState = false,
   onSubmitSuccess,
   showFurigana = false,
+  aiExplanationEnabled = true,
   onSentenceClick,
   imageMap,
   bookDirectory,
@@ -272,7 +275,8 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
 
   // 振り仮名付きテキストをレンダリング
   const renderTextWithFurigana = (text: string, isClickable: boolean = false) => {
-    if (!isClickable) {
+    // AI解説無効時またはクリック不可の場合は単純なテキストレンダリング
+    if (!isClickable || !aiExplanationEnabled) {
       const segments = parseFurigana(text);
       const html = segmentsToHTML(segments, showFurigana);
       return <span dangerouslySetInnerHTML={{ __html: html }} />;
@@ -379,7 +383,12 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             // 画像のパスを構築 - imageMapで実際のファイル名を検索
             const originalName = part.content;
             const actualFileName = imageMap?.[originalName] || imageMap?.[`image/${originalName}`] || originalName;
-            const imagePath = `/${bookDirectory}/${bookFileName}/images/${actualFileName}`;
+            // For nested directories (e.g., bookv2-furigana/book-name/), bookDirectory already contains the full path
+            // For flat directories (e.g., bookv2-furigana/), we need to add bookFileName
+            const isNestedDirectory = bookDirectory?.includes('/');
+            const imagePath = isNestedDirectory
+              ? `/${bookDirectory}/images/${actualFileName}`
+              : `/${bookDirectory}/${bookFileName?.replace(/-rephrase$/, '')}/images/${actualFileName}`;
 
             return (
               <BookImage
@@ -396,9 +405,9 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   };
 
   return (
-    <div className="flex collapsibleItem" id={id}>
+    <div className="collapsibleItem relative" id={id}>
       <div
-        className="p-2 my-1 w-full transition-all duration-500"
+        className="p-3 my-2 rounded-lg transition-all duration-500"
         style={
           shouldHighlight
             ? {
@@ -412,117 +421,50 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         id="collapsible-item"
         ref={itemRef}
       >
-        <div
-          className={"head-text font-bold text-lg whitespace-pre-wrap"}
-          ref={headRef}
-          onMouseUp={handleTextSelection}
-          style={vocabularyMode ? { userSelect: 'text', cursor: 'text' } : {}}
-        >
-          {renderHeadWithImages()}
-        </div>
-        {/* <div className="ml-4 mt-2">
-          <div className="ml-4 mt-2">
-            {subItems.map((subItem, index) => (
-              <div key={index} className="sub-item-text my-1">
-                {index === 2 ? (
-                  <div className="jisho-output-container bg-gray-50 p-2 rounded">
-                    {Jisho(subItem).map((word, wordIndex) => (
-                      <div
-                        key={wordIndex}
-                        className="jisho-word-entry mb-1 last:mb-0"
-                      >
-                        <ruby>
-                          <span className="font-bold text-blue-700">
-                            {word.kanji}
-                          </span>
-                          <rt>
-                            <span className="text-black">{word.reading}</span>
-                          </rt>
-                        </ruby>
-                        ：<span className="text-green-700">{word.meaning}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  null
-                )}
-              </div>
-            ))}
+        <div className="flex items-start gap-2">
+          <div className="flex-1 min-w-0">
+            <div
+              className={"head-text font-bold text-lg whitespace-pre-wrap"}
+              ref={headRef}
+              onMouseUp={handleTextSelection}
+              style={(vocabularyMode || !aiExplanationEnabled) ? { userSelect: 'text', cursor: 'text' } : {}}
+            >
+              {renderHeadWithImages()}
+            </div>
           </div>
-        </div> */}
+          <div className="flex items-center gap-1 flex-shrink-0 pt-1">
+            <TTSButton text={head} onLongPress={onStartContinuousPlay} />
+            <form onSubmit={handleSubmit} className="inline-flex">
+              <button
+                disabled={loading}
+                type="submit"
+                className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                aria-label="Bookmark"
+              >
+                {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
+              </button>
+            </form>
+            {subItems.length > 0 && (
+              <button
+                onClick={toggleOpen}
+                className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer select-none"
+                aria-label={isOpen ? "Collapse" : "Expand"}
+              >
+                {isOpen ? <ChevronUp /> : <ChevronDown />}
+              </button>
+            )}
+          </div>
+        </div>
         {isOpen && (
           <div className="ml-4 mt-2">
             {subItems.map((subItem, index) => (
               <div key={index} className="sub-item-text my-1">
-                {index === 4
-                  ? /*<div className="jisho-output-container bg-gray-50 p-2 rounded">
-                    {Jisho(subItem).map((word, wordIndex) => (
-                      <div
-                        key={wordIndex}
-                        className="jisho-word-entry mb-1 last:mb-0"
-                      >
-                        <ruby>
-                          <span className="font-bold text-blue-700">
-                            {word.kanji}
-                          </span>
-                          <rt>
-                            <span className="text-black">{word.reading}</span>
-                          </rt>
-                        </ruby>
-                        ：<span className="text-green-700">{word.meaning}</span>
-                      </div>
-                    ))}
-                  </div>*/ ""
-                  : renderTextWithFurigana(subItem, false)}
+                {index === 4 ? "" : renderTextWithFurigana(subItem, false)}
               </div>
             ))}
           </div>
         )}
       </div>
-      {/* TTS Button */}
-      <div
-        style={{
-          position: "absolute",
-          marginLeft: '0.5rem',
-          marginTop: '0.1rem',
-        }}
-      >
-        <TTSButton text={head} onLongPress={onStartContinuousPlay} />
-      </div>
-      {/* Bookmark Button */}
-      <form onSubmit={handleSubmit}>
-        <button
-          disabled={loading}
-          type="submit"
-          style={{
-            position: "absolute",
-            marginLeft: '2rem',
-            marginTop: '0.3rem',
-            background: "none",
-            border: "none",
-            padding: 0,
-            cursor: "pointer"
-          }}
-          className={id === "bookmark" ? 'cursor-pointer' : ''}
-          aria-label="Bookmark"
-        >
-          {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
-        </button>
-      </form>
-      {subItems.length > 0 && (
-        <span onClick={toggleOpen} className="cursor-pointer select-none"
-          style={{
-              marginLeft: '0.35rem',
-              marginTop: '1.5rem',
-              background: "none",
-              border: "none",
-              padding: 0,
-          }}
-        >
-          {isOpen ? <ChevronUp /> : <ChevronDown />}
-        </span>
-      )}
-
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { calculateReadingProgress, ReadingProgress } from '@/lib/utils/progressC
 
 interface UseReadingProgressOptions {
   fileName: string;
+  directory?: string;
   enabled?: boolean;
 }
 
@@ -27,6 +28,7 @@ interface UseReadingProgressReturn {
  */
 export function useReadingProgress({
   fileName,
+  directory,
   enabled = true,
 }: UseReadingProgressOptions): UseReadingProgressReturn {
   // Fetch text content
@@ -34,7 +36,7 @@ export function useReadingProgress({
     text: textContent,
     isLoading: isLoadingText,
     error: textError,
-  } = useTextContent({ fileName, enabled });
+  } = useTextContent({ fileName, directory, enabled });
 
   // Fetch bookmark
   const {

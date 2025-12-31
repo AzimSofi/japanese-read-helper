@@ -26,14 +26,46 @@ export async function GET(request: Request): Promise<NextResponse<TextResponse>>
       );
     }
 
-    // Split fileName into directory and file parts
-    const parts = fileName.split('/');
-    const directory = parts.length > 1 ? parts[0] : 'public';
-    const file = parts.length > 1 ? parts.slice(1).join('/') : fileName;
+    // Support separate directory parameter for nested directories
+    // URL format: /api/read-public-txt?directory=bookv2-furigana/subdir&fileName=file-name
+    // OR legacy: /api/read-public-txt?fileName=dir/file-name
+    let directory = searchParams.get('directory');
+    let file: string;
+    let content = '';
 
-    // Read from database
-    const content = await getTextEntry(file, directory);
-    console.log(`テキストエントリ読み込み (データベース): fileName="${fileName}", length=${content.length}`);
+    if (directory) {
+      // New format: separate directory and fileName
+      file = fileName;
+      content = await getTextEntry(file, directory);
+    } else {
+      // Legacy format: try multiple directory splits (most nested first)
+      // For path "a/b/c", try: (dir="a/b", file="c"), then (dir="a", file="b/c")
+      const parts = fileName.split('/');
+
+      if (parts.length > 1) {
+        // Try from most nested to least nested
+        for (let i = parts.length - 1; i > 0; i--) {
+          const tryDir = parts.slice(0, i).join('/');
+          const tryFile = parts.slice(i).join('/');
+          content = await getTextEntry(tryFile, tryDir);
+          if (content) {
+            directory = tryDir;
+            file = tryFile;
+            console.log(`Found content with directory="${tryDir}", file="${tryFile}"`);
+            break;
+          }
+        }
+      }
+
+      // If still not found, try with default public directory
+      if (!content) {
+        directory = 'public';
+        file = fileName;
+        content = await getTextEntry(file, directory);
+      }
+    }
+
+    console.log(`テキストエントリ読み込み (データベース): fileName="${fileName}", directory="${directory}", length=${content.length}`);
 
     return NextResponse.json({ text: content });
   } catch (error) {

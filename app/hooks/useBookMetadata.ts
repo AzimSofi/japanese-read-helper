@@ -36,8 +36,20 @@ export function useBookMetadata(
       setError(null);
 
       try {
-        // Construct JSON file path (now inside book directory)
-        const jsonPath = `/${directory}/${fileName}/${fileName}.json`;
+        // For rephrase files (ending with -rephrase), use the base book name for metadata
+        // e.g., "book-rephrase" -> "book"
+        const isRephraseFile = fileName.endsWith('-rephrase');
+        const baseFileName = isRephraseFile
+          ? fileName.replace(/-rephrase$/, '')
+          : fileName;
+
+        // Construct JSON file path
+        // For rephrase files in nested directories (e.g., bookv2-furigana/book-name/),
+        // the JSON is in the same directory: /{directory}/{baseFileName}.json
+        // For regular files, it's: /{directory}/{fileName}/{fileName}.json
+        const jsonPath = isRephraseFile
+          ? `/${directory}/${baseFileName}.json`  // Rephrase: JSON is sibling to rephrase file
+          : `/${directory}/${baseFileName}/${baseFileName}.json`;  // Original: JSON is in book subfolder
         const response = await fetch(jsonPath);
 
         if (!response.ok) {
@@ -56,6 +68,10 @@ export function useBookMetadata(
         const map: ImageMap = {};
 
         data.images?.forEach((image) => {
+          if (!image.originalName || !image.fileName) {
+            return;
+          }
+
           // Strip "image/" or "images/" prefix from originalName if present
           const originalName = image.originalName.replace(/^images?\//, '');
 

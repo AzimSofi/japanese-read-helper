@@ -10,6 +10,8 @@ interface SidebarProps {
   fileName?: string | null;
   refreshTrigger?: number;
   onNavigateToBookmark?: () => void;
+  /** ページ内のすべてのヘッダーテキスト（コピー用） */
+  allHeaders?: string[];
 }
 
 export default function Sidebar({
@@ -18,6 +20,7 @@ export default function Sidebar({
   fileName,
   refreshTrigger,
   onNavigateToBookmark,
+  allHeaders = [],
 }: SidebarProps) {
   const { progress, refetch } = useReadingProgress({
     fileName: fileName || '',
@@ -25,6 +28,30 @@ export default function Sidebar({
   });
 
   const [mobileProgressExpanded, setMobileProgressExpanded] = React.useState(false);
+  const [copyFeedback, setCopyFeedback] = React.useState(false);
+  const [isXlScreen, setIsXlScreen] = React.useState(false);
+
+  // Track window width for xl breakpoint (CSS media queries not loading properly)
+  React.useEffect(() => {
+    const checkWidth = () => setIsXlScreen(window.innerWidth >= 1280);
+    checkWidth();
+    window.addEventListener('resize', checkWidth);
+    return () => window.removeEventListener('resize', checkWidth);
+  }, []);
+
+  // ヘッダーテキストをクリップボードにコピー
+  const handleCopyHeaders = async () => {
+    if (allHeaders.length === 0) return;
+
+    try {
+      const textToCopy = allHeaders.join('\n');
+      await navigator.clipboard.writeText(textToCopy);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (error) {
+      console.error('コピーに失敗しました:', error);
+    }
+  };
 
   // ブックマーク更新時にプログレスバーを自動更新
   React.useEffect(() => {
@@ -53,8 +80,9 @@ export default function Sidebar({
 
   return (
     <>
-      {/* デスクトップ：左サイドバー */}
-      <div className="hidden md:flex fixed top-20 left-4 z-40 text-xs flex-col gap-3">
+      {/* デスクトップ：左サイドバー (xl以上のみ表示) */}
+      {isXlScreen && (
+        <div className="fixed top-20 left-4 z-40 text-xs gap-3 flex flex-col">
         {/* 表示/隠す ボタン */}
         <button
           onClick={() => setDropdownAlwaysOpen(!dropdownAlwaysOpen)}
@@ -163,12 +191,36 @@ export default function Sidebar({
         >
           ブックマークへ
         </a>
-      </div>
 
-      {/* モバイル：ボトムバー */}
+        {/* ヘッダーコピー ボタン */}
+        {allHeaders.length > 0 && (
+          <button
+            onClick={handleCopyHeaders}
+            className="px-4 py-2.5 rounded-lg border font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 text-center"
+            style={{
+              backgroundColor: copyFeedback
+                ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`
+                : `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`,
+              borderColor: CSS_VARS.SECONDARY,
+              color: CSS_VARS.SECONDARY,
+            }}
+          >
+            {copyFeedback ? 'コピー済み!' : 'ヘッダーをコピー'}
+          </button>
+        )}
+        </div>
+      )}
+
+      {/* ボトムバー (xl未満の全画面で表示、オーディオプレーヤーの上) */}
+      {!isXlScreen && (
       <div
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 backdrop-blur-sm shadow-2xl border-t"
+        className="backdrop-blur-sm shadow-lg border-t border-b"
         style={{
+          position: 'fixed',
+          bottom: '3.5rem',
+          left: 0,
+          right: 0,
+          zIndex: 40,
           backgroundColor: `color-mix(in srgb, ${CSS_VARS.BASE} 95%, transparent)`,
           borderColor: CSS_VARS.NEUTRAL,
         }}
@@ -298,21 +350,39 @@ export default function Sidebar({
               )}
             </div>
 
-            {/* 右側：ブックマークボタン */}
-            <button
-              onClick={scrollToBookmark}
-              className="px-4 py-2 rounded-lg border font-medium shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
-              style={{
-                backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 20%, transparent)`,
-                borderColor: CSS_VARS.PRIMARY,
-                color: CSS_VARS.PRIMARY,
-              }}
-            >
-              ブックマーク
-            </button>
+            {/* 右側：コピー + ブックマークボタン */}
+            <div className="flex items-center gap-2">
+              {allHeaders.length > 0 && (
+                <button
+                  onClick={handleCopyHeaders}
+                  className="px-3 py-2 rounded-lg border font-medium shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
+                  style={{
+                    backgroundColor: copyFeedback
+                      ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`
+                      : `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`,
+                    borderColor: CSS_VARS.SECONDARY,
+                    color: CSS_VARS.SECONDARY,
+                  }}
+                >
+                  {copyFeedback ? '済' : 'コピー'}
+                </button>
+              )}
+              <button
+                onClick={scrollToBookmark}
+                className="px-4 py-2 rounded-lg border font-medium shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 20%, transparent)`,
+                  borderColor: CSS_VARS.PRIMARY,
+                  color: CSS_VARS.PRIMARY,
+                }}
+              >
+                ブックマーク
+              </button>
+            </div>
           </div>
         </div>
       </div>
+      )}
     </>
   );
 }

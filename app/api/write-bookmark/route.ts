@@ -1,10 +1,10 @@
 /**
  * ブックマークデータを更新するためのAPIルート
- * Now uses Prisma with PostgreSQL database
+ * Uses PostgreSQL database
  */
 
 import { NextResponse } from 'next/server';
-import { upsertBookmark } from '@/lib/db/bookQueries';
+import { upsertBookmark } from '@/lib/db/queries';
 import type { BookmarkRequest, WriteResponse } from '@/lib/types';
 
 // Mark as dynamic to prevent static generation during build
@@ -36,13 +36,14 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       );
     }
 
-    // Extract just the filename without directory prefix
-    // e.g., "bookv1-rephrase/readable-code" -> "readable-code"
+    // Extract directory and filename
+    // e.g., "bookv1-rephrase/readable-code" -> dir="bookv1-rephrase", file="readable-code"
     const parts = target.split('/');
+    const directory = parts.length > 1 ? parts[0] : 'public';
     const file = parts.length > 1 ? parts.slice(1).join('/') : target;
 
     console.log(`ブックマーク保存: fileName="${target}", content length=${content.length}`);
-    await upsertBookmark(file, content);
+    await upsertBookmark(file, content, directory);
     console.log(`ブックマーク保存成功: fileName="${target}"`);
 
     return NextResponse.json({ success: true, message: 'ブックマークを更新しました' });

@@ -72,3 +72,108 @@ rt {
   font-weight: normal;
   font-size: large;
 }
+
+/* Desktop sidebar - hidden by default, shown at xl */
+.desktop-sidebar {
+  display: none;
+}
+
+@media (min-width: 1280px) {
+  .desktop-sidebar {
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+/* Main content container - proper spacing below fixed navbar */
+.main-content {
+  padding-top: 12rem; /* 192px - enough for full navbar */
+}
+
+@media (min-width: 768px) {
+  .main-content {
+    padding-top: 11rem; /* 176px - navbar is slightly smaller on desktop */
+  }
+}
+
+/* Minimal Reader Styles */
+.reader-content {
+  font-family: "Noto Serif JP", serif;
+  font-weight: 400;
+}
+
+.reader-content ruby {
+  ruby-align: center;
+}
+
+.reader-content rt {
+  font-size: 0.5em;
+  color: var(--color-secondary-dark);
+}
+
+/* Range slider styling for settings */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 8px;
+  border-radius: 4px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* FAB animation */
+@keyframes fabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fab-button-animate {
+  animation: fabFadeIn 0.2s ease-out forwards;
+}
+
+/* Library grid animations */
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.library-card {
+  animation: cardFadeIn 0.3s ease-out forwards;
+}

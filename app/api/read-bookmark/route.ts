@@ -1,10 +1,10 @@
 /**
  * ブックマークデータを読み込むためのAPIルート
- * Now uses Prisma with PostgreSQL database
+ * Uses PostgreSQL database
  */
 
 import { NextResponse } from 'next/server';
-import { getBookmark } from '@/lib/db/bookQueries';
+import { getBookmark } from '@/lib/db/queries';
 import { DEFAULT_FILE_NAME } from '@/lib/constants';
 import type { BookmarkResponse } from '@/lib/types';
 
@@ -23,12 +23,13 @@ export async function GET(request: Request): Promise<NextResponse<BookmarkRespon
   }
 
   try {
-    // Extract just the filename without directory prefix
-    // e.g., "bookv1-rephrase/readable-code" -> "readable-code"
+    // Extract directory and filename
+    // e.g., "bookv1-rephrase/readable-code" -> dir="bookv1-rephrase", file="readable-code"
     const parts = fileName.split('/');
+    const directory = parts.length > 1 ? parts[0] : 'public';
     const file = parts.length > 1 ? parts.slice(1).join('/') : fileName;
 
-    const bookmarkContent = await getBookmark(file);
+    const bookmarkContent = await getBookmark(file, directory);
     return NextResponse.json({ text: bookmarkContent });
   } catch (error) {
     console.error('ブックマークの読み込み中にエラーが発生しました:', error);
