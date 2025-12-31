@@ -135,7 +135,9 @@ function ReaderContent({
   const totalItems = useMemo(() => {
     if (!content) return 0;
     if (content.includes('>>')) {
-      return content.split(/(?=<[^>]*>>)/).filter(Boolean).length;
+      // Count lines starting with "< " (heading marker), excluding <ruby> tags
+      const headingCount = (content.match(/^< /gm) || []).length;
+      return headingCount || 1;
     }
     return content.split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN).filter(p => p.trim()).length;
   }, [content]);
