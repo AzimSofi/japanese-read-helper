@@ -29,6 +29,7 @@ export default function TopNavigation() {
 
   const [showFurigana, setShowFurigana] = useState<boolean>(false);
   const [vocabularyMode, setVocabularyMode] = useState<boolean>(false);
+  const [aiExplanationEnabled, setAiExplanationEnabled] = useState<boolean>(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
 
@@ -42,6 +43,10 @@ export default function TopNavigation() {
       const vocabStored = localStorage.getItem(STORAGE_KEYS.VOCABULARY_MODE);
       if (vocabStored !== null) {
         setVocabularyMode(vocabStored === 'true');
+      }
+      const aiExplanationStored = localStorage.getItem(STORAGE_KEYS.AI_EXPLANATION_ENABLED);
+      if (aiExplanationStored !== null) {
+        setAiExplanationEnabled(aiExplanationStored === 'true');
       }
       const collapsedStored = localStorage.getItem('topnav_collapsed');
       if (collapsedStored !== null) {
@@ -81,6 +86,17 @@ export default function TopNavigation() {
       localStorage.setItem(STORAGE_KEYS.VOCABULARY_MODE, newValue.toString());
       // カスタムイベントを発火して他のコンポーネントに通知
       window.dispatchEvent(new CustomEvent('vocabularyModeChanged', { detail: { enabled: newValue } }));
+    }
+  };
+
+  // AI解説機能をトグル（localStorageに保存 + カスタムイベント発火）
+  const toggleAiExplanation = () => {
+    const newValue = !aiExplanationEnabled;
+    setAiExplanationEnabled(newValue);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STORAGE_KEYS.AI_EXPLANATION_ENABLED, newValue.toString());
+      // カスタムイベントを発火して他のコンポーネントに通知
+      window.dispatchEvent(new CustomEvent('aiExplanationChanged', { detail: { enabled: newValue } }));
     }
   };
 
@@ -303,6 +319,21 @@ export default function TopNavigation() {
               {vocabularyMode ? '📝 単語帳 ON' : '単語帳 OFF'}
             </button>
 
+            {/* AI解説トグルボタン */}
+            <button
+              onClick={toggleAiExplanation}
+              className="px-4 py-2 rounded-lg font-medium shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95 border"
+              style={{
+                backgroundColor: aiExplanationEnabled
+                  ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`
+                  : CSS_VARS.NEUTRAL,
+                borderColor: aiExplanationEnabled ? CSS_VARS.SECONDARY : CSS_VARS.NEUTRAL,
+                color: aiExplanationEnabled ? CSS_VARS.SECONDARY : '#6b7280',
+              }}
+            >
+              {aiExplanationEnabled ? '🤖 AI解説 ON' : 'AI解説 OFF'}
+            </button>
+
             {/* ページナビゲーション */}
             <div className="flex items-center gap-2">
               <a
@@ -371,6 +402,20 @@ export default function TopNavigation() {
               >
                 📝 単語帳
               </a>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('toggleRubyLookup'));
+                }}
+                className="px-4 py-2 rounded-lg border font-medium shadow-sm transition-all hover:shadow-md hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`,
+                  borderColor: CSS_VARS.SECONDARY,
+                  color: CSS_VARS.SECONDARY,
+                }}
+                title="Ruby Lookup (Ctrl+K or /)"
+              >
+                Ruby
+              </button>
               <button
                 onClick={async () => {
                   await fetch(API_ROUTES.AUTH_LOGOUT, { method: 'POST' });
@@ -458,6 +503,25 @@ export default function TopNavigation() {
               >
                 <span className="text-sm font-bold">
                   {showFurigana ? 'あ' : 'A'}
+                </span>
+              </button>
+
+              {/* AI解説トグル */}
+              <button
+                onClick={toggleAiExplanation}
+                className="p-2 rounded-lg border shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
+                style={{
+                  backgroundColor: aiExplanationEnabled
+                    ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`
+                    : CSS_VARS.BASE,
+                  borderColor: CSS_VARS.SECONDARY,
+                  color: CSS_VARS.SECONDARY,
+                }}
+                title={aiExplanationEnabled ? 'AI解説 ON' : 'AI解説 OFF'}
+                aria-label={aiExplanationEnabled ? 'AI解説 ON' : 'AI解説 OFF'}
+              >
+                <span className="text-lg">
+                  {aiExplanationEnabled ? '🤖' : '💬'}
                 </span>
               </button>
 
@@ -655,6 +719,24 @@ export default function TopNavigation() {
                 >
                   {vocabularyMode ? '📝 単語帳 ON' : '単語帳 OFF'}
                 </button>
+
+                {/* AI解説トグル */}
+                <button
+                  onClick={() => {
+                    toggleAiExplanation();
+                    closeMobileMenu();
+                  }}
+                  className="w-full px-4 py-3 rounded-lg font-medium shadow-sm transition-all active:scale-95 border text-sm"
+                  style={{
+                    backgroundColor: aiExplanationEnabled
+                      ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`
+                      : CSS_VARS.NEUTRAL,
+                    borderColor: aiExplanationEnabled ? CSS_VARS.SECONDARY : CSS_VARS.NEUTRAL,
+                    color: aiExplanationEnabled ? CSS_VARS.SECONDARY : '#6b7280',
+                  }}
+                >
+                  {aiExplanationEnabled ? '🤖 AI解説 ON' : 'AI解説 OFF'}
+                </button>
               </div>
 
               {/* ページナビゲーションセクション */}
@@ -733,6 +815,20 @@ export default function TopNavigation() {
                 >
                   📝 単語帳
                 </a>
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('toggleRubyLookup'));
+                    closeMobileMenu();
+                  }}
+                  className="block w-full px-4 py-3 rounded-lg border font-medium shadow-sm transition-all active:scale-95 text-center text-sm"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, ${CSS_VARS.SECONDARY} 20%, transparent)`,
+                    borderColor: CSS_VARS.SECONDARY,
+                    color: CSS_VARS.SECONDARY,
+                  }}
+                >
+                  Ruby Lookup
+                </button>
                 <button
                   onClick={async () => {
                     await fetch(API_ROUTES.AUTH_LOGOUT, { method: 'POST' });

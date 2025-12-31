@@ -10,6 +10,7 @@ import type { TextResponse } from '@/lib/types';
 
 interface UseTextContentOptions {
   fileName: string;
+  directory?: string;
   enabled?: boolean;
 }
 
@@ -30,6 +31,7 @@ interface UseTextContentReturn {
  */
 export function useTextContent({
   fileName,
+  directory,
   enabled = true,
 }: UseTextContentOptions): UseTextContentReturn {
   const [text, setText] = useState<string>('');
@@ -46,9 +48,12 @@ export function useTextContent({
     setError(null);
 
     try {
-      const response = await fetch(
-        `${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fileName)}`
-      );
+      // Build URL with optional directory parameter for nested directories
+      let url = `${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fileName)}`;
+      if (directory) {
+        url += `&directory=${encodeURIComponent(directory)}`;
+      }
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error(`テキストの取得に失敗しました: ${response.statusText}`);
