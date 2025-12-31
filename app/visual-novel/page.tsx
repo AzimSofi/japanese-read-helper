@@ -4,7 +4,7 @@ import React from "react";
 import { useState, useCallback } from "react";
 import { parseMarkdown } from "@/lib/utils/markdownParser";
 import CollapsibleItem from "@/app/components/ui/CollapsibleItem";
-import { ai_instructions } from "@/lib/geminiService";
+import { ai_instructions } from "@/lib/ai";
 import { VN_RETRY_CONFIG, AI_MODELS, API_ROUTES, CSS_VARS } from "@/lib/constants";
 
 export default function Home() {
