@@ -38,6 +38,62 @@ export interface TextEntry {
   created_at?: Date;
 }
 
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  file_name: string;
+  text_file_path: string;
+  original_epub_name: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface BookImage {
+  id: string;
+  book_id: string;
+  file_name: string;
+  image_path: string;
+  order_index: number;
+  chapter_name?: string;
+  alt_text?: string;
+  created_at: Date;
+}
+
+export interface ProcessingHistory {
+  id: string;
+  book_id: string;
+  processed_at: Date;
+  filter_mode: string;
+  hiragana_style: string;
+  chapters_count: number;
+  file_size: number;
+  image_count: number;
+}
+
+export interface UserBookmark {
+  id: string;
+  book_id: string;
+  user_id: string;
+  bookmark_text: string;
+  position?: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface VocabularyEntry {
+  id: string;
+  word: string;
+  reading?: string;
+  sentence: string;
+  file_name: string;
+  directory: string;
+  paragraph_text?: string;
+  notes?: string;
+  created_at: Date;
+  updated_at: Date;
+}
+
 /**
  * SQL schema for creating tables
  * Run this in Vercel Postgres dashboard or via migration script
@@ -70,4 +126,75 @@ export const CREATE_TABLES_SQL = `
   -- Create index for faster lookups
   CREATE INDEX IF NOT EXISTS idx_text_entries_file_directory
     ON text_entries(file_name, directory);
+
+  -- Books table (book metadata from EPUB processing)
+  CREATE TABLE IF NOT EXISTS books (
+    id VARCHAR(255) PRIMARY KEY,
+    title VARCHAR(500) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    file_name VARCHAR(255) UNIQUE NOT NULL,
+    text_file_path VARCHAR(500) NOT NULL,
+    original_epub_name VARCHAR(500) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_books_file_name ON books(file_name);
+
+  -- Book images table (images extracted from EPUB)
+  CREATE TABLE IF NOT EXISTS book_images (
+    id VARCHAR(255) PRIMARY KEY,
+    book_id VARCHAR(255) NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    image_path VARCHAR(500) NOT NULL,
+    order_index INT NOT NULL,
+    chapter_name VARCHAR(255),
+    alt_text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_book_images_book_id ON book_images(book_id);
+  CREATE INDEX IF NOT EXISTS idx_book_images_order ON book_images(book_id, order_index);
+
+  -- Processing history table (tracks EPUB processing)
+  CREATE TABLE IF NOT EXISTS processing_history (
+    id VARCHAR(255) PRIMARY KEY,
+    book_id VARCHAR(255) NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    filter_mode VARCHAR(50) NOT NULL,
+    hiragana_style VARCHAR(50) NOT NULL,
+    chapters_count INT NOT NULL,
+    file_size INT NOT NULL,
+    image_count INT DEFAULT 0
+  );
+  CREATE INDEX IF NOT EXISTS idx_processing_history_book_id ON processing_history(book_id);
+  CREATE INDEX IF NOT EXISTS idx_processing_history_processed_at ON processing_history(processed_at);
+
+  -- User bookmarks table (linked to books)
+  CREATE TABLE IF NOT EXISTS user_bookmarks (
+    id VARCHAR(255) PRIMARY KEY,
+    book_id VARCHAR(255) NOT NULL REFERENCES books(id) ON DELETE CASCADE,
+    user_id VARCHAR(255) DEFAULT 'default',
+    bookmark_text TEXT NOT NULL,
+    position INT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(book_id, user_id)
+  );
+  CREATE INDEX IF NOT EXISTS idx_user_bookmarks_book_id ON user_bookmarks(book_id);
+
+  -- Vocabulary entries table (user vocabulary diary)
+  CREATE TABLE IF NOT EXISTS vocabulary_entries (
+    id VARCHAR(255) PRIMARY KEY,
+    word VARCHAR(255) NOT NULL,
+    reading VARCHAR(255),
+    sentence TEXT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    directory VARCHAR(255) NOT NULL,
+    paragraph_text TEXT,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_vocabulary_entries_created_at ON vocabulary_entries(created_at);
+  CREATE INDEX IF NOT EXISTS idx_vocabulary_entries_word ON vocabulary_entries(word);
+  CREATE INDEX IF NOT EXISTS idx_vocabulary_entries_file ON vocabulary_entries(file_name, directory);
 `;

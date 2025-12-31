@@ -1,20 +1,18 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import {
+  getVocabularyEntryById,
+  updateVocabularyEntry,
+  deleteVocabularyEntry,
+} from '@/lib/db/vocabularyQueries.sql';
 
 interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+  params: Promise<{ id: string }>;
 }
 
-// GET /api/vocabulary/[id] - Get a specific vocabulary entry
 export async function GET(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-
-    const entry = await prisma.vocabularyEntry.findUnique({
-      where: { id },
-    });
+    const entry = await getVocabularyEntryById(id);
 
     if (!entry) {
       return NextResponse.json(
@@ -36,23 +34,20 @@ export async function GET(request: Request, { params }: RouteParams) {
   }
 }
 
-// PUT /api/vocabulary/[id] - Update a vocabulary entry (mainly notes)
 export async function PUT(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
     const body = await request.json();
     const { notes, word, reading } = body;
 
-    // Build update data
-    const updateData: Record<string, unknown> = {};
-    if (notes !== undefined) updateData.notes = notes;
-    if (word !== undefined) updateData.word = word;
-    if (reading !== undefined) updateData.reading = reading;
+    const entry = await updateVocabularyEntry(id, { notes, word, reading });
 
-    const entry = await prisma.vocabularyEntry.update({
-      where: { id },
-      data: updateData,
-    });
+    if (!entry) {
+      return NextResponse.json(
+        { success: false, message: 'Vocabulary entry not found' },
+        { status: 404 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -68,14 +63,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
   }
 }
 
-// DELETE /api/vocabulary/[id] - Delete a vocabulary entry
 export async function DELETE(request: Request, { params }: RouteParams) {
   try {
     const { id } = await params;
-
-    await prisma.vocabularyEntry.delete({
-      where: { id },
-    });
+    await deleteVocabularyEntry(id);
 
     return NextResponse.json({
       success: true,

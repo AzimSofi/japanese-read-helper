@@ -1,45 +1,19 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { getVocabularyEntries, createVocabularyEntry } from '@/lib/db/vocabularyQueries.sql';
 
-// GET /api/vocabulary - List all vocabulary entries with optional filters
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const word = searchParams.get('word');
-    const fileName = searchParams.get('fileName');
-    const directory = searchParams.get('directory');
+    const word = searchParams.get('word') || undefined;
+    const fileName = searchParams.get('fileName') || undefined;
+    const directory = searchParams.get('directory') || undefined;
     const today = searchParams.get('today') === 'true';
 
-    // Build filter conditions
-    const where: Record<string, unknown> = {};
-
-    if (word) {
-      where.word = { contains: word };
-    }
-
-    if (fileName) {
-      where.fileName = fileName;
-    }
-
-    if (directory) {
-      where.directory = directory;
-    }
-
-    if (today) {
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date();
-      endOfDay.setHours(23, 59, 59, 999);
-
-      where.createdAt = {
-        gte: startOfDay,
-        lte: endOfDay,
-      };
-    }
-
-    const entries = await prisma.vocabularyEntry.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
+    const entries = await getVocabularyEntries({
+      word,
+      fileName,
+      directory,
+      today,
     });
 
     return NextResponse.json({
@@ -56,13 +30,11 @@ export async function GET(request: Request) {
   }
 }
 
-// POST /api/vocabulary - Create a new vocabulary entry
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { word, reading, sentence, fileName, directory, paragraphText, notes } = body;
 
-    // Validate required fields
     if (!word || !sentence || !fileName || !directory) {
       return NextResponse.json(
         {
@@ -73,16 +45,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const entry = await prisma.vocabularyEntry.create({
-      data: {
-        word,
-        reading: reading || null,
-        sentence,
-        fileName,
-        directory,
-        paragraphText: paragraphText || null,
-        notes: notes || null,
-      },
+    const entry = await createVocabularyEntry({
+      word,
+      reading,
+      sentence,
+      fileName,
+      directory,
+      paragraphText,
+      notes,
     });
 
     return NextResponse.json({

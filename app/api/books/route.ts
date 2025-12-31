@@ -6,39 +6,16 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { getBooks, createBook } from '@/lib/db/bookQueries.sql';
 
-// Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
 
-/**
- * GET /api/books
- *
- * List all books with optional filtering
- */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const fileName = searchParams.get('fileName');
+    const fileName = searchParams.get('fileName') || undefined;
 
-    const books = await prisma.book.findMany({
-      where: fileName ? { fileName } : undefined,
-      include: {
-        images: {
-          orderBy: { orderIndex: 'asc' },
-        },
-        processingHistory: {
-          orderBy: { processedAt: 'desc' },
-          take: 1, // Only get the most recent processing history
-        },
-        userBookmarks: {
-          where: { userId: 'default' }, // For now, just default user
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const books = await getBooks(fileName);
 
     return NextResponse.json({
       books,
@@ -53,34 +30,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-/**
- * POST /api/books
- *
- * Create a new book with metadata from EPUB processing
- *
- * Body:
- * {
- *   title: string;
- *   author: string;
- *   fileName: string;
- *   textFilePath: string;
- *   originalEpubName: string;
- *   processingHistory: {
- *     filterMode: 'all' | 'n3';
- *     hiraganaStyle: 'full' | 'long-vowel';
- *     chaptersCount: number;
- *     fileSize: number;
- *     imageCount: number;
- *   };
- *   images: Array<{
- *     fileName: string;
- *     imagePath: string;
- *     orderIndex: number;
- *     chapterName?: string;
- *     altText?: string;
- *   }>;
- * }
- */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -94,7 +43,6 @@ export async function POST(request: NextRequest) {
       images,
     } = body;
 
-    // Validate required fields
     if (!title || !author || !fileName || !textFilePath || !originalEpubName) {
       return NextResponse.json(
         { error: 'Missing required fields' },
@@ -102,49 +50,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create book with related records in a transaction
-    const book = await prisma.book.create({
-      data: {
-        title,
-        author,
-        fileName,
-        textFilePath,
-        originalEpubName,
-        // Create processing history
-        processingHistory: processingHistory
-          ? {
-              create: {
-                filterMode: processingHistory.filterMode,
-                hiraganaStyle: processingHistory.hiraganaStyle,
-                chaptersCount: processingHistory.chaptersCount,
-                fileSize: processingHistory.fileSize,
-                imageCount: processingHistory.imageCount || 0,
-              },
-            }
-          : undefined,
-        // Create images
-        images: images
-          ? {
-              create: images.map((img: {
-                fileName: string;
-                imagePath: string;
-                orderIndex: number;
-                chapterName?: string;
-                altText?: string;
-              }) => ({
-                fileName: img.fileName,
-                imagePath: img.imagePath,
-                orderIndex: img.orderIndex,
-                chapterName: img.chapterName,
-                altText: img.altText,
-              })),
-            }
-          : undefined,
-      },
-      include: {
-        images: true,
-        processingHistory: true,
-      },
+    const book = await createBook({
+      title,
+      author,
+      fileName,
+      textFilePath,
+      originalEpubName,
+      processingHistory,
+      images,
     });
 
     return NextResponse.json({

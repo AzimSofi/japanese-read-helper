@@ -1,53 +1,19 @@
-/**
- * Individual Book API Routes
- *
- * GET /api/books/[id] - Get a single book by ID
- * PUT /api/books/[id] - Update a book
- * DELETE /api/books/[id] - Delete a book
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { getBookById, updateBook, deleteBook } from '@/lib/db/bookQueries.sql';
 
-// Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-/**
- * GET /api/books/[id]
- *
- * Get a single book with all related data
- */
-export async function GET(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-
-    const book = await prisma.book.findUnique({
-      where: { id },
-      include: {
-        images: {
-          orderBy: { orderIndex: 'asc' },
-        },
-        processingHistory: {
-          orderBy: { processedAt: 'desc' },
-        },
-        userBookmarks: {
-          where: { userId: 'default' },
-        },
-      },
-    });
+    const book = await getBookById(id);
 
     if (!book) {
-      return NextResponse.json(
-        { error: 'Book not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
     return NextResponse.json({ book });
@@ -60,39 +26,21 @@ export async function GET(
   }
 }
 
-/**
- * PUT /api/books/[id]
- *
- * Update a book's metadata
- *
- * Body:
- * {
- *   title?: string;
- *   author?: string;
- *   textFilePath?: string;
- * }
- */
-export async function PUT(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function PUT(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.json();
     const { title, author, textFilePath } = body;
 
-    const book = await prisma.book.update({
-      where: { id },
-      data: {
-        ...(title && { title }),
-        ...(author && { author }),
-        ...(textFilePath && { textFilePath }),
-      },
-      include: {
-        images: true,
-        processingHistory: true,
-      },
+    const book = await updateBook(id, {
+      title,
+      author,
+      text_file_path: textFilePath,
     });
+
+    if (!book) {
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
+    }
 
     return NextResponse.json({
       message: 'Book updated successfully',
@@ -107,21 +55,10 @@ export async function PUT(
   }
 }
 
-/**
- * DELETE /api/books/[id]
- *
- * Delete a book and all related data (cascades to images, history, bookmarks)
- */
-export async function DELETE(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function DELETE(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-
-    await prisma.book.delete({
-      where: { id },
-    });
+    await deleteBook(id);
 
     return NextResponse.json({
       message: 'Book deleted successfully',

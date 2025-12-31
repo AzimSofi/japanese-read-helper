@@ -1,36 +1,16 @@
-/**
- * Book Images API Routes
- *
- * GET /api/books/[id]/images - Get all images for a book
- * POST /api/books/[id]/images - Add a new image to a book
- */
-
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/db/prisma';
+import { getBookById, getBookImages, addBookImage } from '@/lib/db/bookQueries.sql';
 
-// Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
 };
 
-/**
- * GET /api/books/[id]/images
- *
- * Get all images for a specific book
- */
-export async function GET(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function GET(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
-
-    const images = await prisma.bookImage.findMany({
-      where: { bookId: id },
-      orderBy: { orderIndex: 'asc' },
-    });
+    const images = await getBookImages(id);
 
     return NextResponse.json({
       images,
@@ -45,30 +25,12 @@ export async function GET(
   }
 }
 
-/**
- * POST /api/books/[id]/images
- *
- * Add a new image to a book
- *
- * Body:
- * {
- *   fileName: string;
- *   imagePath: string;
- *   orderIndex: number;
- *   chapterName?: string;
- *   altText?: string;
- * }
- */
-export async function POST(
-  request: NextRequest,
-  context: RouteContext
-) {
+export async function POST(request: NextRequest, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.json();
     const { fileName, imagePath, orderIndex, chapterName, altText } = body;
 
-    // Validate required fields
     if (!fileName || !imagePath || orderIndex === undefined) {
       return NextResponse.json(
         { error: 'Missing required fields: fileName, imagePath, orderIndex' },
@@ -76,28 +38,17 @@ export async function POST(
       );
     }
 
-    // Verify book exists
-    const book = await prisma.book.findUnique({
-      where: { id },
-    });
-
+    const book = await getBookById(id);
     if (!book) {
-      return NextResponse.json(
-        { error: 'Book not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Book not found' }, { status: 404 });
     }
 
-    // Create image
-    const image = await prisma.bookImage.create({
-      data: {
-        bookId: id,
-        fileName,
-        imagePath,
-        orderIndex,
-        chapterName,
-        altText,
-      },
+    const image = await addBookImage(id, {
+      fileName,
+      imagePath,
+      orderIndex,
+      chapterName,
+      altText,
     });
 
     return NextResponse.json({
