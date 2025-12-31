@@ -217,7 +217,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
         {renderContentWithImages()}
       </div>
 
-      <form onSubmit={handleBookmarkClick}>
+      <form onSubmit={handleBookmarkClick} onClick={(e) => e.stopPropagation()}>
         <button
           disabled={loading}
           type="submit"

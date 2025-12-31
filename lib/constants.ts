@@ -177,6 +177,7 @@ export const STORAGE_KEYS = {
   VOCABULARY_MODE: 'vocabulary_mode',
   AI_EXPLANATION_ENABLED: 'ai_explanation_enabled',
   SHOW_REPHRASE: 'show_rephrase',
+  STARRED_WORDS: 'starred_words', // Format: starred_words_{directory}_{bookName}
   // TTS設定
   TTS_SPEED: 'tts_speed',
   TTS_VOICE_GENDER: 'tts_voice_gender',
