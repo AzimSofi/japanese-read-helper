@@ -18,9 +18,15 @@ import ReadingContent from './components/ReadingContent';
 import ReaderHeader from './components/ReaderHeader';
 import { useBookMetadata } from '@/app/hooks/useBookMetadata';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
+import { parseMarkdown } from '@/lib/utils/markdownParser';
 
 const ExplanationSidebar = dynamic(
   () => import('@/app/components/ui/ExplanationSidebar'),
+  { ssr: false }
+);
+
+const RubyLookupSidebar = dynamic(
+  () => import('@/app/components/ui/RubyLookupSidebar'),
   { ssr: false }
 );
 
@@ -62,6 +68,7 @@ function ReaderContent({
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [explanationOpen, setExplanationOpen] = useState(false);
+  const [rubyLookupOpen, setRubyLookupOpen] = useState(false);
   const [selectedSentence, setSelectedSentence] = useState('');
   const [sentenceContext, setSentenceContext] = useState('');
 
@@ -95,6 +102,19 @@ function ReaderContent({
       setShowRephrase(isExpanded);
       setDisplayMode(isExpanded ? 'expanded' : 'collapsed');
     }
+  }, []);
+
+  // Keyboard shortcut: Ctrl/Cmd+K to open Ruby Lookup
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        setRubyLookupOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   useEffect(() => {
@@ -146,14 +166,82 @@ function ReaderContent({
   const currentPage = Math.min(Math.max(1, pageParam), totalPages || 1);
   const progress = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
 
+  const currentPageHeaders = useMemo(() => {
+    if (!content) return [];
+
+    let items: { head?: string; text?: string }[] = [];
+    if (content.includes('>>')) {
+      items = parseMarkdown(content);
+    } else {
+      items = content
+        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => ({ text: p }));
+    }
+
+    const start = (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const end = start + PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const pageItems = items.slice(start, end);
+
+    return pageItems.map(item => {
+      const text = item.head || item.text || '';
+      return stripFurigana(text);
+    });
+  }, [content, currentPage]);
+
   const bookmarkPage = useMemo(() => {
     if (!bookmarkText) return null;
+
+    // Check for page-level bookmark (format: page:N)
     const match = bookmarkText.match(/^page:(\d+)$/);
     if (match) {
       return parseInt(match[1], 10);
     }
-    return null;
-  }, [bookmarkText]);
+
+    // For sentence-level bookmarks, find which page contains it
+    if (!content) return null;
+
+    const normalizedBookmark = stripFurigana(bookmarkText).replace(/[\r\n]/g, '').trim();
+    if (!normalizedBookmark) return null;
+
+    let items: { head?: string; text?: string }[] = [];
+    if (content.includes('>>')) {
+      items = parseMarkdown(content);
+    } else {
+      items = content
+        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => ({ text: p }));
+    }
+
+    const itemIndex = items.findIndex(item => {
+      const itemText = item.head || item.text || '';
+      const normalizedItem = stripFurigana(itemText).replace(/[\r\n]/g, '').trim();
+      return normalizedItem === normalizedBookmark;
+    });
+
+    if (itemIndex === -1) return null;
+
+    return Math.floor(itemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+  }, [bookmarkText, content]);
+
+  // Auto-scroll to bookmark element when on the bookmark page
+  useEffect(() => {
+    if (isLoading) return;
+
+    const scrollToBookmark = () => {
+      const bookmarkElement = document.getElementById('bookmark');
+      if (bookmarkElement) {
+        bookmarkElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    };
+
+    // Small delay to ensure content is rendered
+    const timer = setTimeout(scrollToBookmark, 100);
+    return () => clearTimeout(timer);
+  }, [currentPage, isLoading, bookmarkText]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -245,6 +333,19 @@ function ReaderContent({
     }
   };
 
+  const handleGoToBookmark = useCallback(() => {
+    if (!bookmarkPage) return;
+
+    if (currentPage === bookmarkPage) {
+      const bookmarkElement = document.getElementById('bookmark');
+      if (bookmarkElement) {
+        bookmarkElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    } else {
+      handlePageChange(bookmarkPage);
+    }
+  }, [bookmarkPage, currentPage, handlePageChange]);
+
   const handleTapNavigation = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -324,6 +425,7 @@ function ReaderContent({
         onPageChange={handlePageChange}
         onToggleFurigana={handleToggleFurigana}
         onToggleRephrase={handleToggleRephrase}
+        onOpenRubyLookup={() => setRubyLookupOpen(true)}
       />
 
       <main
@@ -386,8 +488,12 @@ function ReaderContent({
         onBookmark={handleBookmark}
         onToggleFurigana={handleToggleFurigana}
         onOpenSettings={() => setSettingsOpen(true)}
+        onGoToBookmark={bookmarkPage ? handleGoToBookmark : undefined}
         isFuriganaEnabled={showFurigana}
         isBookmarked={bookmarkText.includes(`page:${currentPage}`)}
+        bookmarkPage={bookmarkPage}
+        currentPage={currentPage}
+        currentPageHeaders={currentPageHeaders}
       />
 
       <ReaderSettings
@@ -410,6 +516,13 @@ function ReaderContent({
         context={sentenceContext}
         fileName={fullFilePath}
         showFurigana={showFurigana}
+      />
+
+      <RubyLookupSidebar
+        isOpen={rubyLookupOpen}
+        onClose={() => setRubyLookupOpen(false)}
+        directory={directoryParam?.split('/')[0] || ''}
+        bookName={directoryParam?.split('/').slice(1).join('/') || ''}
       />
     </div>
   );
