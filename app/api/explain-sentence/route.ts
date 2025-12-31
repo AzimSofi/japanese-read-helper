@@ -6,7 +6,7 @@ import {
   ai_instructions_nuance,
   ai_instructions_speaker,
   ai_instructions_narrative,
-} from "@/lib/geminiService";
+} from "@/lib/ai";
 import { AI_MODELS, EXPLANATION_MODES } from "@/lib/constants";
 import type { ExplanationRequest, ExplanationResponse } from "@/lib/types";
 

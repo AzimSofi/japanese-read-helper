@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { marked } from "marked";
-import { ai_instructions_picture } from "@/lib/geminiService";
+import { ai_instructions_picture } from "@/lib/ai";
 import { API_ROUTES, AI_MODELS, CSS_VARS } from "@/lib/constants";
 
 export default function Home() {
