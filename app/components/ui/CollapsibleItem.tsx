@@ -434,7 +434,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           </div>
           <div className="flex items-center gap-1 flex-shrink-0 pt-1">
             <TTSButton text={head} onLongPress={onStartContinuousPlay} />
-            <form onSubmit={handleSubmit} className="inline-flex">
+            <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="inline-flex">
               <button
                 disabled={loading}
                 type="submit"

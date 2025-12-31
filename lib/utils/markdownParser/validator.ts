@@ -11,12 +11,20 @@ const DIALOGUE_MARKERS = ['」', '？」', '。」', '！」', '…」'];
 
 /**
  * 行が見出し行かどうかを確認します
+ * HTML ruby/rt タグは除外します（<ruby> や <rt> で始まる行は見出しではない）
  */
 export function isHeadingLine(line: string): boolean {
-  return (
-    line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX) ||
-    line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX_FULLWIDTH)
-  );
+  if (line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX)) {
+    // <ruby> や <rt> タグの場合は見出しではない
+    if (line.startsWith('<ruby>') || line.startsWith('<rt>') || line.startsWith('</')) {
+      return false;
+    }
+    return true;
+  }
+  if (line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX_FULLWIDTH)) {
+    return true;
+  }
+  return false;
 }
 
 /**

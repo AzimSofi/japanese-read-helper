@@ -7,12 +7,17 @@ import { MARKDOWN_PATTERNS } from '@/lib/constants';
 
 /**
  * 行から見出しのプレフィックスを削除します（< または ＜）
+ * HTML ruby/rt タグは除外します
  */
 export function removeHeadingPrefix(line: string): string {
-  if (
-    line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX) ||
-    line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX_FULLWIDTH)
-  ) {
+  if (line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX)) {
+    // <ruby> や <rt> タグの場合はプレフィックスを削除しない
+    if (line.startsWith('<ruby>') || line.startsWith('<rt>') || line.startsWith('</')) {
+      return line;
+    }
+    return line.slice(1);
+  }
+  if (line.startsWith(MARKDOWN_PATTERNS.HEADING_PREFIX_FULLWIDTH)) {
     return line.slice(1);
   }
   return line;

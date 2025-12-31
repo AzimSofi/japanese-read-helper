@@ -15,6 +15,7 @@ interface ReaderHeaderProps {
   onPageChange: (page: number) => void;
   onToggleFurigana: () => void;
   onToggleRephrase: () => void;
+  onOpenRubyLookup: () => void;
 }
 
 export default function ReaderHeader({
@@ -28,6 +29,7 @@ export default function ReaderHeader({
   onPageChange,
   onToggleFurigana,
   onToggleRephrase,
+  onOpenRubyLookup,
 }: ReaderHeaderProps) {
   const router = useRouter();
   const [pageInput, setPageInput] = useState(currentPage.toString());
@@ -155,6 +157,20 @@ export default function ReaderHeader({
               title={showFurigana ? 'Hide furigana' : 'Show furigana'}
             >
               ruby
+            </button>
+
+            <button
+              onClick={onOpenRubyLookup}
+              className="p-2 rounded-lg transition-colors text-xs font-medium"
+              style={{
+                backgroundColor: 'transparent',
+                color: COLORS.SECONDARY_DARK,
+              }}
+              title="Ruby lookup"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </button>
 
             <button

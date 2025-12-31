@@ -84,11 +84,8 @@ export function parseMarkdown(
     let line = splitByLines[i];
     const previousLine = i > 0 ? splitByLines[i - 1] : '';
 
-    // 空行をスキップ（ただし複数行ヘッダー収集中は改行として追加）
+    // 空行をスキップ
     if (line.trim() === '') {
-      if (collectingMultiLineHeader && currentHeadItem) {
-        currentHeadItem.head += '\n';
-      }
       continue;
     }
 
@@ -109,9 +106,9 @@ export function parseMarkdown(
         currentHeadItem.subItems.push(trimmedSubItem);
       }
     }
-    // 複数行ヘッダーの継続
+    // 複数行ヘッダーの継続（改行なしで結合）
     else if (collectingMultiLineHeader && currentHeadItem) {
-      currentHeadItem.head += '\n' + line;
+      currentHeadItem.head += line;
     }
     // 標準的なサブアイテム行（複数行ヘッダー収集中でない場合）
     else if (!collectingMultiLineHeader && isSubItemLine(line)) {

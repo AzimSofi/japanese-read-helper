@@ -106,9 +106,7 @@ export default function ReadingContent({
           const normalizedHead = normalizeForComparison(typedItem.head);
           const normalizedBookmark = normalizeForComparison(bookmarkText);
           const isBookmarked = !!(
-            bookmarkText &&
-            (normalizedHead.includes(normalizedBookmark) ||
-              normalizedBookmark.includes(normalizedHead))
+            bookmarkText && normalizedHead === normalizedBookmark
           );
 
           return (
@@ -139,9 +137,7 @@ export default function ReadingContent({
         const normalizedText = normalizeForComparison(typedItem.text);
         const normalizedBookmark = normalizeForComparison(bookmarkText);
         const isBookmarked = !!(
-          bookmarkText &&
-          (normalizedText.includes(normalizedBookmark) ||
-            normalizedBookmark.includes(normalizedText))
+          bookmarkText && normalizedText === normalizedBookmark
         );
 
         return (
