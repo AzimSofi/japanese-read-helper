@@ -52,6 +52,8 @@ public/image/*
 temp
 .claude
 CLAUDE.md
+.playwright-mcp/
+.history/
 
 # Python
 venv/
@@ -74,6 +76,7 @@ public/**/bookmark.json
 public/**/temp.json
 public/**/images/
 public/bookv2-furigana/*
+public/bookv3-rephrase/*
 
 # Keep directory structure with .gitkeep files
 !public/**/.gitkeep
