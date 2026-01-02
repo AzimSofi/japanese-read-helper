@@ -10,11 +10,15 @@ interface FileListResponse {
   files: string[];
 }
 
+interface BookProgressData {
+  progress: number;
+  totalCharacters: number;
+  bookmarkPage: number | null;
+  totalPages: number;
+}
+
 interface BookProgress {
-  [key: string]: {
-    progress: number;
-    totalCharacters?: number;
-  };
+  [key: string]: BookProgressData;
 }
 
 export default function LibraryGrid() {
@@ -27,23 +31,21 @@ export default function LibraryGrid() {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(API_ROUTES.LIST_TEXT_FILES);
-        if (!response.ok) throw new Error('Failed to load library');
-        const data: FileListResponse = await response.json();
+
+        const [fileResponse, progressResponse] = await Promise.all([
+          fetch(API_ROUTES.LIST_TEXT_FILES),
+          fetch(API_ROUTES.LIBRARY_PROGRESS),
+        ]);
+
+        if (!fileResponse.ok) throw new Error('Failed to load library');
+
+        const data: FileListResponse = await fileResponse.json();
         setFileData(data);
 
-        const progressData: BookProgress = {};
-        for (const dir of data.directories) {
-          const files = data.filesByDirectory[dir] || [];
-          for (const file of files) {
-            const key = `${dir}/${file}`;
-            progressData[key] = {
-              progress: Math.random() * 100,
-              totalCharacters: Math.floor(Math.random() * 50000) + 5000,
-            };
-          }
+        if (progressResponse.ok) {
+          const progressData: BookProgress = await progressResponse.json();
+          setBookProgress(progressData);
         }
-        setBookProgress(progressData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
@@ -113,10 +115,11 @@ export default function LibraryGrid() {
         const files = fileData.filesByDirectory[directory] || [];
         const books = files.map((fileName) => {
           const key = `${directory}/${fileName}`;
-          const progress = bookProgress[key] || { progress: 0 };
+          const progressData = bookProgress[key] || { progress: 0, totalCharacters: 0 };
           return {
             fileName,
-            ...progress,
+            progress: progressData.progress,
+            totalCharacters: progressData.totalCharacters,
           };
         });
 
