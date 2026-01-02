@@ -137,7 +137,10 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
             <span
               key={index}
               dangerouslySetInnerHTML={{ __html: html }}
-              onClick={() => onSentenceClick(sentence)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSentenceClick(sentence);
+              }}
               className="cursor-pointer transition-colors rounded px-1"
               style={{
                 backgroundColor: 'transparent',
