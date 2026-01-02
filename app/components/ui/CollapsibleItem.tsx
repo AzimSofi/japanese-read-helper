@@ -295,7 +295,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             <span
               key={index}
               dangerouslySetInnerHTML={{ __html: html }}
-              onClick={() => !vocabularyMode && onSentenceClick?.(sentence)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!vocabularyMode) onSentenceClick?.(sentence);
+              }}
               className={onSentenceClick && !vocabularyMode ? "cursor-pointer hover:bg-opacity-50 transition-colors rounded px-1" : ""}
               style={
                 onSentenceClick && !vocabularyMode
@@ -446,7 +449,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             </form>
             {subItems.length > 0 && (
               <button
-                onClick={toggleOpen}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleOpen();
+                }}
                 className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer select-none"
                 aria-label={isOpen ? "Collapse" : "Expand"}
               >

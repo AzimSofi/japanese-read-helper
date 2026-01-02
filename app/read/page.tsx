@@ -347,6 +347,12 @@ function ReaderContent({
   }, [bookmarkPage, currentPage, handlePageChange]);
 
   const handleTapNavigation = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement;
+    const interactiveElements = ['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT'];
+    if (interactiveElements.includes(target.tagName)) return;
+
+    if (target.closest('.collapsibleItem') || target.closest('.paragraph-item')) return;
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const width = rect.width;
