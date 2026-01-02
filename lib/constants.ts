@@ -82,6 +82,8 @@ export const API_ROUTES = {
   TTS: '/api/tts',
   // Ruby Registry
   RUBY_REGISTRY: '/api/ruby-registry',
+  // Library
+  LIBRARY_PROGRESS: '/api/library-progress',
 } as const;
 
 // ページルート
