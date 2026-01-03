@@ -30,6 +30,11 @@ const RubyLookupSidebar = dynamic(
   { ssr: false }
 );
 
+const FloatingStickyNotes = dynamic(
+  () => import('./components/FloatingStickyNotes'),
+  { ssr: false }
+);
+
 function SearchParamsReader({
   children,
 }: {
@@ -527,6 +532,11 @@ function ReaderContent({
       <RubyLookupSidebar
         isOpen={rubyLookupOpen}
         onClose={() => setRubyLookupOpen(false)}
+        directory={directoryParam?.split('/')[0] || ''}
+        bookName={directoryParam?.split('/').slice(1).join('/') || ''}
+      />
+
+      <FloatingStickyNotes
         directory={directoryParam?.split('/')[0] || ''}
         bookName={directoryParam?.split('/').slice(1).join('/') || ''}
       />
