@@ -233,11 +233,19 @@ def find_book_directory(epub_path: Path, public_dir: Path) -> Path | None:
 def main():
     script_dir = Path(__file__).parent
     project_root = script_dir.parent
-    temp_dir = project_root / 'temp'
     public_dir = project_root / 'public'
 
-    if not temp_dir.exists():
-        print(f"Error: temp directory not found at {temp_dir}")
+    # Check for dated subdirectory first, then fall back to temp/
+    temp_base = project_root / 'temp'
+    dated_dir = temp_base / '2025-01-02'
+
+    if dated_dir.exists():
+        temp_dir = dated_dir
+        print(f"Using dated directory: {temp_dir}")
+    elif temp_base.exists():
+        temp_dir = temp_base
+    else:
+        print(f"Error: temp directory not found at {temp_base}")
         sys.exit(1)
 
     epub_files = list(temp_dir.glob('*.epub'))
