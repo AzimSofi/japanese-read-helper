@@ -18,6 +18,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { execSync } from 'child_process';
 import { GoogleGenAI } from '@google/genai';
 import * as dotenv from 'dotenv';
 
@@ -120,6 +121,7 @@ interface CLIOptions {
   dryRun: boolean;
   apiUrl: string;
   baseDir: string;
+  rubify: boolean;
 }
 
 // ============================================================================
@@ -466,6 +468,33 @@ function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function addFuriganaToChunk(chunkText: string, outputDir: string): string {
+  const tempInput = path.join(outputDir, 'temp-chunk.txt');
+  const tempOutput = path.join(outputDir, 'temp-chunk-furigana.txt');
+
+  fs.writeFileSync(tempInput, chunkText, 'utf-8');
+
+  try {
+    execSync(`python3 scripts/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
+      cwd: process.cwd(),
+      encoding: 'utf-8',
+      stdio: ['pipe', 'pipe', 'pipe']
+    });
+
+    const result = fs.readFileSync(tempOutput, 'utf-8');
+
+    fs.unlinkSync(tempInput);
+    fs.unlinkSync(tempOutput);
+
+    return result;
+  } catch (error) {
+    console.error(`    Furigana addition failed:`, error);
+    fs.unlinkSync(tempInput);
+    if (fs.existsSync(tempOutput)) fs.unlinkSync(tempOutput);
+    return chunkText;
+  }
+}
+
 function formatDuration(seconds: number): string {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -493,6 +522,7 @@ Options:
   --model <name>    Gemini model (default: gemini-2.0-flash-exp)
   --api-url <url>   App URL for database sync (default: http://localhost:3333)
   --base-dir <dir>  Base directory name in public/ (default: bookv2-furigana)
+  --rubify          Add furigana after each chunk and sync immediately
   --reset           Start fresh, ignore existing progress
   --dry-run         Show chunks without processing
 
@@ -512,6 +542,7 @@ Example:
     dryRun: false,
     apiUrl: 'http://localhost:3333',
     baseDir: 'bookv2-furigana',
+    rubify: false,
   };
 
   // Parse options
@@ -531,6 +562,9 @@ Example:
         break;
       case '--base-dir':
         options.baseDir = args[++i];
+        break;
+      case '--rubify':
+        options.rubify = true;
         break;
       case '--reset':
         options.reset = true;
@@ -571,6 +605,7 @@ Example:
   // Check for existing progress
   const progressPath = getProgressPath(sourceDir, options.bookName);
   const outputPath = getOutputPath(sourceDir, options.bookName);
+  const outputPathFurigana = path.join(sourceDir, `${options.bookName}-rephrase-furigana.txt`);
 
   let progress = options.reset ? null : loadProgress(progressPath);
   let chunks: string[];
@@ -598,6 +633,9 @@ Example:
     console.log(`Delay: ${options.delaySeconds}s (${formatDuration(options.delaySeconds)}) between chunks`);
     console.log(`Model: ${options.model}`);
     console.log(`Database sync: ${options.apiUrl}`);
+    if (options.rubify) {
+      console.log(`Rubify: enabled (adding furigana after each chunk)`);
+    }
 
     const estimatedTime = chunks.length * options.delaySeconds;
     console.log(`Estimated total time: ${formatDuration(estimatedTime)}`);
@@ -665,15 +703,30 @@ Example:
       chunkProgress.completedAt = new Date().toISOString();
       progress.chunks.completed++;
 
-      // Append to output file
+      // Always save the raw rephrase output
       const separator = fs.existsSync(outputPath) ? '\n\n' : '';
       fs.appendFileSync(outputPath, separator + result.response, 'utf-8');
 
+      // Add furigana if --rubify is set
+      let finalText = result.response;
+      let finalOutputPath = outputPath;
+      let finalFileName = `${options.bookName}-rephrase`;
+
+      if (options.rubify) {
+        console.log(`  Adding furigana...`);
+        finalText = addFuriganaToChunk(result.response, sourceDir);
+        finalOutputPath = outputPathFurigana;
+        finalFileName = `${options.bookName}-rephrase-furigana`;
+
+        const furiganaSeparator = fs.existsSync(outputPathFurigana) ? '\n\n' : '';
+        fs.appendFileSync(outputPathFurigana, furiganaSeparator + finalText, 'utf-8');
+        console.log(`  Furigana added!`);
+      }
+
       // Sync to database so users can read immediately
-      const outputFileName = `${options.bookName}-rephrase`;
       const outputDirectory = `${options.baseDir}/${options.bookName}`;
       console.log(`  Syncing to database...`);
-      const synced = await syncToDatabase(options.apiUrl, outputFileName, outputDirectory);
+      const synced = await syncToDatabase(options.apiUrl, finalFileName, outputDirectory);
       if (synced) {
         console.log(`  Database synced! Users can now read the updated content.`);
       } else {
