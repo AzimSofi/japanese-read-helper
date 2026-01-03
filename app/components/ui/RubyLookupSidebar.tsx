@@ -61,6 +61,8 @@ export default function RubyLookupSidebar({
       // Save to localStorage
       const key = getStarredStorageKey(directory, bookName);
       localStorage.setItem(key, JSON.stringify([...next]));
+      // Dispatch event for FloatingStickyNotes to pick up
+      window.dispatchEvent(new CustomEvent('starredWordsChanged'));
       return next;
     });
   }, [directory, bookName]);

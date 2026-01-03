@@ -180,6 +180,9 @@ export const STORAGE_KEYS = {
   AI_EXPLANATION_ENABLED: 'ai_explanation_enabled',
   SHOW_REPHRASE: 'show_rephrase',
   STARRED_WORDS: 'starred_words', // Format: starred_words_{directory}_{bookName}
+  // Floating sticky notes
+  STICKY_NOTES_POSITION: 'sticky_notes_position',
+  STICKY_NOTES_COLLAPSED: 'sticky_notes_collapsed',
   // TTS設定
   TTS_SPEED: 'tts_speed',
   TTS_VOICE_GENDER: 'tts_voice_gender',
