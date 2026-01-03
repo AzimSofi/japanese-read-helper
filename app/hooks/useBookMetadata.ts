@@ -36,11 +36,11 @@ export function useBookMetadata(
       setError(null);
 
       try {
-        // For rephrase files (ending with -rephrase), use the base book name for metadata
-        // e.g., "book-rephrase" -> "book"
-        const isRephraseFile = fileName.endsWith('-rephrase');
+        // For rephrase files (ending with -rephrase or -rephrase-furigana), use the base book name for metadata
+        // e.g., "book-rephrase" -> "book", "book-rephrase-furigana" -> "book"
+        const isRephraseFile = /-rephrase(-furigana)?$/.test(fileName);
         const baseFileName = isRephraseFile
-          ? fileName.replace(/-rephrase$/, '')
+          ? fileName.replace(/-rephrase(-furigana)?$/, '')
           : fileName;
 
         // Construct JSON file path
