@@ -351,6 +351,31 @@ function ReaderContent({
     }
   }, [bookmarkPage, currentPage, handlePageChange]);
 
+  const handleCopyRange = useCallback(async (startPage: number, endPage: number) => {
+    if (!content) return;
+
+    let items: { head?: string; text?: string }[] = [];
+    if (content.includes('>>')) {
+      items = parseMarkdown(content);
+    } else {
+      items = content
+        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => ({ text: p }));
+    }
+
+    const startIndex = (startPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const endIndex = endPage * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const rangeItems = items.slice(startIndex, endIndex);
+
+    const textToCopy = rangeItems
+      .map(item => stripFurigana(item.head || item.text || ''))
+      .join('\n');
+
+    await navigator.clipboard.writeText(textToCopy);
+  }, [content]);
+
   const handleTapNavigation = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
     const interactiveElements = ['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT'];
@@ -498,12 +523,16 @@ function ReaderContent({
       <ReaderFAB
         onBookmark={handleBookmark}
         onToggleFurigana={handleToggleFurigana}
+        onToggleRephrase={handleToggleRephrase}
         onOpenSettings={() => setSettingsOpen(true)}
         onGoToBookmark={bookmarkPage ? handleGoToBookmark : undefined}
+        onCopyRange={handleCopyRange}
         isFuriganaEnabled={showFurigana}
         isBookmarked={bookmarkText.includes(`page:${currentPage}`)}
+        showRephrase={showRephrase}
         bookmarkPage={bookmarkPage}
         currentPage={currentPage}
+        totalPages={totalPages}
         currentPageHeaders={currentPageHeaders}
       />
 

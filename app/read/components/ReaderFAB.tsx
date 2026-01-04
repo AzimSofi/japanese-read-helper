@@ -7,12 +7,16 @@ import { useRouter } from 'next/navigation';
 interface ReaderFABProps {
   onBookmark: () => void;
   onToggleFurigana: () => void;
+  onToggleRephrase: () => void;
   onOpenSettings: () => void;
   onGoToBookmark?: () => void;
+  onCopyRange: (startPage: number, endPage: number) => Promise<void>;
   isFuriganaEnabled: boolean;
   isBookmarked: boolean;
+  showRephrase: boolean;
   bookmarkPage?: number | null;
   currentPage?: number;
+  totalPages?: number;
   currentPageHeaders?: string[];
 }
 
@@ -50,17 +54,25 @@ function getInitialPosition(): Position {
 export default function ReaderFAB({
   onBookmark,
   onToggleFurigana,
+  onToggleRephrase,
   onOpenSettings,
   onGoToBookmark,
+  onCopyRange,
   isFuriganaEnabled,
   isBookmarked,
+  showRephrase,
   bookmarkPage,
   currentPage,
+  totalPages = 1,
   currentPageHeaders = [],
 }: ReaderFABProps) {
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copyRangeHovered, setCopyRangeHovered] = useState(false);
+  const [startPage, setStartPage] = useState(currentPage || 1);
+  const [endPage, setEndPage] = useState(currentPage || 1);
+  const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
   const [position, setPosition] = useState<Position>({ x: 20, y: 80 });
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -89,6 +101,16 @@ export default function ReaderFAB({
     }
   }, [position, isDragging, mounted]);
 
+  // Reset copy range values when FAB menu opens
+  useEffect(() => {
+    if (isExpanded) {
+      setStartPage(currentPage || 1);
+      setEndPage(currentPage || 1);
+      setCopyRangeFeedback(false);
+      setCopyRangeHovered(false);
+    }
+  }, [isExpanded, currentPage]);
+
   const handleCopyPageText = useCallback(async () => {
     if (currentPageHeaders.length === 0) return;
 
@@ -101,6 +123,21 @@ export default function ReaderFAB({
       console.error('Failed to copy:', error);
     }
   }, [currentPageHeaders]);
+
+  const handleCopyRangeSubmit = useCallback(async () => {
+    if (startPage > endPage || startPage < 1 || endPage > totalPages) return;
+
+    try {
+      await onCopyRange(startPage, endPage);
+      setCopyRangeFeedback(true);
+      setTimeout(() => {
+        setCopyRangeFeedback(false);
+        setIsExpanded(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to copy range:', error);
+    }
+  }, [startPage, endPage, totalPages, onCopyRange]);
 
   const handleDragStart = useCallback((clientX: number, clientY: number) => {
     dragRef.current = {
@@ -258,6 +295,24 @@ export default function ReaderFAB({
       keepOpen: true,
     },
     {
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+      label: 'Copy Range',
+      action: () => {},
+      active: copyRangeHovered,
+      hidden: totalPages <= 1,
+      isCopyRange: true,
+    },
+    {
+      icon: <span className="text-sm font-medium">R</span>,
+      label: showRephrase ? 'Hide Rephrase' : 'Show Rephrase',
+      action: onToggleRephrase,
+      active: showRephrase,
+    },
+    {
       icon: <span className="text-sm font-medium">{isFuriganaEnabled ? 'A' : 'ruby'}</span>,
       label: 'Furigana',
       action: onToggleFurigana,
@@ -324,6 +379,93 @@ export default function ReaderFAB({
                 const delay = isMenuAbove
                   ? (visibleButtons.length - 1 - index) * 40
                   : index * 40;
+
+                // Special handling for Copy Range button with submenu
+                if ((btn as { isCopyRange?: boolean }).isCopyRange) {
+                  return (
+                    <div
+                      key={index}
+                      className="relative animate-fab-item"
+                      style={{
+                        animationDelay: `${delay}ms`,
+                        opacity: 0,
+                        transform: isMenuAbove ? 'translateY(8px)' : 'translateY(-8px)',
+                      }}
+                      onMouseEnter={() => setCopyRangeHovered(true)}
+                      onMouseLeave={() => setCopyRangeHovered(false)}
+                    >
+                      <button
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap"
+                        style={{
+                          backgroundColor: btn.active ? COLORS.PRIMARY : READER_THEME.SURFACE,
+                          color: btn.active ? '#FFFFFF' : COLORS.PRIMARY_DARK,
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                        }}
+                      >
+                        {btn.icon}
+                        <span className="text-sm font-medium">{btn.label}</span>
+                        <svg className="w-4 h-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+
+                      {copyRangeHovered && (
+                        <div
+                          className="absolute left-full ml-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-2 rounded-full shadow-lg whitespace-nowrap"
+                          style={{
+                            backgroundColor: READER_THEME.SURFACE,
+                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                          }}
+                        >
+                          <input
+                            type="number"
+                            min={1}
+                            max={totalPages}
+                            value={startPage}
+                            onChange={(e) => setStartPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-12 px-2 py-1 rounded border text-center text-sm"
+                            style={{
+                              borderColor: COLORS.NEUTRAL,
+                              backgroundColor: READER_THEME.SURFACE,
+                              color: COLORS.PRIMARY_DARK,
+                            }}
+                          />
+                          <span style={{ color: COLORS.SECONDARY_DARK }}>-</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={totalPages}
+                            value={endPage}
+                            onChange={(e) => setEndPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-12 px-2 py-1 rounded border text-center text-sm"
+                            style={{
+                              borderColor: COLORS.NEUTRAL,
+                              backgroundColor: READER_THEME.SURFACE,
+                              color: COLORS.PRIMARY_DARK,
+                            }}
+                          />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyRangeSubmit();
+                            }}
+                            disabled={startPage > endPage}
+                            className="px-3 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
+                            style={{
+                              backgroundColor: copyRangeFeedback ? COLORS.SECONDARY : COLORS.PRIMARY,
+                              color: '#FFFFFF',
+                            }}
+                          >
+                            {copyRangeFeedback ? 'Copied!' : 'Copy'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
 
                 return (
                   <button
