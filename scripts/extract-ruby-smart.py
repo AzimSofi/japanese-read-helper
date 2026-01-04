@@ -260,8 +260,9 @@ def main():
             book = epub.read_epub(str(epub_path))
             all_words = {}
 
-            for item in book.get_items():
-                if item.get_type() == ebooklib.ITEM_DOCUMENT:
+            for spine_id, linear in book.spine:
+                item = book.get_item_with_id(spine_id)
+                if item and item.get_type() == ebooklib.ITEM_DOCUMENT:
                     html = item.get_content().decode('utf-8')
                     chapter_words = extract_words_from_html(html)
                     all_words.update(chapter_words)
