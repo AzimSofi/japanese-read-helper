@@ -215,8 +215,9 @@ def process_epub(epub_path, output_dir=None):
     ruby_collector = {}
     compound_counter = Counter()
 
-    for item in book.get_items():
-        if item.get_type() == ebooklib.ITEM_DOCUMENT:
+    for spine_id, linear in book.spine:
+        item = book.get_item_with_id(spine_id)
+        if item and item.get_type() == ebooklib.ITEM_DOCUMENT:
             chapter_count += 1
             print(f"  Processing chapter {chapter_count}...", end='', flush=True)
 
