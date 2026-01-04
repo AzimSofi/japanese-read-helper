@@ -335,8 +335,9 @@ def process_epub_to_text(epub_path, filter_n3_plus=False, output_dir=None, prese
     chapter_count = 0
 
     # Get all items in reading order (spine)
-    for item in book.get_items():
-        if item.get_type() == ebooklib.ITEM_DOCUMENT:
+    for spine_id, linear in book.spine:
+        item = book.get_item_with_id(spine_id)
+        if item and item.get_type() == ebooklib.ITEM_DOCUMENT:
             chapter_count += 1
             print(f"  Processing chapter {chapter_count}...", end='', flush=True)
 
