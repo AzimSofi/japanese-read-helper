@@ -35,26 +35,26 @@ interface ExportData {
 }
 
 async function importBookmarks() {
-  console.log('🔄 Importing bookmarks to local PostgreSQL...\n');
+  console.log('[IMPORT] Importing bookmarks to local PostgreSQL...\n');
 
   // Check for export file
   const exportPath = join(__dirname, 'bookmarks-export.json');
   if (!existsSync(exportPath)) {
-    console.error('❌ Export file not found:', exportPath);
+    console.error('[ERROR] Export file not found:', exportPath);
     console.error('   Run export-vercel-bookmarks.ts first, then copy the file here.');
     process.exit(1);
   }
 
   // Read export data
   const exportData: ExportData = JSON.parse(readFileSync(exportPath, 'utf-8'));
-  console.log(`📁 Found export from ${exportData.exportedAt}`);
+  console.log(`[FILE] Found export from ${exportData.exportedAt}`);
   console.log(`   Bookmarks: ${exportData.bookmarks.length}`);
   console.log(`   Text entries: ${exportData.textEntries.length}\n`);
 
   // Connect to local database
   const connectionString = process.env.DATABASE_URL || process.env.POSTGRES_URL || '';
   if (!connectionString) {
-    console.error('❌ No DATABASE_URL or POSTGRES_URL found');
+    console.error('[ERROR] No DATABASE_URL or POSTGRES_URL found');
     process.exit(1);
   }
 
@@ -62,7 +62,7 @@ async function importBookmarks() {
 
   try {
     // Ensure tables exist
-    console.log('📋 Ensuring tables exist...');
+    console.log('[TABLES] Ensuring tables exist...');
     await sql`
       CREATE TABLE IF NOT EXISTS bookmarks (
         id SERIAL PRIMARY KEY,
@@ -87,7 +87,7 @@ async function importBookmarks() {
     `;
 
     // Import bookmarks
-    console.log('📚 Importing bookmarks...');
+    console.log('[BOOKMARKS] Importing bookmarks...');
     let bookmarkCount = 0;
     for (const bookmark of exportData.bookmarks) {
       await sql`
@@ -101,7 +101,7 @@ async function importBookmarks() {
     console.log(`   Imported ${bookmarkCount} bookmarks`);
 
     // Import text entries
-    console.log('📝 Importing text entries...');
+    console.log('[TEXT] Importing text entries...');
     let textEntryCount = 0;
     for (const entry of exportData.textEntries) {
       await sql`
@@ -114,11 +114,11 @@ async function importBookmarks() {
     }
     console.log(`   Imported ${textEntryCount} text entries`);
 
-    console.log('\n✅ Import complete!');
+    console.log('\n[OK] Import complete!');
 
     await sql.end();
   } catch (error) {
-    console.error('❌ Import failed:', error);
+    console.error('[ERROR] Import failed:', error);
     await sql.end();
     process.exit(1);
   }

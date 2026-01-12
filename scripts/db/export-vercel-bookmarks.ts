@@ -30,20 +30,20 @@ interface TextEntryRow {
 }
 
 async function exportBookmarks() {
-  console.log('🔄 Exporting bookmarks from Vercel Postgres...\n');
+  console.log('[EXPORT] Exporting bookmarks from Vercel Postgres...\n');
 
   // Dynamically import Vercel Postgres
   const { sql } = await import('@vercel/postgres');
 
   try {
     // Export bookmarks
-    console.log('📚 Fetching bookmarks...');
+    console.log('[BOOKMARKS] Fetching bookmarks...');
     const bookmarksResult = await sql`SELECT file_name, directory, bookmark_text FROM bookmarks`;
     const bookmarks = bookmarksResult.rows as BookmarkRow[];
     console.log(`   Found ${bookmarks.length} bookmarks`);
 
     // Export text entries
-    console.log('📝 Fetching text entries...');
+    console.log('[TEXT] Fetching text entries...');
     const textEntriesResult = await sql`SELECT file_name, directory, content FROM text_entries`;
     const textEntries = textEntriesResult.rows as TextEntryRow[];
     console.log(`   Found ${textEntries.length} text entries`);
@@ -60,13 +60,13 @@ async function exportBookmarks() {
     const outputPath = join(__dirname, 'bookmarks-export.json');
     writeFileSync(outputPath, JSON.stringify(exportData, null, 2));
 
-    console.log(`\n✅ Export complete!`);
+    console.log(`\n[OK] Export complete!`);
     console.log(`   File: ${outputPath}`);
     console.log(`   Bookmarks: ${bookmarks.length}`);
     console.log(`   Text entries: ${textEntries.length}`);
     console.log(`\nNext step: Copy this file to your Lightsail server and run import-bookmarks.ts`);
   } catch (error) {
-    console.error('❌ Export failed:', error);
+    console.error('[ERROR] Export failed:', error);
     process.exit(1);
   }
 }
