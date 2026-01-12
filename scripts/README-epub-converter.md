@@ -4,17 +4,13 @@ A Python script that converts Japanese EPUB files to plain text while intelligen
 
 ## Features
 
-✨ **Preserves Existing Furigana**: Keeps all ruby tags already in the EPUB (especially important for character names and special terms)
-
-✨ **Adds Missing Furigana**: Uses MeCab to add furigana to kanji that don't have it
-
-✨ **Configurable Filtering**: Choose between:
-- **All kanji** (default) - Add furigana to every kanji without it
-- **N3+ only** - Only add furigana to advanced/rare kanji (beginner kanji like 人、日、食 are left as-is)
-
-✨ **Command-line Interface**: Easy to use with file path arguments
-
-✨ **Automatic Output**: Saves to `public/bookv2-furigana/` for immediate use in the reading app
+- **Preserves Existing Furigana**: Keeps all ruby tags already in the EPUB (especially important for character names and special terms)
+- **Adds Missing Furigana**: Uses MeCab to add furigana to kanji that don't have it
+- **Configurable Filtering**: Choose between:
+  - **All kanji** (default) - Add furigana to every kanji without it
+  - **N3+ only** - Only add furigana to advanced/rare kanji (beginner kanji like 人、日、食 are left as-is)
+- **Command-line Interface**: Easy to use with file path arguments
+- **Automatic Output**: Saves to `public/bookv2-furigana/` for immediate use in the reading app
 
 ## Installation
 
@@ -110,15 +106,15 @@ Author: 著者名
 Initializing MeCab (this may take a moment)...
 
 Extracting chapters...
-  Processing chapter 1... ✓
-  Processing chapter 2... ✓
-  Processing chapter 3... ✓
+  Processing chapter 1... [OK]
+  Processing chapter 2... [OK]
+  Processing chapter 3... [OK]
   ...
 
 Successfully processed 25 chapters
 
 ============================================================
-✓ Conversion complete!
+[OK] Conversion complete!
 ============================================================
 Output file: public/bookv2-furigana/俺にトラウマを与えた女子達がチラチラ見てくるけど、残念ですが手遅れです.txt
 File size: 973.4 KB

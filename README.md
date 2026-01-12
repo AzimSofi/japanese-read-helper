@@ -252,12 +252,12 @@ npm run dev         # Start Next.js (port 3333)
 
 ### Important Notes
 
-- ✅ **Text files are gitignored** - no copyrighted content in repository
-- ✅ **Images are gitignored** - book covers/illustrations not committed
-- ✅ **Database is the source of truth** - all text content stored in PostgreSQL
-- ✅ **Directory structure preserved** - `.gitkeep` files maintain folder structure
-- ⚠️ **ADMIN_API_KEY required** - generate a secure key for production
-- ⚠️ **Database backup** - recommended for production (Vercel handles automatically)
+- **Text files are gitignored** - no copyrighted content in repository
+- **Images are gitignored** - book covers/illustrations not committed
+- **Database is the source of truth** - all text content stored in PostgreSQL
+- **Directory structure preserved** - `.gitkeep` files maintain folder structure
+- **ADMIN_API_KEY required** - generate a secure key for production
+- **Database backup** - recommended for production (Vercel handles automatically)
 
 ### Migrating Existing Files
 

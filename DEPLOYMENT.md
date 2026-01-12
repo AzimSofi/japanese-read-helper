@@ -259,11 +259,11 @@ ON CONFLICT (file_name, directory) DO UPDATE SET bookmark_text = EXCLUDED.bookma
 ## Vercel Free Tier Limits
 
 The Hobby (free) plan includes:
-- ✅ Unlimited deployments
-- ✅ 100 GB bandwidth/month
-- ✅ 100 GB-hours serverless function execution/month
-- ✅ Vercel Postgres: 256 MB storage, 60 hours compute time/month
-- ⚠️ Function timeout: 10 seconds (can be extended to 60s with config)
+- Unlimited deployments
+- 100 GB bandwidth/month
+- 100 GB-hours serverless function execution/month
+- Vercel Postgres: 256 MB storage, 60 hours compute time/month
+- Function timeout: 10 seconds (can be extended to 60s with config)
 
 For this app, the free tier should be sufficient for personal use!
 
@@ -278,11 +278,11 @@ To add a custom domain:
 
 ## Production Best Practices
 
-- ✅ Enable preview deployments for testing
-- ✅ Set up monitoring/logging in Vercel Dashboard
-- ✅ Regularly backup your database
-- ✅ Use environment-specific variables for staging vs production
-- ✅ Monitor database usage to stay within free tier limits
+- Enable preview deployments for testing
+- Set up monitoring/logging in Vercel Dashboard
+- Regularly backup your database
+- Use environment-specific variables for staging vs production
+- Monitor database usage to stay within free tier limits
 
 ## Support
 
