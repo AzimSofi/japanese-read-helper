@@ -475,7 +475,7 @@ function addFuriganaToChunk(chunkText: string, outputDir: string): string {
   fs.writeFileSync(tempInput, chunkText, 'utf-8');
 
   try {
-    execSync(`python3 scripts/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
+    execSync(`python3 scripts/core/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
       cwd: process.cwd(),
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe']
@@ -519,7 +519,7 @@ Usage:
 Options:
   --chunk-size <n>  Target characters per chunk (default: 5000)
   --delay <n>       Seconds between chunks (default: 600 = 10min)
-  --model <name>    Gemini model (default: gemini-2.0-flash-exp)
+  --model <name>    Gemini model (default: gemini-2.5-flash)
   --api-url <url>   App URL for database sync (default: http://localhost:3333)
   --base-dir <dir>  Base directory name in public/ (default: bookv2-furigana)
   --rubify          Add furigana after each chunk and sync immediately
@@ -537,7 +537,7 @@ Example:
     bookName: args[0],
     chunkSize: 5000,
     delaySeconds: 600,
-    model: AI_MODELS.GEMINI_FLASH, // gemini-2.0-flash-exp - same as app uses
+    model: AI_MODELS.GEMINI_2_5_FLASH, // gemini-2.5-flash - default model
     reset: false,
     dryRun: false,
     apiUrl: 'http://localhost:3333',

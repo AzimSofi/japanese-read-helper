@@ -86,12 +86,12 @@ def extract_images_from_epub(book, output_dir, safe_title):
         original_name = item.get_name()
         if 'cover' in original_name.lower():
             cover_image = item
-            print(f"  📕 Detected cover image in ITEM_IMAGE: {original_name}")
+            print(f"  [COVER] Detected cover image in ITEM_IMAGE: {original_name}")
             break
 
     # Method 2: If not found, check all items (including non-ITEM_IMAGE)
     if not cover_image:
-        print(f"  🔍 Cover not in ITEM_IMAGE list, checking all items...")
+        print(f"  [SEARCH] Cover not in ITEM_IMAGE list, checking all items...")
         for item in book.get_items():
             original_name = item.get_name()
             if 'cover' in original_name.lower() and (original_name.endswith('.jpg') or
@@ -99,7 +99,7 @@ def extract_images_from_epub(book, output_dir, safe_title):
                                                        original_name.endswith('.png')):
                 cover_image = item
                 total_images += 1  # Add to count since it wasn't in ITEM_IMAGE
-                print(f"  📕 Detected cover image in all items: {original_name}")
+                print(f"  [COVER] Detected cover image in all items: {original_name}")
                 break
 
     # Extract cover first with index 000 if found
@@ -121,9 +121,9 @@ def extract_images_from_epub(book, output_dir, safe_title):
                 'originalName': original_name,
                 'altText': None
             })
-            print(f"  ✓ Extracted: {new_filename}")
+            print(f"  [OK] Extracted: {new_filename}")
         except Exception as e:
-            print(f"  ✗ ERROR saving cover image {original_name}:")
+            print(f"  [FAIL] ERROR saving cover image {original_name}:")
             print(f"     Exception: {type(e).__name__}: {e}")
             failed_images.append(original_name)
 
@@ -151,9 +151,9 @@ def extract_images_from_epub(book, output_dir, safe_title):
                 'originalName': original_name,
                 'altText': None
             })
-            print(f"  ✓ Extracted: {new_filename}")
+            print(f"  [OK] Extracted: {new_filename}")
         except Exception as e:
-            print(f"  ✗ ERROR saving image {original_name}:")
+            print(f"  [FAIL] ERROR saving image {original_name}:")
             print(f"     Exception: {type(e).__name__}: {e}")
             failed_images.append(original_name)
 
@@ -162,11 +162,11 @@ def extract_images_from_epub(book, output_dir, safe_title):
     print(f"    Total images in EPUB: {total_images}")
     print(f"    Successfully extracted: {len(image_metadata)}")
     if failed_images:
-        print(f"    ⚠️  Failed to extract: {len(failed_images)}")
+        print(f"    [WARN]  Failed to extract: {len(failed_images)}")
         for img in failed_images:
             print(f"       - {img}")
     if len(image_metadata) < total_images:
-        print(f"    ⚠️  WARNING: {total_images - len(image_metadata)} image(s) missing!")
+        print(f"    [WARN]  WARNING: {total_images - len(image_metadata)} image(s) missing!")
 
     return image_metadata
 
@@ -216,23 +216,23 @@ def upload_to_api(fileName, directory, content, api_url=None, api_key=None):
         with urllib.request.urlopen(req, timeout=30) as response:
             response_data = json.loads(response.read().decode('utf-8'))
             if response_data.get('success'):
-                print(f"  ✓ Upload successful: {response_data.get('message', 'OK')}")
+                print(f"  [OK] Upload successful: {response_data.get('message', 'OK')}")
                 return True
             else:
-                print(f"  ✗ Upload failed: {response_data.get('message', 'Unknown error')}")
+                print(f"  [FAIL] Upload failed: {response_data.get('message', 'Unknown error')}")
                 return False
 
     except urllib.error.HTTPError as e:
         error_body = e.read().decode('utf-8')
-        print(f"  ✗ HTTP Error {e.code}: {e.reason}")
+        print(f"  [FAIL] HTTP Error {e.code}: {e.reason}")
         print(f"     {error_body}")
         return False
     except urllib.error.URLError as e:
-        print(f"  ✗ Connection Error: {e.reason}")
+        print(f"  [FAIL] Connection Error: {e.reason}")
         print(f"     Make sure the server is running at {api_url}")
         return False
     except Exception as e:
-        print(f"  ✗ Unexpected error: {e}")
+        print(f"  [FAIL] Unexpected error: {e}")
         return False
 
 
@@ -369,12 +369,12 @@ def process_epub_to_text(epub_path, filter_n3_plus=False, output_dir=None, prese
                 # Only add non-empty chapters with actual content
                 if processed and len(processed) > 10:  # Ignore nearly-empty chapters
                     chapters.append(processed)
-                    print(" ✓")
+                    print(" [OK]")
                 else:
                     print(" (empty, skipped)")
 
             except Exception as e:
-                print(f" ✗ Error: {e}")
+                print(f" [FAIL] Error: {e}")
                 # Continue processing other chapters
                 continue
 
@@ -411,7 +411,7 @@ def process_epub_to_text(epub_path, filter_n3_plus=False, output_dir=None, prese
         )
 
         if not success:
-            print("\n✗ Failed to upload to API")
+            print("\n[FAIL] Failed to upload to API")
             print("  You can still save to file by running without --output-mode api")
             sys.exit(1)
 
@@ -419,7 +419,7 @@ def process_epub_to_text(epub_path, filter_n3_plus=False, output_dir=None, prese
         file_size = len(output_text.encode('utf-8')) / 1024  # KB
 
         print(f"\n{'='*60}")
-        print(f"✓ Upload complete!")
+        print(f"[OK] Upload complete!")
         print(f"{'='*60}")
         print(f"File name: {safe_title}")
         print(f"Directory: bookv2-furigana")
@@ -497,7 +497,7 @@ def process_epub_to_text(epub_path, filter_n3_plus=False, output_dir=None, prese
 
     # Print summary
     print(f"\n{'='*60}")
-    print(f"✓ Conversion complete!")
+    print(f"[OK] Conversion complete!")
     print(f"{'='*60}")
     print(f"Output file: {output_path}")
     print(f"Metadata: {metadata_path}")
@@ -596,13 +596,13 @@ Note: Existing furigana in the EPUB will always be preserved.
 
     if output_mode == 'api':
         if result:
-            print("\n✓ Done! Text uploaded to database via API.")
+            print("\n[OK] Done! Text uploaded to database via API.")
             print("  Refresh your app to see the new book.")
         else:
-            print("\n✗ Failed to upload to API.")
+            print("\n[FAIL] Failed to upload to API.")
             sys.exit(1)
     else:
-        print("\n✓ Done! You can now use this file in your Japanese reading app.")
+        print("\n[OK] Done! You can now use this file in your Japanese reading app.")
         print(f"  File saved to: {result}")
 
 

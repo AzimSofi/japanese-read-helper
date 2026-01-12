@@ -137,7 +137,7 @@ export async function migrateBookmarks(
         migratedCount++;
       } catch (error) {
         const errorMsg = `Failed to migrate ${fileName}: ${error instanceof Error ? error.message : String(error)}`;
-        console.error(`  ✗ ${errorMsg}`);
+        console.error(`  [ERROR] ${errorMsg}`);
         errors.push(errorMsg);
       }
     }
@@ -151,14 +151,14 @@ export async function migrateBookmarks(
           console.log(`  Created empty bookmark for: ${fileName}`);
         } catch (error) {
           const errorMsg = `Failed to create bookmark for ${fileName}: ${error instanceof Error ? error.message : String(error)}`;
-          console.error(`  ✗ ${errorMsg}`);
+          console.error(`  [ERROR] ${errorMsg}`);
           errors.push(errorMsg);
         }
       }
     }
 
     console.log(`\n${'='.repeat(60)}`);
-    console.log(`✓ Migration complete!`);
+    console.log(`[OK] Migration complete!`);
     console.log(`${'='.repeat(60)}`);
     console.log(`Migrated: ${migratedCount} bookmarks`);
     console.log(`Errors: ${errors.length}`);
