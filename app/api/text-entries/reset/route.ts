@@ -40,7 +40,7 @@ export async function POST(request: Request) {
     console.log(`Deleted ${deletedCount} text entries from database`);
 
     const migrationLog: string[] = [
-      `✓ Deleted ${deletedCount} text entries from database`
+      `[OK] Deleted ${deletedCount} text entries from database`
     ];
 
     let totalMigrated = 0;
@@ -66,17 +66,16 @@ export async function POST(request: Request) {
             const content = await readTextFile(fileName);
 
             if (content) {
-              // Insert into database
               await upsertTextEntry(file, content, directory);
               totalMigrated++;
-              migrationLog.push(`  ✓ Migrated: ${fileName} (${content.length} chars)`);
+              migrationLog.push(`  [OK] Migrated: ${fileName} (${content.length} chars)`);
             } else {
-              migrationLog.push(`  ⚠ Skipped (empty): ${fileName}`);
+              migrationLog.push(`  [SKIP] Empty: ${fileName}`);
             }
           } catch (error) {
             errors++;
             const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-            migrationLog.push(`  ✗ Error: ${directory}/${file} - ${errorMsg}`);
+            migrationLog.push(`  [ERROR] ${directory}/${file} - ${errorMsg}`);
             console.error(`Error migrating ${directory}/${file}:`, error);
           }
         }
