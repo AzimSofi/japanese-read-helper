@@ -25,7 +25,7 @@ A comprehensive word diary system that allows you to save interesting words whil
 ### Features:
 1. **Vocabulary Mode Toggle** (in TopNavigation):
    - Button to switch between "Explanation Mode" and "Vocabulary Mode"
-   - When ON (📝 単語帳 ON), text selection is enabled
+   - When ON (単語帳 ON), text selection is enabled
    - When OFF, sentence explanation clicks work normally
 
 2. **Text Selection**:
@@ -76,7 +76,6 @@ Simple password-only authentication to protect your Japanese reading helper from
 - `GET /api/auth/session` - Check authentication status
 
 ### Security:
-- Password: `REDACTED`
 - Password hash stored in `.env.local`
 - Session stored in httpOnly cookie (7-day expiration)
 - JWT-based session tokens
@@ -104,8 +103,8 @@ Simple password-only authentication to protect your Japanese reading helper from
    - Static files and Next.js internals excluded
 
 ### Credentials:
-- **Password**: `REDACTED`
-- No username needed (hardcoded as "azimsofi" in backend for reference only)
+- Password stored securely as hash in `.env.local`
+- No username needed (single-user system)
 
 ---
 
@@ -146,9 +145,9 @@ Simple password-only authentication to protect your Japanese reading helper from
 
 Added to `.env.local`:
 ```bash
-# Authentication
-AUTH_PASSWORD_HASH="$2b$10$poHwGoMzT7wANs5IULWbqOxwHdGJEMnJaJ/YS/mSzgrCZEOMNfv9q"
-SESSION_SECRET="9c14f639d0e79ab1dd229885a5fd48a2f1e5a5c59c47c9f4a2f82f6ad38a6ba9"
+# Authentication (generate with: npx tsx scripts/auth/generate-password-hash.ts <password>)
+AUTH_PASSWORD_HASH="<your-bcrypt-hash>"
+SESSION_SECRET="<random-32-character-string>"
 ```
 
 ---
@@ -165,7 +164,7 @@ SESSION_SECRET="9c14f639d0e79ab1dd229885a5fd48a2f1e5a5c59c47c9f4a2f82f6ad38a6ba9
 Build successful with no errors:
 ```bash
 npm run build
-✓ Compiled successfully
+Compiled successfully
 ```
 
 All features are ready to use!
