@@ -39,18 +39,12 @@ export default function Home() {
         try {
           const contentToPrompt = findLastPTagContent();
           if (contentToPrompt === null) {
-            console.error("対象となるPタグのコンテンツが見つかりません。");
+            console.error("No target P tag content found");
             setIsLoading(false);
             return;
           }
 
-        //   const formData = new FormData();
-        //   formData.append("image", "");
-        //   formData.append("prompt_post", currentInstruction + contentToPrompt);
-        //   formData.append("ai_model", "gemini-2.5-flash");
-
-        console.log(`${attempt + 1}回目の試行: プロンプトを送信中...`);
-        const res = await fetch(API_ROUTES.GEMINI, {
+          const res = await fetch(API_ROUTES.GEMINI, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -74,24 +68,12 @@ export default function Home() {
           if (allItemsValid && parsedItems.length > 0) {
             success = true;
           } else {
-            console.warn(
-              `${
-                attempt + 1
-              }回目の試行でAPIレスポンスの形式が無効です。再試行します...`
-            );
-            console.log("無効なデータレスポンス: ", apiResponseData.response);
-            console.log(
-              "allItemsValid: ",
-              allItemsValid,
-              "parsedItems.length : ",
-              parsedItems.length
-            );
             currentInstruction =
               "回答のフォーマットが正しくありません。もう一度やり直してください。必ず下記の構成に従ってください。\n" +
               aiInstructions;
           }
         } catch (error) {
-          console.error(`${attempt + 1}回目の試行でエラーが発生しました:`, error);
+          console.error('API request failed:', error);
         }
         attempt++;
       }
@@ -99,9 +81,7 @@ export default function Home() {
       if (success && apiResponseData) {
         setResponse(apiResponseData.response);
       } else {
-        console.error(
-          `複数回(${attempt}回)試行しましたが、有効な応答を取得できませんでした。`
-        );
+        console.error(`Failed after ${attempt} attempts`);
         setResponse("エラー: 正しい形式の応答が得られませんでした。");
         setIsError(true);
       }
@@ -117,7 +97,6 @@ export default function Home() {
         pElements[i].innerHTML = "";
       }
     }
-    // setResponse(''); // 応答もクリアする
   };
 
   return (
@@ -129,8 +108,7 @@ export default function Home() {
         style={{
           height: "20rem",
           overflow: "auto",
-          alignContent:
-            "end" /*display: "flex", flexDirection: "column-reverse"*/,
+          alignContent: "end",
         }}
       ></span>
       <input

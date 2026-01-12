@@ -115,7 +115,7 @@ export default function VocabularyPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2">📝 単語帳</h1>
+          <h1 className="text-3xl font-bold mb-2">単語帳</h1>
           <p className="text-gray-600">
             保存した単語: {entries.length}個
           </p>
@@ -212,7 +212,7 @@ export default function VocabularyPage() {
                       backgroundColor: `color-mix(in srgb, ${CSS_VARS.SECONDARY} 10%, white)`,
                     }}
                   >
-                    💡 {entry.notes}
+                    {entry.notes}
                   </div>
                 )}
 
@@ -220,7 +220,7 @@ export default function VocabularyPage() {
                 <div className="flex items-center justify-between text-xs text-gray-500 border-t pt-2"
                   style={{ borderColor: CSS_VARS.NEUTRAL }}
                 >
-                  <span>📖 {entry.directory}/{entry.fileName}</span>
+                  <span>{entry.directory}/{entry.fileName}</span>
                   <span>{new Date(entry.createdAt).toLocaleDateString('ja-JP')}</span>
                 </div>
               </div>
@@ -319,7 +319,7 @@ export default function VocabularyPage() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-700 mb-2">出典</h3>
                 <p className="text-gray-600">
-                  📖 {selectedEntry.directory}/{selectedEntry.fileName}
+                  {selectedEntry.directory}/{selectedEntry.fileName}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
                   保存日時: {formatDate(selectedEntry.createdAt)}
