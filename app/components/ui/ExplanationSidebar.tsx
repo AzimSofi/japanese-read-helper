@@ -332,7 +332,7 @@ export default function ExplanationSidebar({
                 className="text-xs font-medium transition-all hover:scale-105 flex items-center gap-1"
                 style={{ color: CSS_VARS.SECONDARY }}
               >
-                ⚙️ コンテキスト: {contextSize}文
+                コンテキスト: {contextSize}文字
                 <span style={{
                   transform: contextSizeExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
                   transition: 'transform 200ms',

@@ -316,7 +316,7 @@ export default function TopNavigation() {
                 color: vocabularyMode ? CSS_VARS.PRIMARY : '#6b7280',
               }}
             >
-              {vocabularyMode ? '📝 単語帳 ON' : '単語帳 OFF'}
+              {vocabularyMode ? '単語帳 ON' : '単語帳 OFF'}
             </button>
 
             {/* AI解説トグルボタン */}
@@ -400,7 +400,7 @@ export default function TopNavigation() {
                   color: CSS_VARS.PRIMARY,
                 }}
               >
-                📝 単語帳
+                単語帳
               </a>
               <button
                 onClick={() => {
@@ -482,8 +482,8 @@ export default function TopNavigation() {
                 title={vocabularyMode ? '単語帳モード ON' : '単語帳モード OFF'}
                 aria-label={vocabularyMode ? '単語帳モード ON' : '単語帳モード OFF'}
               >
-                <span className="text-lg">
-                  {vocabularyMode ? '📝' : '📄'}
+                <span className="text-lg font-bold">
+                  {vocabularyMode ? '単' : '-'}
                 </span>
               </button>
 
@@ -537,7 +537,7 @@ export default function TopNavigation() {
                 title="単語帳ページへ"
                 aria-label="単語帳ページへ"
               >
-                <span className="text-lg">📖</span>
+                <span className="text-lg font-bold">単</span>
               </a>
             </div>
           )}
@@ -717,7 +717,7 @@ export default function TopNavigation() {
                     color: vocabularyMode ? CSS_VARS.PRIMARY : '#6b7280',
                   }}
                 >
-                  {vocabularyMode ? '📝 単語帳 ON' : '単語帳 OFF'}
+                  {vocabularyMode ? '単語帳 ON' : '単語帳 OFF'}
                 </button>
 
                 {/* AI解説トグル */}
@@ -813,7 +813,7 @@ export default function TopNavigation() {
                   }}
                   onClick={closeMobileMenu}
                 >
-                  📝 単語帳
+                  単語帳
                 </a>
                 <button
                   onClick={() => {

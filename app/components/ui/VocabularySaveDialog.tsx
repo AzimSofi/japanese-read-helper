@@ -92,7 +92,7 @@ export default function VocabularySaveDialog({
           className="flex items-center justify-between p-4 border-b"
           style={{ borderColor: CSS_VARS.NEUTRAL }}
         >
-          <h2 className="text-xl font-bold">📝 単語を保存</h2>
+          <h2 className="text-xl font-bold">単語を保存</h2>
           <button
             onClick={handleClose}
             className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
