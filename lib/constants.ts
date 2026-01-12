@@ -123,27 +123,27 @@ export type ExplanationMode = typeof EXPLANATION_MODES[keyof typeof EXPLANATION_
 export const EXPLANATION_MODE_CONFIG = {
   [EXPLANATION_MODES.QUICK]: {
     label: '簡潔',
-    icon: '🎯',
+    icon: '[簡]',
     description: '短く要点のみ',
   },
   [EXPLANATION_MODES.STORY]: {
     label: '物語',
-    icon: '📖',
+    icon: '[物]',
     description: '物語の流れと感想',
   },
   [EXPLANATION_MODES.NUANCE]: {
     label: '詳細',
-    icon: '🔍',
+    icon: '[詳]',
     description: 'ニュアンス分析',
   },
   [EXPLANATION_MODES.SPEAKER]: {
     label: '話者',
-    icon: '👥',
+    icon: '[話]',
     description: '登場人物の特定',
   },
   [EXPLANATION_MODES.NARRATIVE]: {
     label: '文体',
-    icon: '📝',
+    icon: '[文]',
     description: '文章構造の分析',
   },
 } as const;
