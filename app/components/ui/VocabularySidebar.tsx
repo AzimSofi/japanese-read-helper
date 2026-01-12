@@ -79,7 +79,7 @@ export default function VocabularySidebar({
           style={{ borderColor: CSS_VARS.NEUTRAL }}
         >
           <div>
-            <h2 className="text-xl font-bold">📝 今日の単語</h2>
+            <h2 className="text-xl font-bold">今日の単語</h2>
             <p className="text-sm text-gray-600 mt-1">
               {entries.length}個の単語を保存しました
             </p>
@@ -168,7 +168,7 @@ export default function VocabularySidebar({
 
                   {/* File info */}
                   <div className="text-xs text-gray-500">
-                    📖 {entry.directory}/{entry.fileName}
+                    {entry.directory}/{entry.fileName}
                   </div>
 
                   {/* Notes */}
@@ -179,7 +179,7 @@ export default function VocabularySidebar({
                         backgroundColor: `color-mix(in srgb, ${CSS_VARS.SECONDARY} 10%, white)`,
                       }}
                     >
-                      💡 {entry.notes}
+                      {entry.notes}
                     </div>
                   )}
                 </div>
