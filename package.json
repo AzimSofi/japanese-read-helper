@@ -16,7 +16,10 @@
     "db:reset": "docker-compose down -v && docker-compose up -d",
     "db:init": "curl http://localhost:3333/api/init-db",
     "db:migrate": "curl http://localhost:3333/api/migrate-text-files",
-    "batch-rephrase": "npx tsx scripts/batch-rephrase.ts"
+    "batch-rephrase": "npx tsx scripts/batch-rephrase.ts",
+    "sst:dev": "sst dev",
+    "sst:deploy": "sst deploy --stage production",
+    "sst:remove": "sst remove"
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.4.0",
@@ -48,6 +51,7 @@
     "eslint-config-next": "15.4.5",
     "kuroshiro": "^1.2.0",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
+    "sst": "^3.17.25",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.30.2",
     "tailwindcss": "^4",
