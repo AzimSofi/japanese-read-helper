@@ -51,7 +51,7 @@
     "eslint-config-next": "15.4.5",
     "kuroshiro": "^1.2.0",
     "kuroshiro-analyzer-kuromoji": "^1.1.0",
-    "sst": "^3.14.29",
+    "sst": "^3.9.37",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-react": "^5.30.2",
     "tailwindcss": "^4",
