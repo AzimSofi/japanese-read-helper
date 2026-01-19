@@ -24,7 +24,7 @@ const LONG_PRESS_DURATION = 700; // ミリ秒
 export default function TTSButton({ text, className = '', size = 'sm', onLongPress }: TTSButtonProps) {
   const { isPlaying, isPaused, isLoading, play, pause, resume, stop } = useTTS();
 
-  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
   const isLongPressRef = useRef(false);
 
   const clearLongPressTimer = useCallback(() => {
@@ -34,12 +34,12 @@ export default function TTSButton({ text, className = '', size = 'sm', onLongPre
     }
   }, []);
 
-  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+  const handlePointerDown = useCallback(() => {
     if (isLoading || !onLongPress) return;
 
     isLongPressRef.current = false;
 
-    longPressTimerRef.current = setTimeout(() => {
+    longPressTimerRef.current = window.setTimeout(() => {
       isLongPressRef.current = true;
       onLongPress();
     }, LONG_PRESS_DURATION);
