@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
+import TranslateIcon from "@/app/components/icons/TranslateIcon";
 import BookImage from "@/app/components/ui/BookImage";
 import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
@@ -33,6 +34,9 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   imageMap,
 }) => {
   const [loading, setLoading] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
 
   const handleBookmarkClick = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,6 +57,46 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
       console.error(error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTranslateClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Toggle back to original text if already showing translation
+    if (showTranslation) {
+      setShowTranslation(false);
+      return;
+    }
+
+    // If we already have a translation, just show it
+    if (translatedText) {
+      setShowTranslation(true);
+      return;
+    }
+
+    // Fetch translation
+    try {
+      setTranslating(true);
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Translation failed");
+      }
+
+      const data = await response.json();
+      setTranslatedText(data.translatedText);
+      setShowTranslation(true);
+    } catch (error) {
+      console.error("Translation error:", error);
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -161,6 +205,15 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
 
   // 画像を含むコンテンツをレンダリング
   const renderContentWithImages = () => {
+    // Show translation if enabled
+    if (showTranslation && translatedText) {
+      return (
+        <div className="paragraph-text whitespace-pre-wrap" style={{ fontStyle: 'normal' }}>
+          {translatedText}
+        </div>
+      );
+    }
+
     if (!hasImage) {
       // 画像がない場合は通常のテキストレンダリング
       return (
@@ -220,25 +273,47 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
         {renderContentWithImages()}
       </div>
 
-      <form onSubmit={handleBookmarkClick} onClick={(e) => e.stopPropagation()}>
+      <div
+        style={{
+          position: "absolute",
+          marginLeft: '0.5rem',
+          marginTop: '0.8rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.25rem',
+        }}
+      >
         <button
-          disabled={loading}
-          type="submit"
+          disabled={translating}
+          onClick={handleTranslateClick}
           style={{
-            position: "absolute",
-            marginLeft: '0.5rem',
-            marginTop: '0.8rem',
             background: "none",
             border: "none",
             padding: 0,
-            cursor: "pointer"
+            cursor: "pointer",
+            opacity: translating ? 0.5 : 1,
           }}
-          className={isBookmarked ? 'cursor-pointer' : ''}
-          aria-label="Bookmark"
+          aria-label="Translate"
         >
-          {isBookmarked ? <BookmarkFilled /> : <BookmarkUnfilled />}
+          <TranslateIcon isActive={showTranslation} />
         </button>
-      </form>
+        <form onSubmit={handleBookmarkClick} onClick={(e) => e.stopPropagation()}>
+          <button
+            disabled={loading}
+            type="submit"
+            style={{
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer"
+            }}
+            className={isBookmarked ? 'cursor-pointer' : ''}
+            aria-label="Bookmark"
+          >
+            {isBookmarked ? <BookmarkFilled /> : <BookmarkUnfilled />}
+          </button>
+        </form>
+      </div>
     </div>
   );
 };

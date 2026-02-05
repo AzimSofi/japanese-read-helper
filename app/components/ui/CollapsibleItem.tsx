@@ -3,12 +3,13 @@
 import React, { useEffect, useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
+import TranslateIcon from "@/app/components/icons/TranslateIcon";
 import ChevronUp from "@/app/components/icons/ChevronUp";
 import ChevronDown from "@/app/components/icons/ChevronDown";
 import BookImage from "@/app/components/ui/BookImage";
 import TTSButton from "@/app/components/ui/TTSButton";
 import { useSearchParams } from "next/navigation";
-import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
+import { CSS_VARS, EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
 interface CollapsibleItemProps {
@@ -20,6 +21,8 @@ interface CollapsibleItemProps {
   showFurigana?: boolean;
   /** AI解説機能の有効/無効（無効時はテキスト選択可能） */
   aiExplanationEnabled?: boolean;
+  /** ダークモードの有効/無効 */
+  isDarkMode?: boolean;
   onSentenceClick?: (sentence: string) => void;
   imageMap?: Record<string, string>;
   bookDirectory?: string;
@@ -41,6 +44,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   onSubmitSuccess,
   showFurigana = false,
   aiExplanationEnabled = true,
+  isDarkMode = false,
   onSentenceClick,
   imageMap,
   bookDirectory,
@@ -62,6 +66,9 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   const [loading, setLoading] = useState(false);
   const [vocabularyMode, setVocabularyMode] = useState(false);
   const [shouldHighlight, setShouldHighlight] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translatedText, setTranslatedText] = useState<string | null>(null);
+  const [translating, setTranslating] = useState(false);
 
   // Listen for vocabulary mode changes
   useEffect(() => {
@@ -210,6 +217,46 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       setLoading(false);
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  const handleTranslateClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+
+    // Toggle back to original text if already showing translation
+    if (showTranslation) {
+      setShowTranslation(false);
+      return;
+    }
+
+    // If we already have a translation, just show it
+    if (translatedText) {
+      setShowTranslation(true);
+      return;
+    }
+
+    // Fetch translation
+    try {
+      setTranslating(true);
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ text: head }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Translation failed");
+      }
+
+      const data = await response.json();
+      setTranslatedText(data.translatedText);
+      setShowTranslation(true);
+    } catch (error) {
+      console.error("Translation error:", error);
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -365,6 +412,11 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
 
   // 画像を含むコンテンツをレンダリング
   const renderHeadWithImages = () => {
+    // Show translation if enabled
+    if (showTranslation && translatedText) {
+      return <span style={{ fontStyle: 'normal' }}>{translatedText}</span>;
+    }
+
     if (!hasImage) {
       // 画像がない場合は通常のテキストレンダリング
       return renderTextWithFurigana(head, true);
@@ -407,6 +459,13 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     );
   };
 
+  const darkStyles = {
+    base: DARK_COLORS.SURFACE,
+    text: DARK_COLORS.TEXT,
+    subText: '#c0c0c0',
+    subBg: '#2a2a3e',
+  };
+
   return (
     <div className="collapsibleItem relative" id={id}>
       <div
@@ -418,7 +477,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                 boxShadow: '0 0 20px rgba(226, 161, 111, 0.5)',
               }
             : id === "bookmark"
-            ? { backgroundColor: CSS_VARS.BASE }
+            ? { backgroundColor: isDarkMode ? darkStyles.base : CSS_VARS.BASE }
             : {}
         }
         id="collapsible-item"
@@ -437,6 +496,15 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
           </div>
           <div className="flex items-center gap-1 flex-shrink-0 pt-1">
             <TTSButton text={head} onLongPress={onStartContinuousPlay} />
+            <button
+              disabled={translating}
+              onClick={handleTranslateClick}
+              className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+              style={{ opacity: translating ? 0.5 : 1 }}
+              aria-label="Translate"
+            >
+              <TranslateIcon isActive={showTranslation} />
+            </button>
             <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="inline-flex">
               <button
                 disabled={loading}
@@ -464,7 +532,15 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         {isOpen && (
           <div className="ml-4 mt-2">
             {subItems.map((subItem, index) => (
-              <div key={index} className="sub-item-text my-1">
+              <div
+                key={index}
+                className="sub-item-text my-1 rounded-lg"
+                style={isDarkMode ? {
+                  color: darkStyles.subText,
+                  backgroundColor: darkStyles.subBg,
+                  padding: '8px 12px',
+                } : {}}
+              >
                 {index === 4 ? "" : renderTextWithFurigana(subItem, false)}
               </div>
             ))}

@@ -19,15 +19,17 @@ export default $config({
     const geminiApiKey = new sst.Secret("GeminiApiKey");
     const authPasswordHash = new sst.Secret("AuthPasswordHash");
     const databaseUrl = new sst.Secret("DatabaseUrl");
+    const googleTranslateApiKey = new sst.Secret("GoogleTranslateApiKey");
 
     const web = new sst.aws.Nextjs("JapaneseReadHelper", {
       openNextVersion: "3.4.1",
-      link: [geminiApiKey, authPasswordHash, databaseUrl],
+      link: [geminiApiKey, authPasswordHash, databaseUrl, googleTranslateApiKey],
       environment: {
         GEMINI_API_KEY: geminiApiKey.value,
         AUTH_PASSWORD_HASH: authPasswordHash.value,
         DATABASE_URL: databaseUrl.value,
         POSTGRES_URL: databaseUrl.value,
+        GOOGLE_TRANSLATE_API_KEY: googleTranslateApiKey.value,
       },
       warm: 1,
     });
