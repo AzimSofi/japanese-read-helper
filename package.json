@@ -38,9 +38,6 @@
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
-  "optionalDependencies": {
-    "sst-win32-x64": "^3.17.38"
-  },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
