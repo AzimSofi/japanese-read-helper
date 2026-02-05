@@ -15,15 +15,29 @@ export default $config({
     };
   },
   async run() {
-    // SST Secrets use SSM Parameter Store (SecureString) - free tier
-    const geminiApiKey = new sst.Secret("GeminiApiKey");
-    const authPasswordHash = new sst.Secret("AuthPasswordHash");
-    const databaseUrl = new sst.Secret("DatabaseUrl");
-    const googleTranslateApiKey = new sst.Secret("GoogleTranslateApiKey");
+    // Use SSM parameters directly (easier to set via AWS CLI)
+    const stage = $app.stage;
+    const ssmPrefix = `japanese-read-helper-${stage}`;
+
+    const geminiApiKey = await aws.ssm.getParameter({
+      name: `${ssmPrefix}-GEMINI_API_KEY`,
+      withDecryption: true,
+    });
+    const authPasswordHash = await aws.ssm.getParameter({
+      name: `${ssmPrefix}-AUTH_PASSWORD_HASH`,
+      withDecryption: true,
+    });
+    const databaseUrl = await aws.ssm.getParameter({
+      name: `${ssmPrefix}-DATABASE_URL`,
+      withDecryption: true,
+    });
+    const googleTranslateApiKey = await aws.ssm.getParameter({
+      name: `${ssmPrefix}-GOOGLE_TRANSLATE_API_KEY`,
+      withDecryption: true,
+    });
 
     const web = new sst.aws.Nextjs("JapaneseReadHelper", {
       openNextVersion: "3.4.1",
-      link: [geminiApiKey, authPasswordHash, databaseUrl, googleTranslateApiKey],
       environment: {
         GEMINI_API_KEY: geminiApiKey.value,
         AUTH_PASSWORD_HASH: authPasswordHash.value,
