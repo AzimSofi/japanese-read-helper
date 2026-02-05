@@ -44,12 +44,26 @@ if (fs.existsSync(envLocalPath)) {
 // Constants
 // ============================================================================
 
+// Use 'python' on Windows, 'python3' elsewhere
+// On Windows, use full path if regular python command fails
+const PYTHON_CMD = process.platform === 'win32'
+  ? 'C:\\Users\\azimm\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
+  : 'python3';
+
 const AI_MODELS = {
-  GEMINI_FLASH: 'gemini-2.0-flash-exp',
+  GEMINI_3_FLASH_PREVIEW: 'gemini-3-flash-preview',
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
   GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
+  GEMINI_FLASH: 'gemini-2.0-flash-exp',
   GEMINI_PRO: 'gemini-1.5-pro-latest',
 } as const;
+
+// Model fallback order: try gemini-3-flash-preview first, then 2.5-flash, then 2.5-flash-lite
+const MODEL_FALLBACK_ORDER = [
+  AI_MODELS.GEMINI_3_FLASH_PREVIEW,
+  AI_MODELS.GEMINI_2_5_FLASH,
+  AI_MODELS.GEMINI_2_5_FLASH_LITE,
+];
 
 const VN_RETRY_CONFIG = {
   MAX_ATTEMPTS: 4,
@@ -89,6 +103,7 @@ interface CLIOptions {
   delaySeconds: number;
   model: string;
   skipRephrase: boolean;
+  skipExtract: boolean;
   skipImages: boolean;
   filter: 'all' | 'n3';
   reset: boolean;
@@ -224,12 +239,12 @@ function extractEpub(epubPath: string, outputDir: string, filter: string, skipIm
   const filterArg = filter === 'n3' ? '--filter n3' : '';
   const outputArg = `--output "${path.join(process.cwd(), 'public', outputDir)}"`;
 
-  const cmd = `python3 scripts/core/epub-to-text-furigana.py "${epubPath}" ${filterArg} ${outputArg}`;
+  const cmd = `${PYTHON_CMD} scripts/core/epub-to-text-furigana.py "${epubPath}" ${filterArg} ${outputArg}`;
 
   console.log(`Running: ${cmd}\n`);
 
   try {
-    const result = spawnSync('python3', [
+    const result = spawnSync(PYTHON_CMD, [
       'scripts/core/epub-to-text-furigana.py',
       epubPath,
       ...(filter === 'n3' ? ['--filter', 'n3'] : []),
@@ -297,7 +312,7 @@ function extractRubyRegistry(epubPath: string, bookDir: string): boolean {
   console.log(`Copied EPUB to: ${tempEpubPath}`);
 
   try {
-    const result = spawnSync('python3', [
+    const result = spawnSync(PYTHON_CMD, [
       'scripts/core/extract-ruby-smart.py',
     ], {
       cwd: process.cwd(),
@@ -465,63 +480,113 @@ function createProgress(
 // AI Processing
 // ============================================================================
 
-let aiClient: GoogleGenAI | null = null;
+// Multiple API key support for faster processing
+let aiClients: GoogleGenAI[] = [];
+let currentClientIndex = 0;
+
+function initializeAIClients(): void {
+  if (aiClients.length > 0) return;
+
+  // Collect all GEMINI_API_KEY* environment variables
+  const keys: string[] = [];
+
+  if (process.env.GEMINI_API_KEY) keys.push(process.env.GEMINI_API_KEY);
+  if (process.env.GEMINI_API_KEY2) keys.push(process.env.GEMINI_API_KEY2);
+  if (process.env.GEMINI_API_KEY3) keys.push(process.env.GEMINI_API_KEY3);
+  if (process.env.GEMINI_API_KEY4) keys.push(process.env.GEMINI_API_KEY4);
+  if (process.env.GEMINI_API_KEY5) keys.push(process.env.GEMINI_API_KEY5);
+
+  if (keys.length === 0) {
+    throw new Error('No GEMINI_API_KEY environment variables set');
+  }
+
+  console.log(`Initialized ${keys.length} API key(s) for rotation`);
+  aiClients = keys.map(apiKey => new GoogleGenAI({ apiKey }));
+}
 
 function getAIClient(): GoogleGenAI {
-  if (!aiClient) {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      throw new Error('GEMINI_API_KEY environment variable is not set');
-    }
-    aiClient = new GoogleGenAI({ apiKey });
-  }
-  return aiClient;
+  initializeAIClients();
+  return aiClients[currentClientIndex];
+}
+
+function rotateAIClient(): void {
+  initializeAIClients();
+  currentClientIndex = (currentClientIndex + 1) % aiClients.length;
+}
+
+function getApiKeyCount(): number {
+  initializeAIClients();
+  return aiClients.length;
 }
 
 async function processChunk(
   chunk: string,
   model: string,
   maxAttempts: number = VN_RETRY_CONFIG.MAX_ATTEMPTS
-): Promise<{ success: boolean; response: string; attempts: number }> {
+): Promise<{ success: boolean; response: string; attempts: number; usedModel?: string }> {
   const ai = getAIClient();
-  let currentInstruction = ai_instructions;
-  let attempt = 0;
-
   const cleanChunk = stripRubyTags(chunk);
 
-  while (attempt < maxAttempts) {
-    attempt++;
-    console.log(`    Attempt ${attempt}/${maxAttempts}...`);
+  // Build model fallback list: start with requested model, then add fallbacks
+  const modelsToTry = [model];
+  for (const fallbackModel of MODEL_FALLBACK_ORDER) {
+    if (!modelsToTry.includes(fallbackModel)) {
+      modelsToTry.push(fallbackModel);
+    }
+  }
 
-    try {
-      const response = await ai.models.generateContent({
-        model: model,
-        contents: currentInstruction + cleanChunk,
-      });
+  for (const currentModel of modelsToTry) {
+    let currentInstruction = ai_instructions;
+    let attempt = 0;
 
-      const responseText = response.text || '';
+    console.log(`    Trying model: ${currentModel}`);
 
-      if (validateResponse(responseText)) {
-        return { success: true, response: responseText, attempts: attempt };
-      }
+    while (attempt < maxAttempts) {
+      attempt++;
+      console.log(`    Attempt ${attempt}/${maxAttempts}...`);
 
-      console.log('    Invalid format, retrying with correction prompt...');
-      currentInstruction =
-        '回答のフォーマットが正しくありません。もう一度やり直してください。必ず下記の構成に従ってください。\n' +
-        ai_instructions;
+      try {
+        const response = await ai.models.generateContent({
+          model: currentModel,
+          contents: currentInstruction + cleanChunk,
+        });
 
-    } catch (error) {
-      console.error(`    API error on attempt ${attempt}:`, error);
+        const responseText = response.text || '';
 
-      if (attempt < maxAttempts) {
-        const waitTime = Math.min(30, attempt * 10);
-        console.log(`    Waiting ${waitTime}s before retry...`);
-        await sleep(waitTime * 1000);
+        if (validateResponse(responseText)) {
+          if (currentModel !== model) {
+            console.log(`    Success with fallback model: ${currentModel}`);
+          }
+          return { success: true, response: responseText, attempts: attempt, usedModel: currentModel };
+        }
+
+        console.log('    Invalid format, retrying with correction prompt...');
+        console.log('    Response preview:', responseText.slice(0, 200).replace(/\n/g, '\\n'));
+        currentInstruction =
+          '回答のフォーマットが正しくありません。もう一度やり直してください。必ず下記の構成に従ってください。\n' +
+          ai_instructions;
+
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`    API error on attempt ${attempt}:`, errorMessage);
+
+        // Check if it's a model-specific error (not found, quota, etc.)
+        if (errorMessage.includes('not found') || errorMessage.includes('404') ||
+            errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
+          console.log(`    Model ${currentModel} unavailable, trying next fallback...`);
+          break; // Try next model
+        }
+
+        if (attempt < maxAttempts) {
+          const waitTime = Math.min(30, attempt * 10);
+          console.log(`    Waiting ${waitTime}s before retry...`);
+          await sleep(waitTime * 1000);
+        }
       }
     }
   }
 
-  return { success: false, response: '', attempts: attempt };
+  return { success: false, response: '', attempts: maxAttempts * modelsToTry.length };
 }
 
 // ============================================================================
@@ -564,7 +629,7 @@ function addFuriganaToChunk(chunkText: string, outputDir: string): string {
   fs.writeFileSync(tempInput, chunkText, 'utf-8');
 
   try {
-    execSync(`python3 scripts/core/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
+    execSync(`${PYTHON_CMD} scripts/core/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
       cwd: process.cwd(),
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe']
@@ -628,13 +693,17 @@ async function batchRephrase(
     const result = chunkText(sourceText, options.chunkSize);
     chunks = result.chunks;
 
+    const keyCount = getApiKeyCount();
+    const effectiveDelay = Math.ceil(options.delaySeconds / keyCount);
+
     console.log(`\nChunks: ${chunks.length} (target size: ${options.chunkSize} chars)`);
-    console.log(`Delay: ${options.delaySeconds}s (${formatDuration(options.delaySeconds)}) between chunks`);
+    console.log(`API Keys: ${keyCount} (rotating for faster processing)`);
+    console.log(`Delay: ${effectiveDelay}s (${formatDuration(effectiveDelay)}) between chunks (base: ${options.delaySeconds}s / ${keyCount} keys)`);
     console.log(`Model: ${options.model}`);
     console.log(`Database sync: ${options.apiUrl}`);
     console.log(`Furigana: enabled (adding after each chunk)`);
 
-    const estimatedTime = chunks.length * options.delaySeconds;
+    const estimatedTime = chunks.length * effectiveDelay;
     console.log(`Estimated total time: ${formatDuration(estimatedTime)}`);
 
     progress = createProgress(
@@ -726,20 +795,51 @@ async function batchRephrase(
       console.log(`  Done! (${progress.chunks.completed}/${chunks.length})`);
       console.log(`  ETA for remaining: ${formatDuration(eta)}`);
     } else {
-      chunkProgress.status = 'failed';
-      chunkProgress.error = 'Max retries exceeded';
-      console.log(`  Failed after ${result.attempts} attempts`);
+      // Fallback: include original text without rephrasing so no content is skipped
+      chunkProgress.status = 'completed';
+      chunkProgress.completedAt = new Date().toISOString();
+      chunkProgress.error = 'Used original text (rephrase failed)';
+      progress.chunks.completed++;
+
+      console.log(`  Failed after ${result.attempts} attempts, using original text as fallback...`);
+
+      // Convert original text to the expected format (each line as < original >> original)
+      const cleanChunk = stripRubyTags(chunk);
+      const lines = cleanChunk.split('\n').filter(l => l.trim().length > 0);
+      const fallbackResponse = lines.map(line => `< ${line}\n>> ${line}`).join('\n\n');
+
+      const separator = fs.existsSync(outputPath) ? '\n\n' : '';
+      fs.appendFileSync(outputPath, separator + fallbackResponse, 'utf-8');
+
+      console.log(`  Adding furigana to fallback...`);
+      const finalText = addFuriganaToChunk(fallbackResponse, sourceDir);
+      const furiganaSeparator = fs.existsSync(outputPathFurigana) ? '\n\n' : '';
+      fs.appendFileSync(outputPathFurigana, furiganaSeparator + finalText, 'utf-8');
+
+      const outputDirectory = `${options.outputDir}/${bookName}`;
+      const synced = await syncToDatabase(options.apiUrl, `${bookName}-rephrase-furigana`, outputDirectory);
+      if (synced) {
+        console.log(`  Database synced with fallback content.`);
+      }
+
+      processedCount++;
     }
 
     saveProgress(progressPath, progress);
 
-    // Wait before next chunk
+    // Rotate to next API key for next chunk
+    rotateAIClient();
+
+    // Wait before next chunk (delay divided by number of API keys)
     if (i < chunks.length - 1 && !shouldStop) {
       const pendingCount = progress.chunks.items.filter(c => c.status === 'pending').length;
       if (pendingCount > 0) {
-        console.log(`\n  Waiting ${formatDuration(progress.settings.delaySeconds)} before next chunk...`);
+        const keyCount = getApiKeyCount();
+        const effectiveDelay = Math.ceil(progress.settings.delaySeconds / keyCount);
+        console.log(`\n  Rotating to API key ${(currentClientIndex % keyCount) + 1}/${keyCount}`);
+        console.log(`  Waiting ${formatDuration(effectiveDelay)} before next chunk...`);
         console.log(`  (Press Ctrl+C to stop and save progress)\n`);
-        await sleep(progress.settings.delaySeconds * 1000);
+        await sleep(effectiveDelay * 1000);
       }
     }
   }
@@ -796,9 +896,10 @@ Example:
     epubPath: args[0],
     outputDir: 'bookv2-furigana',
     chunkSize: 5000,
-    delaySeconds: 600,
-    model: AI_MODELS.GEMINI_2_5_FLASH,
+    delaySeconds: 120, // Base delay (divided by number of API keys)
+    model: AI_MODELS.GEMINI_3_FLASH_PREVIEW,
     skipRephrase: false,
+    skipExtract: false,
     skipImages: false,
     filter: 'all',
     reset: false,
@@ -823,6 +924,9 @@ Example:
         break;
       case '--skip-rephrase':
         options.skipRephrase = true;
+        break;
+      case '--skip-extract':
+        options.skipExtract = true;
         break;
       case '--skip-images':
         options.skipImages = true;
@@ -861,16 +965,26 @@ Example:
 `);
 
   // Step 1: Extract EPUB
-  const bookName = extractEpub(options.epubPath, options.outputDir, options.filter, options.skipImages);
-  if (!bookName) {
-    console.error('Failed to extract EPUB');
-    process.exit(1);
+  let bookName: string | null;
+  if (options.skipExtract) {
+    // Derive book name from epub filename
+    bookName = path.basename(options.epubPath, path.extname(options.epubPath));
+    console.log(`\n=== Skipping Extraction (--skip-extract) ===`);
+    console.log(`Using existing book: ${bookName}\n`);
+  } else {
+    bookName = extractEpub(options.epubPath, options.outputDir, options.filter, options.skipImages);
+    if (!bookName) {
+      console.error('Failed to extract EPUB');
+      process.exit(1);
+    }
   }
 
   const sourceDir = path.join(process.cwd(), 'public', options.outputDir, bookName);
 
   // Step 2: Extract Ruby Registry
-  extractRubyRegistry(options.epubPath, bookName);
+  if (!options.skipExtract) {
+    extractRubyRegistry(options.epubPath, bookName);
+  }
 
   // Step 3: Batch Rephrase (unless skipped)
   if (!options.skipRephrase) {
