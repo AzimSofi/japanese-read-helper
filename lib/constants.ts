@@ -183,6 +183,8 @@ export const STORAGE_KEYS = {
   // Floating sticky notes
   STICKY_NOTES_POSITION: 'sticky_notes_position',
   STICKY_NOTES_COLLAPSED: 'sticky_notes_collapsed',
+  // Dark mode
+  READER_DARK_MODE: 'reader_dark_mode',
   // TTS設定
   TTS_SPEED: 'tts_speed',
   TTS_VOICE_GENDER: 'tts_voice_gender',
@@ -226,6 +228,17 @@ export const CSS_VARS = {
   SECONDARY: 'var(--color-secondary)',
   SECONDARY_DARK: 'var(--color-secondary-dark)',
 } as const;
+
+// Dark mode color palette
+export const DARK_COLORS = {
+  BASE: '#1a1a2e',
+  SURFACE: '#16213e',
+  NEUTRAL: '#4a4a5a',
+  PRIMARY: '#9a6b52',
+  PRIMARY_MUTED: '#7a5540',
+  SECONDARY: '#4a6a7a',
+  TEXT: '#e8e8e8',
+};
 
 // Minimal Reader Theme
 export const READER_THEME = {

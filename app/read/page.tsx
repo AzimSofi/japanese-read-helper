@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import {
   READER_THEME,
   COLORS,
+  DARK_COLORS,
   READER_CONFIG,
   STORAGE_KEYS,
   PAGINATION_CONFIG,
@@ -70,6 +71,7 @@ function ReaderContent({
   const [displayMode, setDisplayMode] = useState<'collapsed' | 'expanded'>('collapsed');
   const [showRephrase, setShowRephrase] = useState(false);
   const [aiExplanationEnabled, setAiExplanationEnabled] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [explanationOpen, setExplanationOpen] = useState(false);
@@ -107,7 +109,18 @@ function ReaderContent({
       setShowRephrase(isExpanded);
       setDisplayMode(isExpanded ? 'expanded' : 'collapsed');
     }
+
+    const storedDarkMode = localStorage.getItem(STORAGE_KEYS.READER_DARK_MODE);
+    if (storedDarkMode) setIsDarkMode(storedDarkMode === 'true');
   }, []);
+
+  // Apply dark mode to body for outer areas
+  useEffect(() => {
+    document.body.style.backgroundColor = isDarkMode ? DARK_COLORS.BASE : '';
+    return () => {
+      document.body.style.backgroundColor = '';
+    };
+  }, [isDarkMode]);
 
   // Keyboard shortcut: Ctrl/Cmd+K to open Ruby Lookup
   useEffect(() => {
@@ -315,6 +328,12 @@ function ReaderContent({
     localStorage.setItem(STORAGE_KEYS.AI_EXPLANATION_ENABLED, enabled.toString());
   };
 
+  const handleToggleDarkMode = () => {
+    const newValue = !isDarkMode;
+    setIsDarkMode(newValue);
+    localStorage.setItem(STORAGE_KEYS.READER_DARK_MODE, newValue.toString());
+  };
+
   const handleSentenceClick = (sentence: string) => {
     if (!aiExplanationEnabled) return;
 
@@ -439,10 +458,14 @@ function ReaderContent({
     );
   }
 
+  const theme = isDarkMode
+    ? { bg: DARK_COLORS.BASE, surface: DARK_COLORS.SURFACE, text: DARK_COLORS.TEXT }
+    : { bg: READER_THEME.SURFACE_MUTED, surface: READER_THEME.SURFACE, text: COLORS.PRIMARY_DARK };
+
   return (
     <div
-      className="min-h-screen"
-      style={{ backgroundColor: READER_THEME.SURFACE_MUTED }}
+      className="min-h-screen transition-colors duration-300"
+      style={{ backgroundColor: theme.bg, color: theme.text }}
     >
       <ProgressBar
         progress={progress}
@@ -456,6 +479,7 @@ function ReaderContent({
         bookmarkPage={bookmarkPage}
         showFurigana={showFurigana}
         showRephrase={showRephrase}
+        isDarkMode={isDarkMode}
         directoryParam={directoryParam}
         fileNameParam={fileNameParam}
         onPageChange={handlePageChange}
@@ -484,13 +508,14 @@ function ReaderContent({
           aiExplanationEnabled={aiExplanationEnabled}
           currentPage={currentPage}
           itemsPerPage={PAGINATION_CONFIG.ITEMS_PER_PAGE}
+          isDarkMode={isDarkMode}
           onBookmarkSuccess={refetchBookmark}
           onSentenceClick={handleSentenceClick}
           imageMap={imageMap}
         />
 
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-8 pt-4 border-t" style={{ borderColor: COLORS.NEUTRAL }}>
+          <div className="flex justify-center items-center gap-4 mt-8 pt-4 border-t" style={{ borderColor: isDarkMode ? DARK_COLORS.NEUTRAL : COLORS.NEUTRAL }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -502,7 +527,7 @@ function ReaderContent({
             >
               Previous
             </button>
-            <span style={{ color: COLORS.SECONDARY_DARK }}>
+            <span style={{ color: isDarkMode ? DARK_COLORS.TEXT : COLORS.SECONDARY_DARK }}>
               {currentPage} / {totalPages}
             </span>
             <button
@@ -527,9 +552,11 @@ function ReaderContent({
         onOpenSettings={() => setSettingsOpen(true)}
         onGoToBookmark={bookmarkPage ? handleGoToBookmark : undefined}
         onCopyRange={handleCopyRange}
+        onToggleDarkMode={handleToggleDarkMode}
         isFuriganaEnabled={showFurigana}
         isBookmarked={bookmarkText.includes(`page:${currentPage}`)}
         showRephrase={showRephrase}
+        isDarkMode={isDarkMode}
         bookmarkPage={bookmarkPage}
         currentPage={currentPage}
         totalPages={totalPages}

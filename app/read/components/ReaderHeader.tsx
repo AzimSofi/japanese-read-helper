@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { READER_THEME, COLORS } from '@/lib/constants';
+import { READER_THEME, COLORS, DARK_COLORS } from '@/lib/constants';
 
 interface ReaderHeaderProps {
   currentPage: number;
@@ -10,6 +10,7 @@ interface ReaderHeaderProps {
   bookmarkPage: number | null;
   showFurigana: boolean;
   showRephrase: boolean;
+  isDarkMode: boolean;
   directoryParam: string | null;
   fileNameParam: string | null;
   onPageChange: (page: number) => void;
@@ -24,6 +25,7 @@ export default function ReaderHeader({
   bookmarkPage,
   showFurigana,
   showRephrase,
+  isDarkMode,
   directoryParam,
   fileNameParam,
   onPageChange,
@@ -57,12 +59,16 @@ export default function ReaderHeader({
     }
   };
 
+  const theme = isDarkMode
+    ? { surface: DARK_COLORS.SURFACE, border: DARK_COLORS.NEUTRAL, text: DARK_COLORS.TEXT, textMuted: '#a0a0a0', primary: DARK_COLORS.PRIMARY, secondary: DARK_COLORS.SECONDARY }
+    : { surface: READER_THEME.SURFACE, border: COLORS.NEUTRAL, text: COLORS.PRIMARY_DARK, textMuted: COLORS.SECONDARY_DARK, primary: COLORS.PRIMARY, secondary: COLORS.SECONDARY };
+
   return (
     <header
-      className="sticky top-0 z-40 backdrop-blur-sm border-b"
+      className="sticky top-0 z-40 backdrop-blur-sm border-b transition-colors duration-300"
       style={{
-        backgroundColor: `${READER_THEME.SURFACE}F5`,
-        borderColor: COLORS.NEUTRAL,
+        backgroundColor: `${theme.surface}F5`,
+        borderColor: theme.border,
       }}
     >
       <div className="max-w-3xl mx-auto px-4 py-2">
@@ -70,7 +76,7 @@ export default function ReaderHeader({
           <button
             onClick={() => router.push('/library')}
             className="p-2 rounded-lg transition-colors hover:bg-opacity-80 flex-shrink-0"
-            style={{ color: COLORS.SECONDARY_DARK }}
+            style={{ color: theme.textMuted }}
             title="Back to Library"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -83,7 +89,7 @@ export default function ReaderHeader({
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage <= 1}
               className="p-1.5 rounded disabled:opacity-30 transition-opacity"
-              style={{ color: COLORS.SECONDARY_DARK }}
+              style={{ color: theme.textMuted }}
               title="Previous page"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -108,12 +114,12 @@ export default function ReaderHeader({
                 onKeyDown={handlePageInputKeyDown}
                 className="w-12 text-center text-sm py-1 px-1 rounded border focus:outline-none focus:ring-1"
                 style={{
-                  backgroundColor: READER_THEME.SURFACE,
-                  borderColor: COLORS.NEUTRAL,
-                  color: COLORS.PRIMARY_DARK,
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                  color: theme.text,
                 }}
               />
-              <span className="text-sm" style={{ color: COLORS.SECONDARY_DARK }}>
+              <span className="text-sm" style={{ color: theme.textMuted }}>
                 / {totalPages}
               </span>
             </div>
@@ -122,7 +128,7 @@ export default function ReaderHeader({
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
               className="p-1.5 rounded disabled:opacity-30 transition-opacity"
-              style={{ color: COLORS.SECONDARY_DARK }}
+              style={{ color: theme.textMuted }}
               title="Next page"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -150,9 +156,9 @@ export default function ReaderHeader({
               onClick={onToggleFurigana}
               className="p-2 rounded-lg transition-colors text-xs font-medium"
               style={{
-                backgroundColor: showFurigana ? COLORS.PRIMARY : 'transparent',
-                color: showFurigana ? '#FFFFFF' : COLORS.SECONDARY_DARK,
-                boxShadow: showFurigana ? `0 0 0 1px ${COLORS.PRIMARY}` : 'none',
+                backgroundColor: showFurigana ? theme.primary : 'transparent',
+                color: showFurigana ? '#FFFFFF' : theme.textMuted,
+                boxShadow: showFurigana ? `0 0 0 1px ${theme.primary}` : 'none',
               }}
               title={showFurigana ? 'Hide furigana' : 'Show furigana'}
             >
@@ -164,7 +170,7 @@ export default function ReaderHeader({
               className="p-2 rounded-lg transition-colors text-xs font-medium"
               style={{
                 backgroundColor: 'transparent',
-                color: COLORS.SECONDARY_DARK,
+                color: theme.textMuted,
               }}
               title="Ruby lookup"
             >
@@ -177,9 +183,9 @@ export default function ReaderHeader({
               onClick={onToggleRephrase}
               className="p-2 rounded-lg transition-colors text-xs font-medium"
               style={{
-                backgroundColor: showRephrase ? COLORS.SECONDARY : 'transparent',
-                color: showRephrase ? '#FFFFFF' : COLORS.SECONDARY_DARK,
-                boxShadow: showRephrase ? `0 0 0 1px ${COLORS.SECONDARY}` : 'none',
+                backgroundColor: showRephrase ? theme.secondary : 'transparent',
+                color: showRephrase ? '#FFFFFF' : theme.textMuted,
+                boxShadow: showRephrase ? `0 0 0 1px ${theme.secondary}` : 'none',
               }}
               title={showRephrase ? 'Collapse rephrases' : 'Expand rephrases'}
             >
