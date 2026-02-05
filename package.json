@@ -36,7 +36,9 @@
     "postgres": "^3.4.7",
     "prisma": "^7.0.0",
     "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react-dom": "19.1.0"
+  },
+  "optionalDependencies": {
     "sst-win32-x64": "^3.17.38"
   },
   "devDependencies": {
