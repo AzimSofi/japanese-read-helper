@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import dynamic from 'next/dynamic';
 import { parseMarkdown } from '@/lib/utils/markdownParser';
-import { READER_CONFIG, READER_THEME, COLORS } from '@/lib/constants';
+import { READER_CONFIG, READER_THEME, COLORS, DARK_COLORS } from '@/lib/constants';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
 
 const CollapsibleItem = dynamic(
@@ -30,6 +30,7 @@ interface ReadingContentProps {
   aiExplanationEnabled: boolean;
   currentPage: number;
   itemsPerPage: number;
+  isDarkMode: boolean;
   onBookmarkSuccess: () => void;
   onSentenceClick?: (sentence: string) => void;
   imageMap?: Record<string, string>;
@@ -62,6 +63,7 @@ export default function ReadingContent({
   aiExplanationEnabled,
   currentPage,
   itemsPerPage,
+  isDarkMode,
   onBookmarkSuccess,
   onSentenceClick,
   imageMap,
@@ -118,6 +120,7 @@ export default function ReadingContent({
               initialDropdownState={displayMode === 'expanded'}
               showFurigana={showFurigana}
               aiExplanationEnabled={aiExplanationEnabled}
+              isDarkMode={isDarkMode}
               onSubmitSuccess={onBookmarkSuccess}
               onSentenceClick={onSentenceClick}
               imageMap={imageMap}

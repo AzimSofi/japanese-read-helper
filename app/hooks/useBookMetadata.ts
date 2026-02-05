@@ -72,15 +72,21 @@ export function useBookMetadata(
             return;
           }
 
-          // Strip "image/" or "images/" prefix from originalName if present
-          const originalName = image.originalName.replace(/^images?\//, '');
+          // Extract just the filename (basename) from any path
+          // OEBPS/image_rsrc3F7.jpg -> image_rsrc3F7.jpg
+          // images/cover.jpg -> cover.jpg
+          const basename = image.originalName.split('/').pop() || image.originalName;
 
-          // Map original name → renamed filename
-          map[originalName] = image.fileName;
+          // Map basename → renamed filename (this is what the text file uses)
+          map[basename] = image.fileName;
 
-          // Also add mapping with original path for backward compatibility
-          if (image.originalName.startsWith('image/') || image.originalName.startsWith('images/')) {
-            map[image.originalName] = image.fileName;
+          // Also add mapping with full original path for backward compatibility
+          map[image.originalName] = image.fileName;
+
+          // Strip common prefixes and add those mappings too
+          const withoutPrefix = image.originalName.replace(/^(OEBPS|images?)\//i, '');
+          if (withoutPrefix !== basename) {
+            map[withoutPrefix] = image.fileName;
           }
         });
 
