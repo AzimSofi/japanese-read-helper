@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { READER_THEME, COLORS } from '@/lib/constants';
+import { READER_THEME, COLORS, DARK_COLORS } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
 
 interface ReaderFABProps {
@@ -11,9 +11,11 @@ interface ReaderFABProps {
   onOpenSettings: () => void;
   onGoToBookmark?: () => void;
   onCopyRange: (startPage: number, endPage: number) => Promise<void>;
+  onToggleDarkMode: () => void;
   isFuriganaEnabled: boolean;
   isBookmarked: boolean;
   showRephrase: boolean;
+  isDarkMode: boolean;
   bookmarkPage?: number | null;
   currentPage?: number;
   totalPages?: number;
@@ -58,9 +60,11 @@ export default function ReaderFAB({
   onOpenSettings,
   onGoToBookmark,
   onCopyRange,
+  onToggleDarkMode,
   isFuriganaEnabled,
   isBookmarked,
   showRephrase,
+  isDarkMode,
   bookmarkPage,
   currentPage,
   totalPages = 1,
@@ -319,6 +323,20 @@ export default function ReaderFAB({
       active: isFuriganaEnabled,
     },
     {
+      icon: isDarkMode ? (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+      ) : (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+      ),
+      label: isDarkMode ? 'Light Mode' : 'Dark Mode',
+      action: onToggleDarkMode,
+      active: isDarkMode,
+    },
+    {
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -504,7 +522,9 @@ export default function ReaderFAB({
               width: `${FAB_SIZE}px`,
               height: `${FAB_SIZE}px`,
               borderRadius: '50%',
-              backgroundColor: isExpanded ? COLORS.SECONDARY : COLORS.PRIMARY,
+              backgroundColor: isExpanded
+                ? (isDarkMode ? DARK_COLORS.SECONDARY : COLORS.SECONDARY)
+                : (isDarkMode ? DARK_COLORS.PRIMARY : COLORS.PRIMARY),
               color: '#FFFFFF',
               border: 'none',
               boxShadow: isDragging
