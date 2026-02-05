@@ -37,16 +37,29 @@ if (fs.existsSync(envLocalPath)) {
 // ============================================================================
 
 const AI_MODELS = {
-  GEMINI_FLASH: 'gemini-2.0-flash-exp',
+  GEMINI_3_FLASH_PREVIEW: 'gemini-3-flash-preview',
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
   GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
+  GEMINI_FLASH: 'gemini-2.0-flash-exp',
   GEMINI_PRO: 'gemini-1.5-pro-latest',
 } as const;
+
+// Model fallback order
+const MODEL_FALLBACK_ORDER = [
+  AI_MODELS.GEMINI_3_FLASH_PREVIEW,
+  AI_MODELS.GEMINI_2_5_FLASH,
+  AI_MODELS.GEMINI_2_5_FLASH_LITE,
+];
 
 const VN_RETRY_CONFIG = {
   MAX_ATTEMPTS: 4,
   INITIAL_ATTEMPT: 1,
 } as const;
+
+// Use 'python' on Windows, 'python3' elsewhere
+const PYTHON_CMD = process.platform === 'win32'
+  ? 'C:\\Users\\azimm\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
+  : 'python3';
 
 // AI instruction prompt - simplified summary format (1 rephrase per line)
 const ai_instructions = `
@@ -475,7 +488,7 @@ function addFuriganaToChunk(chunkText: string, outputDir: string): string {
   fs.writeFileSync(tempInput, chunkText, 'utf-8');
 
   try {
-    execSync(`python3 scripts/core/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
+    execSync(`${PYTHON_CMD} scripts/core/add-furigana-to-text.py "${tempInput}" -o "${tempOutput}"`, {
       cwd: process.cwd(),
       encoding: 'utf-8',
       stdio: ['pipe', 'pipe', 'pipe']
@@ -537,7 +550,7 @@ Example:
     bookName: args[0],
     chunkSize: 5000,
     delaySeconds: 600,
-    model: AI_MODELS.GEMINI_2_5_FLASH, // gemini-2.5-flash - default model
+    model: AI_MODELS.GEMINI_3_FLASH_PREVIEW, // gemini-3-flash-preview - default with fallback
     reset: false,
     dryRun: false,
     apiUrl: 'http://localhost:3333',
