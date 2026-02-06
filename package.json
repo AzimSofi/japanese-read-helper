@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@google-cloud/text-to-speech": "^6.4.0",
+    "@swc/helpers": "^0.5.15",
     "@google/genai": "^1.13.0",
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
