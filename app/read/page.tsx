@@ -460,7 +460,7 @@ function ReaderContent({
 
   const theme = isDarkMode
     ? { bg: DARK_COLORS.BASE, surface: DARK_COLORS.SURFACE, text: DARK_COLORS.TEXT }
-    : { bg: READER_THEME.SURFACE_MUTED, surface: READER_THEME.SURFACE, text: COLORS.PRIMARY_DARK };
+    : { bg: READER_THEME.SURFACE_MUTED, surface: READER_THEME.SURFACE, text: '#000000' };
 
   return (
     <div
