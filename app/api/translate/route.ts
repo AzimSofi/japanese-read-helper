@@ -14,9 +14,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Translation service not configured' }, { status: 500 });
     }
 
-    // Remove furigana patterns before translation
-    // Pattern: 漢字[ふりがな] -> 漢字
-    const cleanedText = text.replace(/\[([^\]]+)\]/g, '');
+    // Remove furigana before translation
+    // 1. Strip HTML ruby tags: <ruby><rb>漢字</rb><rt>ふりがな</rt></ruby> -> 漢字
+    // 2. Strip bracket format: 漢字[ふりがな] -> 漢字
+    const cleanedText = text
+      .replace(/<rt>[^<]*<\/rt>/g, '')
+      .replace(/<\/?(?:ruby|rb|rt)>/g, '')
+      .replace(/\[([^\]]+)\]/g, '');
 
     const response = await fetch(
       `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
