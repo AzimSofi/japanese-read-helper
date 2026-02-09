@@ -320,6 +320,19 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     return sentences.filter(s => s.length > 0);
   };
 
+  const handleTripleClickSelect = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.detail >= 3) {
+      e.stopPropagation();
+      const selection = window.getSelection();
+      if (selection) {
+        const range = document.createRange();
+        range.selectNodeContents(e.currentTarget);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+  };
+
   // 振り仮名付きテキストをレンダリング
   const renderTextWithFurigana = (text: string, isClickable: boolean = false) => {
     // AI解説無効時またはクリック不可の場合は単純なテキストレンダリング
@@ -489,6 +502,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
               className={"head-text font-bold text-lg whitespace-pre-wrap"}
               ref={headRef}
               onMouseUp={handleTextSelection}
+              onClickCapture={handleTripleClickSelect}
               style={(vocabularyMode || !aiExplanationEnabled) ? { userSelect: 'text', cursor: 'text' } : {}}
             >
               {renderHeadWithImages()}
@@ -535,6 +549,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
               <div
                 key={index}
                 className="sub-item-text my-1 rounded-lg"
+                onClick={handleTripleClickSelect}
                 style={isDarkMode ? {
                   color: darkStyles.subText,
                   backgroundColor: darkStyles.subBg,

@@ -160,6 +160,19 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     return sentences.filter(s => s.length > 0);
   };
 
+  const handleTripleClickSelect = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.detail >= 3) {
+      e.stopPropagation();
+      const selection = window.getSelection();
+      if (selection) {
+        const range = document.createRange();
+        range.selectNodeContents(e.currentTarget);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+    }
+  };
+
   // 振り仮名付きテキストをレンダリング
   const renderTextWithFurigana = (text: string, isClickable: boolean = false) => {
     if (!isClickable || !onSentenceClick) {
@@ -217,7 +230,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     if (!hasImage) {
       // 画像がない場合は通常のテキストレンダリング
       return (
-        <div className="paragraph-text whitespace-pre-wrap">
+        <div className="paragraph-text whitespace-pre-wrap" onClickCapture={handleTripleClickSelect}>
           {renderTextWithFurigana(text, true)}
         </div>
       );
@@ -231,7 +244,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
         {parts.map((part, index) => {
           if (part.type === 'text') {
             return (
-              <div key={index} className="paragraph-text whitespace-pre-wrap">
+              <div key={index} className="paragraph-text whitespace-pre-wrap" onClickCapture={handleTripleClickSelect}>
                 {renderTextWithFurigana(part.content, true)}
               </div>
             );
