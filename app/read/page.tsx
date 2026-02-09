@@ -395,24 +395,6 @@ function ReaderContent({
     await navigator.clipboard.writeText(textToCopy);
   }, [content]);
 
-  const handleTapNavigation = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLElement;
-    const interactiveElements = ['BUTTON', 'A', 'INPUT', 'TEXTAREA', 'SELECT'];
-    if (interactiveElements.includes(target.tagName)) return;
-
-    if (target.closest('.collapsibleItem') || target.closest('.paragraph-item')) return;
-
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const width = rect.width;
-
-    if (x < width * 0.2) {
-      handlePageChange(currentPage - 1);
-    } else if (x > width * 0.8) {
-      handlePageChange(currentPage + 1);
-    }
-  };
-
   if (isLoading) {
     return (
       <div
@@ -489,8 +471,7 @@ function ReaderContent({
       />
 
       <main
-        className="max-w-3xl mx-auto px-4 py-8 pt-4 pb-24 cursor-pointer"
-        onClick={handleTapNavigation}
+        className="max-w-3xl mx-auto px-4 py-8 pt-4 pb-24"
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
