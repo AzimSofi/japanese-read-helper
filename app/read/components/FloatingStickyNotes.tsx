@@ -127,8 +127,13 @@ export default function FloatingStickyNotes({
   }, [loadStarredWords]);
 
   const starredEntries = useMemo(() => {
-    if (!registry || starredWords.size === 0) return [];
-    return registry.entries.filter(e => starredWords.has(e.kanji));
+    if (starredWords.size === 0) return [];
+    if (!registry) {
+      return Array.from(starredWords).map(kanji => ({ kanji, reading: '', note: '' }));
+    }
+    const matched = registry.entries.filter(e => starredWords.has(e.kanji));
+    if (matched.length > 0) return matched;
+    return Array.from(starredWords).map(kanji => ({ kanji, reading: '', note: '' }));
   }, [registry, starredWords]);
 
   const handleDragStart = useCallback((clientX: number, clientY: number) => {

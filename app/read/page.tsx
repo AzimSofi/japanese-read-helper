@@ -534,6 +534,7 @@ function ReaderContent({
         onGoToBookmark={bookmarkPage ? handleGoToBookmark : undefined}
         onCopyRange={handleCopyRange}
         onToggleDarkMode={handleToggleDarkMode}
+        onToggleRubyLookup={() => setRubyLookupOpen(prev => !prev)}
         isFuriganaEnabled={showFurigana}
         isBookmarked={bookmarkText.includes(`page:${currentPage}`)}
         showRephrase={showRephrase}
