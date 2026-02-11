@@ -232,7 +232,7 @@ def find_book_directory(epub_path: Path, public_dir: Path) -> Path | None:
 
 def main():
     script_dir = Path(__file__).parent
-    project_root = script_dir.parent
+    project_root = script_dir.parent.parent
     public_dir = project_root / 'public'
 
     # Check for dated subdirectory first, then fall back to temp/
