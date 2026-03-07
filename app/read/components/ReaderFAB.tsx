@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { READER_THEME, COLORS, DARK_COLORS } from '@/lib/constants';
+import { COLORS, DARK_COLORS } from '@/lib/constants';
 import { useRouter } from 'next/navigation';
 
 interface ReaderFABProps {
@@ -381,9 +381,9 @@ export default function ReaderFAB({
     <>
       {isExpanded && (
         <div
-          className="fixed inset-0 z-[9998]"
+          className="fixed inset-0 z-[9998] backdrop-blur-sm"
           onClick={handleBackdropClick}
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
         />
       )}
 
@@ -426,11 +426,12 @@ export default function ReaderFAB({
                     >
                       <button
                         onClick={(e) => e.stopPropagation()}
-                        className="flex items-center gap-3 px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap"
+                        className="flex items-center gap-3 px-4 py-2.5 rounded-2xl whitespace-nowrap"
                         style={{
-                          backgroundColor: btn.active ? COLORS.PRIMARY : READER_THEME.SURFACE,
-                          color: btn.active ? '#FFFFFF' : COLORS.PRIMARY_DARK,
-                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                          backgroundColor: btn.active ? undefined : '#FFFFFF',
+                          background: btn.active ? 'linear-gradient(135deg, #007AFF, #0051D5)' : undefined,
+                          color: btn.active ? '#FFFFFF' : '#1D1D1F',
+                          boxShadow: '0 2px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
                         }}
                       >
                         {btn.icon}
@@ -442,10 +443,10 @@ export default function ReaderFAB({
 
                       {copyRangeHovered && (
                         <div
-                          className="absolute left-full ml-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-2 rounded-full shadow-lg whitespace-nowrap"
+                          className="absolute left-full ml-2 top-1/2 -translate-y-1/2 flex items-center gap-2 px-3 py-2 rounded-2xl whitespace-nowrap"
                           style={{
-                            backgroundColor: READER_THEME.SURFACE,
-                            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                            backgroundColor: '#FFFFFF',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
                           }}
                         >
                           <input
@@ -455,14 +456,14 @@ export default function ReaderFAB({
                             value={startPage}
                             onChange={(e) => setStartPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-12 px-2 py-1 rounded border text-center text-sm"
+                            className="w-12 px-2 py-1 rounded-lg text-center text-sm"
                             style={{
-                              borderColor: COLORS.NEUTRAL,
-                              backgroundColor: READER_THEME.SURFACE,
-                              color: COLORS.PRIMARY_DARK,
+                              border: '1px solid #D1D1D6',
+                              backgroundColor: '#F2F2F7',
+                              color: '#1D1D1F',
                             }}
                           />
-                          <span style={{ color: COLORS.SECONDARY_DARK }}>-</span>
+                          <span style={{ color: '#8E8E93' }}>-</span>
                           <input
                             type="number"
                             min={1}
@@ -470,11 +471,11 @@ export default function ReaderFAB({
                             value={endPage}
                             onChange={(e) => setEndPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
                             onClick={(e) => e.stopPropagation()}
-                            className="w-12 px-2 py-1 rounded border text-center text-sm"
+                            className="w-12 px-2 py-1 rounded-lg text-center text-sm"
                             style={{
-                              borderColor: COLORS.NEUTRAL,
-                              backgroundColor: READER_THEME.SURFACE,
-                              color: COLORS.PRIMARY_DARK,
+                              border: '1px solid #D1D1D6',
+                              backgroundColor: '#F2F2F7',
+                              color: '#1D1D1F',
                             }}
                           />
                           <button
@@ -483,9 +484,9 @@ export default function ReaderFAB({
                               handleCopyRangeSubmit();
                             }}
                             disabled={startPage > endPage}
-                            className="px-3 py-1 rounded-full text-sm font-medium transition-colors disabled:opacity-50"
+                            className="px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50"
                             style={{
-                              backgroundColor: copyRangeFeedback ? COLORS.SECONDARY : COLORS.PRIMARY,
+                              background: copyRangeFeedback ? '#8E8E93' : 'linear-gradient(135deg, #007AFF, #0051D5)',
                               color: '#FFFFFF',
                             }}
                           >
@@ -504,11 +505,12 @@ export default function ReaderFAB({
                       e.stopPropagation();
                       handleAction(btn.action, btn.keepOpen);
                     }}
-                    className="flex items-center gap-3 px-4 py-2.5 rounded-full shadow-lg whitespace-nowrap animate-fab-item"
+                    className="flex items-center gap-3 px-4 py-2.5 rounded-2xl whitespace-nowrap animate-fab-item"
                     style={{
-                      backgroundColor: btn.active ? COLORS.PRIMARY : READER_THEME.SURFACE,
-                      color: btn.active ? '#FFFFFF' : COLORS.PRIMARY_DARK,
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+                      backgroundColor: btn.active ? undefined : '#FFFFFF',
+                      background: btn.active ? 'linear-gradient(135deg, #007AFF, #0051D5)' : undefined,
+                      color: btn.active ? '#FFFFFF' : '#1D1D1F',
+                      boxShadow: '0 2px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
                       animationDelay: `${delay}ms`,
                       opacity: 0,
                       transform: isMenuAbove ? 'translateY(8px)' : 'translateY(-8px)',
@@ -534,19 +536,19 @@ export default function ReaderFAB({
               width: `${FAB_SIZE}px`,
               height: `${FAB_SIZE}px`,
               borderRadius: '50%',
-              backgroundColor: isExpanded
-                ? (isDarkMode ? DARK_COLORS.SECONDARY : COLORS.SECONDARY)
-                : (isDarkMode ? DARK_COLORS.PRIMARY : COLORS.PRIMARY),
+              background: isExpanded
+                ? (isDarkMode ? DARK_COLORS.SECONDARY : '#8E8E93')
+                : (isDarkMode ? DARK_COLORS.PRIMARY : 'linear-gradient(135deg, #007AFF, #5856D6)'),
               color: '#FFFFFF',
               border: 'none',
               boxShadow: isDragging
                 ? '0 8px 32px rgba(0, 0, 0, 0.35)'
-                : '0 4px 20px rgba(0, 0, 0, 0.25)',
+                : '0 4px 16px rgba(0, 122, 255, 0.35)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: isDragging ? 'grabbing' : 'grab',
-              transition: isDragging ? 'none' : 'background-color 200ms, box-shadow 200ms, transform 200ms',
+              transition: isDragging ? 'none' : 'background 200ms cubic-bezier(0.4, 0, 0.2, 1), box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1), transform 200ms cubic-bezier(0.4, 0, 0.2, 1)',
               transform: isDragging ? 'scale(1.08)' : 'scale(1)',
             }}
           >
@@ -589,7 +591,7 @@ export default function ReaderFAB({
         }
 
         .animate-fab-item {
-          animation: fab-item-enter 200ms ease-out forwards;
+          animation: fab-item-enter 250ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
         }
 
         @keyframes pulse {
