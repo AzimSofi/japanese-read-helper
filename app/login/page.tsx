@@ -46,8 +46,8 @@ export default function LoginPage() {
           <div
             className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center"
             style={{
-              background: 'linear-gradient(135deg, #007AFF 0%, #5856D6 100%)',
-              boxShadow: '0 4px 16px rgba(0, 122, 255, 0.3)',
+              backgroundColor: '#007AFF',
+              boxShadow: '0 4px 16px rgba(0, 122, 255, 0.25)',
             }}
           >
             <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -114,8 +114,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full py-3 px-4 rounded-xl font-semibold text-white text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
             style={{
-              background: loading ? '#8E8E93' : 'linear-gradient(135deg, #007AFF 0%, #0051D5 100%)',
-              boxShadow: loading ? 'none' : '0 2px 8px rgba(0, 122, 255, 0.3)',
+              backgroundColor: loading ? '#8E8E93' : '#007AFF',
             }}
           >
             {loading ? 'Signing in...' : 'Sign In'}

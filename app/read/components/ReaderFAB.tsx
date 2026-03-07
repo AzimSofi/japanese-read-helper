@@ -428,8 +428,7 @@ export default function ReaderFAB({
                         onClick={(e) => e.stopPropagation()}
                         className="flex items-center gap-3 px-4 py-2.5 rounded-2xl whitespace-nowrap"
                         style={{
-                          backgroundColor: btn.active ? undefined : '#FFFFFF',
-                          background: btn.active ? 'linear-gradient(135deg, #007AFF, #0051D5)' : undefined,
+                          backgroundColor: btn.active ? '#007AFF' : '#FFFFFF',
                           color: btn.active ? '#FFFFFF' : '#1D1D1F',
                           boxShadow: '0 2px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
                         }}
@@ -486,7 +485,7 @@ export default function ReaderFAB({
                             disabled={startPage > endPage}
                             className="px-3 py-1 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50"
                             style={{
-                              background: copyRangeFeedback ? '#8E8E93' : 'linear-gradient(135deg, #007AFF, #0051D5)',
+                              backgroundColor: copyRangeFeedback ? '#8E8E93' : '#007AFF',
                               color: '#FFFFFF',
                             }}
                           >
@@ -507,8 +506,7 @@ export default function ReaderFAB({
                     }}
                     className="flex items-center gap-3 px-4 py-2.5 rounded-2xl whitespace-nowrap animate-fab-item"
                     style={{
-                      backgroundColor: btn.active ? undefined : '#FFFFFF',
-                      background: btn.active ? 'linear-gradient(135deg, #007AFF, #0051D5)' : undefined,
+                      backgroundColor: btn.active ? '#007AFF' : '#FFFFFF',
                       color: btn.active ? '#FFFFFF' : '#1D1D1F',
                       boxShadow: '0 2px 12px rgba(0,0,0,0.1), 0 0 0 1px rgba(0,0,0,0.04)',
                       animationDelay: `${delay}ms`,
@@ -538,7 +536,7 @@ export default function ReaderFAB({
               borderRadius: '50%',
               background: isExpanded
                 ? (isDarkMode ? DARK_COLORS.SECONDARY : '#8E8E93')
-                : (isDarkMode ? DARK_COLORS.PRIMARY : 'linear-gradient(135deg, #007AFF, #5856D6)'),
+                : (isDarkMode ? DARK_COLORS.PRIMARY : '#007AFF'),
               color: '#FFFFFF',
               border: 'none',
               boxShadow: isDragging
