@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { COLORS, READER_THEME, API_ROUTES } from '@/lib/constants';
+import { API_ROUTES } from '@/lib/constants';
 import DirectorySection from './DirectorySection';
 
 interface FileListResponse {
@@ -66,13 +66,13 @@ export default function LibraryGrid() {
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="text-center">
           <div
-            className="w-12 h-12 border-4 rounded-full animate-spin mx-auto mb-4"
+            className="w-8 h-8 border-2 rounded-full animate-spin mx-auto mb-4"
             style={{
-              borderColor: COLORS.NEUTRAL,
-              borderTopColor: COLORS.PRIMARY,
+              borderColor: '#E5E5EA',
+              borderTopColor: '#007AFF',
             }}
           />
-          <p style={{ color: COLORS.SECONDARY_DARK }}>Loading library...</p>
+          <p className="text-sm" style={{ color: '#8E8E93' }}>Loading...</p>
         </div>
       </div>
     );
@@ -81,14 +81,14 @@ export default function LibraryGrid() {
   if (error) {
     return (
       <div
-        className="p-6 rounded-xl text-center"
+        className="p-8 rounded-2xl text-center"
         style={{
-          backgroundColor: READER_THEME.SURFACE,
-          color: COLORS.PRIMARY_DARK,
+          backgroundColor: '#FFFFFF',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)',
         }}
       >
-        <p className="text-lg mb-2">Could not load library</p>
-        <p className="text-sm" style={{ color: COLORS.SECONDARY_DARK }}>{error}</p>
+        <p className="text-lg font-semibold mb-2" style={{ color: '#1D1D1F' }}>Could not load library</p>
+        <p className="text-sm" style={{ color: '#8E8E93' }}>{error}</p>
       </div>
     );
   }
@@ -96,13 +96,16 @@ export default function LibraryGrid() {
   if (!fileData || sortedDirectories.length === 0) {
     return (
       <div
-        className="p-8 rounded-xl text-center"
-        style={{ backgroundColor: READER_THEME.SURFACE }}
+        className="p-8 rounded-2xl text-center"
+        style={{
+          backgroundColor: '#FFFFFF',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.04)',
+        }}
       >
-        <p className="text-lg mb-2" style={{ color: COLORS.PRIMARY_DARK }}>
+        <p className="text-lg font-semibold mb-2" style={{ color: '#1D1D1F' }}>
           No books found
         </p>
-        <p className="text-sm" style={{ color: COLORS.SECONDARY_DARK }}>
+        <p className="text-sm" style={{ color: '#8E8E93' }}>
           Add .txt files to the public/ directory to get started.
         </p>
       </div>
