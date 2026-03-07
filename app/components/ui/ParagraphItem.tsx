@@ -5,7 +5,7 @@ import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import TranslateIcon from "@/app/components/icons/TranslateIcon";
 import BookImage from "@/app/components/ui/BookImage";
-import { CSS_VARS, EXPLANATION_CONFIG } from "@/lib/constants";
+import { EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
 interface ParagraphItemProps {
@@ -18,7 +18,7 @@ interface ParagraphItemProps {
   onSentenceClick?: (sentence: string) => void;
   fontSize: number;
   lineHeight: number;
-  imageMap?: Record<string, string>; // Map from original names to renamed files
+  imageMap?: Record<string, string>;
 }
 
 const ParagraphItem: React.FC<ParagraphItemProps> = ({
@@ -50,7 +50,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
         body: JSON.stringify({ target: fileName, content: text }),
       });
       if (!response.ok) {
-        throw new Error("失敗");
+        throw new Error("Failed");
       }
       onBookmarkSuccess();
     } catch (error) {
@@ -63,19 +63,16 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   const handleTranslateClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Toggle back to original text if already showing translation
     if (showTranslation) {
       setShowTranslation(false);
       return;
     }
 
-    // If we already have a translation, just show it
     if (translatedText) {
       setShowTranslation(true);
       return;
     }
 
-    // Fetch translation
     try {
       setTranslating(true);
       const response = await fetch("/api/translate", {
@@ -100,56 +97,50 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     }
   };
 
-  // 画像プレースホルダーを検出
   const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/g;
   const hasImage = IMAGE_PATTERN.test(text);
 
-  // テキストと画像を分割して処理
   const parseContentWithImages = (content: string) => {
-    const parts: Array<{ type: 'text' | 'image'; content: string }> = [];
+    const parts: Array<{ type: "text" | "image"; content: string }> = [];
     let lastIndex = 0;
     const regex = /\[IMAGE:([^\]]+)\]/g;
     let match;
 
     while ((match = regex.exec(content)) !== null) {
-      // 画像の前のテキスト
       if (match.index > lastIndex) {
         const textBefore = content.substring(lastIndex, match.index);
         if (textBefore.trim()) {
-          parts.push({ type: 'text', content: textBefore });
+          parts.push({ type: "text", content: textBefore });
         }
       }
 
-      // 画像プレースホルダー
       const imageName = match[1];
-      parts.push({ type: 'image', content: imageName });
+      parts.push({ type: "image", content: imageName });
 
       lastIndex = regex.lastIndex;
     }
 
-    // 画像の後のテキスト
     if (lastIndex < content.length) {
       const textAfter = content.substring(lastIndex);
       if (textAfter.trim()) {
-        parts.push({ type: 'text', content: textAfter });
+        parts.push({ type: "text", content: textAfter });
       }
     }
 
     return parts;
   };
 
-  // 文を区切り文字で分割
-  const splitIntoSentences = (text: string): string[] => {
+  const splitIntoSentences = (sentenceText: string): string[] => {
     const delimiters: readonly string[] = EXPLANATION_CONFIG.SENTENCE_DELIMITERS;
     const sentences: string[] = [];
-    let currentSentence = '';
+    let currentSentence = "";
 
-    for (let i = 0; i < text.length; i++) {
-      currentSentence += text[i];
+    for (let i = 0; i < sentenceText.length; i++) {
+      currentSentence += sentenceText[i];
 
-      if (delimiters.includes(text[i])) {
+      if (delimiters.includes(sentenceText[i])) {
         sentences.push(currentSentence.trim());
-        currentSentence = '';
+        currentSentence = "";
       }
     }
 
@@ -157,7 +148,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
       sentences.push(currentSentence.trim());
     }
 
-    return sentences.filter(s => s.length > 0);
+    return sentences.filter((s) => s.length > 0);
   };
 
   const handleTripleClickSelect = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -173,16 +164,17 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     }
   };
 
-  // 振り仮名付きテキストをレンダリング
-  const renderTextWithFurigana = (text: string, isClickable: boolean = false) => {
+  const renderTextWithFurigana = (
+    renderText: string,
+    isClickable: boolean = false
+  ) => {
     if (!isClickable || !onSentenceClick) {
-      const segments = parseFurigana(text);
+      const segments = parseFurigana(renderText);
       const html = segmentsToHTML(segments, showFurigana);
       return <span dangerouslySetInnerHTML={{ __html: html }} />;
     }
 
-    // クリック可能な場合は文ごとに分割
-    const sentences = splitIntoSentences(text);
+    const sentences = splitIntoSentences(renderText);
 
     return (
       <>
@@ -198,16 +190,17 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
                 e.stopPropagation();
                 onSentenceClick(sentence);
               }}
-              className="cursor-pointer transition-colors rounded px-1"
+              className="cursor-pointer transition-colors rounded-md px-1"
               style={{
-                backgroundColor: 'transparent',
-                transition: 'background-color 0.2s',
+                backgroundColor: "transparent",
+                transition: "background-color 0.2s ease",
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`;
+                e.currentTarget.style.backgroundColor =
+                  "rgba(0, 122, 255, 0.06)";
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.backgroundColor = "transparent";
               }}
             />
           );
@@ -216,47 +209,52 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     );
   };
 
-  // 画像を含むコンテンツをレンダリング
   const renderContentWithImages = () => {
-    // Show translation if enabled
     if (showTranslation && translatedText) {
       return (
-        <div className="paragraph-text whitespace-pre-wrap" style={{ fontStyle: 'normal' }}>
+        <div
+          className="paragraph-text whitespace-pre-wrap"
+          style={{ color: "#636366" }}
+        >
           {translatedText}
         </div>
       );
     }
 
     if (!hasImage) {
-      // 画像がない場合は通常のテキストレンダリング
       return (
-        <div className="paragraph-text whitespace-pre-wrap" onClickCapture={handleTripleClickSelect}>
+        <div
+          className="paragraph-text whitespace-pre-wrap"
+          onClickCapture={handleTripleClickSelect}
+        >
           {renderTextWithFurigana(text, true)}
         </div>
       );
     }
 
-    // 画像がある場合はパーツごとにレンダリング
     const parts = parseContentWithImages(text);
 
     return (
       <div className="paragraph-content">
         {parts.map((part, index) => {
-          if (part.type === 'text') {
+          if (part.type === "text") {
             return (
-              <div key={index} className="paragraph-text whitespace-pre-wrap" onClickCapture={handleTripleClickSelect}>
+              <div
+                key={index}
+                className="paragraph-text whitespace-pre-wrap"
+                onClickCapture={handleTripleClickSelect}
+              >
                 {renderTextWithFurigana(part.content, true)}
               </div>
             );
           } else {
-            // 画像のパスを構築 - imageMapで実際のファイル名を検索
             const originalName = part.content;
-            const actualFileName = imageMap?.[originalName] || imageMap?.[`image/${originalName}`] || originalName;
-            // fileName format is like "bookv2-furigana/book-name/file-name-rephrase"
-            // For rephrase files, strip the "-rephrase" suffix and the file name part
-            // to get the directory path where images are stored
-            const pathParts = fileName?.split('/') || [];
-            const basePath = pathParts.slice(0, -1).join('/'); // Remove file name, keep directory
+            const actualFileName =
+              imageMap?.[originalName] ||
+              imageMap?.[`image/${originalName}`] ||
+              originalName;
+            const pathParts = fileName?.split("/") || [];
+            const basePath = pathParts.slice(0, -1).join("/");
             const imagePath = `/${basePath}/images/${actualFileName}`;
             return (
               <BookImage
@@ -272,13 +270,29 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     );
   };
 
+  const buttonBaseStyle: React.CSSProperties = {
+    width: "32px",
+    height: "32px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "8px",
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    transition: "transform 0.15s ease, background-color 0.15s ease",
+  };
+
   return (
-    <div className="flex paragraph-item relative" id={id}>
+    <div className="paragraph-item relative" id={id}>
       <div
-        className="p-4 my-2 w-full rounded-lg border"
+        className="p-5 my-3 rounded-xl"
         style={{
-          backgroundColor: isBookmarked ? CSS_VARS.BASE : 'transparent',
-          borderColor: isBookmarked ? CSS_VARS.PRIMARY : CSS_VARS.NEUTRAL,
+          backgroundColor: isBookmarked
+            ? "rgba(0, 122, 255, 0.03)"
+            : "transparent",
+          borderLeft: isBookmarked ? "4px solid #007AFF" : "none",
+          border: isBookmarked ? undefined : "1px solid rgba(0, 0, 0, 0.04)",
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
         }}
@@ -289,38 +303,56 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
       <div
         style={{
           position: "absolute",
-          marginLeft: '0.5rem',
-          marginTop: '0.8rem',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.25rem',
+          top: "16px",
+          right: "8px",
+          display: "flex",
+          flexDirection: "row",
+          gap: "2px",
         }}
       >
         <button
           disabled={translating}
           onClick={handleTranslateClick}
           style={{
-            background: "none",
-            border: "none",
-            padding: 0,
-            cursor: "pointer",
+            ...buttonBaseStyle,
             opacity: translating ? 0.5 : 1,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.04)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = "transparent";
+          }}
+          onMouseDown={(e) => {
+            e.currentTarget.style.transform = "scale(0.9)";
+          }}
+          onMouseUp={(e) => {
+            e.currentTarget.style.transform = "scale(1)";
           }}
           aria-label="Translate"
         >
           <TranslateIcon isActive={showTranslation} />
         </button>
-        <form onSubmit={handleBookmarkClick} onClick={(e) => e.stopPropagation()}>
+        <form
+          onSubmit={handleBookmarkClick}
+          onClick={(e) => e.stopPropagation()}
+        >
           <button
             disabled={loading}
             type="submit"
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              cursor: "pointer"
+            style={buttonBaseStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.04)";
             }}
-            className={isBookmarked ? 'cursor-pointer' : ''}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = "scale(0.9)";
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+            }}
             aria-label="Bookmark"
           >
             {isBookmarked ? <BookmarkFilled /> : <BookmarkUnfilled />}
