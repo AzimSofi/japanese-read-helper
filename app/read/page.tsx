@@ -13,10 +13,11 @@ import {
   API_ROUTES,
 } from '@/lib/constants';
 import ProgressBar from './components/ProgressBar';
-import ReaderFAB from './components/ReaderFAB';
+import ReaderToolbar from './components/ReaderToolbar';
 import ReaderSettings from './components/ReaderSettings';
 import ReadingContent from './components/ReadingContent';
 import ReaderHeader from './components/ReaderHeader';
+import BottomSheet from '@/app/components/ui/BottomSheet';
 import { useBookMetadata } from '@/app/hooks/useBookMetadata';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { parseMarkdown } from '@/lib/utils/markdownParser';
@@ -74,10 +75,17 @@ function ReaderContent({
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [explanationOpen, setExplanationOpen] = useState(false);
   const [rubyLookupOpen, setRubyLookupOpen] = useState(false);
   const [selectedSentence, setSelectedSentence] = useState('');
   const [sentenceContext, setSentenceContext] = useState('');
+
+  const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copyRangeExpanded, setCopyRangeExpanded] = useState(false);
+  const [startPage, setStartPage] = useState(1);
+  const [endPage, setEndPage] = useState(1);
+  const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
 
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
 
@@ -114,7 +122,6 @@ function ReaderContent({
     if (storedDarkMode) setIsDarkMode(storedDarkMode === 'true');
   }, []);
 
-  // Apply dark mode to body for outer areas
   useEffect(() => {
     document.body.style.backgroundColor = isDarkMode ? DARK_COLORS.BASE : '';
     return () => {
@@ -122,7 +129,6 @@ function ReaderContent({
     };
   }, [isDarkMode]);
 
-  // Keyboard shortcut: Ctrl/Cmd+K to open Ruby Lookup
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -173,7 +179,6 @@ function ReaderContent({
   const totalItems = useMemo(() => {
     if (!content) return 0;
     if (content.includes('>>')) {
-      // Count lines starting with "< " (heading marker), excluding <ruby> tags
       const headingCount = (content.match(/^< /gm) || []).length;
       return headingCount || 1;
     }
@@ -211,13 +216,11 @@ function ReaderContent({
   const bookmarkPage = useMemo(() => {
     if (!bookmarkText) return null;
 
-    // Check for page-level bookmark (format: page:N)
     const match = bookmarkText.match(/^page:(\d+)$/);
     if (match) {
       return parseInt(match[1], 10);
     }
 
-    // For sentence-level bookmarks, find which page contains it
     if (!content) return null;
 
     const normalizedBookmark = stripFurigana(bookmarkText).replace(/[\r\n]/g, '').trim();
@@ -245,7 +248,6 @@ function ReaderContent({
     return Math.floor(itemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
   }, [bookmarkText, content]);
 
-  // Auto-scroll to bookmark element when on the bookmark page
   useEffect(() => {
     if (isLoading) return;
 
@@ -256,7 +258,6 @@ function ReaderContent({
       }
     };
 
-    // Small delay to ensure content is rendered
     const timer = setTimeout(scrollToBookmark, 100);
     return () => clearTimeout(timer);
   }, [currentPage, isLoading, bookmarkText]);
@@ -370,7 +371,20 @@ function ReaderContent({
     }
   }, [bookmarkPage, currentPage, handlePageChange]);
 
-  const handleCopyRange = useCallback(async (startPage: number, endPage: number) => {
+  const handleCopyPageText = useCallback(async () => {
+    if (currentPageHeaders.length === 0) return;
+
+    try {
+      const textToCopy = currentPageHeaders.join('\n');
+      await navigator.clipboard.writeText(textToCopy);
+      setCopyFeedback(true);
+      setTimeout(() => setCopyFeedback(false), 2000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  }, [currentPageHeaders]);
+
+  const handleCopyRange = useCallback(async (sp: number, ep: number) => {
     if (!content) return;
 
     let items: { head?: string; text?: string }[] = [];
@@ -384,8 +398,8 @@ function ReaderContent({
         .map(p => ({ text: p }));
     }
 
-    const startIndex = (startPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
-    const endIndex = endPage * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const startIndex = (sp - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const endIndex = ep * PAGINATION_CONFIG.ITEMS_PER_PAGE;
     const rangeItems = items.slice(startIndex, endIndex);
 
     const textToCopy = rangeItems
@@ -395,19 +409,53 @@ function ReaderContent({
     await navigator.clipboard.writeText(textToCopy);
   }, [content]);
 
+  const handleCopyRangeSubmit = useCallback(async () => {
+    if (startPage > endPage || startPage < 1 || endPage > totalPages) return;
+
+    try {
+      await handleCopyRange(startPage, endPage);
+      setCopyRangeFeedback(true);
+      setTimeout(() => {
+        setCopyRangeFeedback(false);
+        setCopyRangeExpanded(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to copy range:', error);
+    }
+  }, [startPage, endPage, totalPages, handleCopyRange]);
+
+  const handleOpenMore = useCallback(() => {
+    setStartPage(currentPage);
+    setEndPage(currentPage);
+    setCopyRangeExpanded(false);
+    setCopyFeedback(false);
+    setCopyRangeFeedback(false);
+    setMoreOpen(true);
+  }, [currentPage]);
+
   if (isLoading) {
     return (
       <div
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: READER_THEME.SURFACE_MUTED }}
+        style={{ backgroundColor: isDarkMode ? DARK_COLORS.BASE : READER_THEME.SURFACE_MUTED }}
       >
         <div
-          className="w-12 h-12 border-4 rounded-full animate-spin"
+          className="p-8 rounded-2xl"
           style={{
-            borderColor: COLORS.NEUTRAL,
-            borderTopColor: COLORS.PRIMARY,
+            backgroundColor: isDarkMode ? DARK_COLORS.SURFACE : READER_THEME.SURFACE,
+            boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
           }}
-        />
+        >
+          <div
+            className="w-10 h-10 rounded-full animate-spin"
+            style={{
+              borderWidth: '3px',
+              borderStyle: 'solid',
+              borderColor: isDarkMode ? DARK_COLORS.NEUTRAL : '#E5E5EA',
+              borderTopColor: '#007AFF',
+            }}
+          />
+        </div>
       </div>
     );
   }
@@ -416,21 +464,24 @@ function ReaderContent({
     return (
       <div
         className="min-h-screen flex items-center justify-center p-4"
-        style={{ backgroundColor: READER_THEME.SURFACE_MUTED }}
+        style={{ backgroundColor: isDarkMode ? DARK_COLORS.BASE : READER_THEME.SURFACE_MUTED }}
       >
         <div
-          className="p-6 rounded-xl text-center max-w-md"
-          style={{ backgroundColor: READER_THEME.SURFACE }}
+          className="p-6 rounded-2xl text-center max-w-md"
+          style={{
+            backgroundColor: isDarkMode ? DARK_COLORS.SURFACE : READER_THEME.SURFACE,
+            boxShadow: '0 2px 16px rgba(0,0,0,0.06)',
+          }}
         >
-          <p className="text-lg mb-2" style={{ color: COLORS.PRIMARY_DARK }}>
+          <p className="text-lg mb-2" style={{ color: isDarkMode ? DARK_COLORS.TEXT : COLORS.PRIMARY_DARK }}>
             Could not load book
           </p>
-          <p className="text-sm mb-4" style={{ color: COLORS.SECONDARY_DARK }}>
+          <p className="text-sm mb-4" style={{ color: '#8E8E93' }}>
             {error}
           </p>
           <button
             onClick={() => router.push('/library')}
-            className="px-4 py-2 rounded-lg"
+            className="px-4 py-2 rounded-xl text-sm font-medium"
             style={{ backgroundColor: COLORS.PRIMARY, color: '#FFFFFF' }}
           >
             Back to Library
@@ -443,6 +494,9 @@ function ReaderContent({
   const theme = isDarkMode
     ? { bg: DARK_COLORS.BASE, surface: DARK_COLORS.SURFACE, text: DARK_COLORS.TEXT }
     : { bg: READER_THEME.SURFACE_MUTED, surface: READER_THEME.SURFACE, text: '#000000' };
+
+  const isBookmarked = bookmarkText.includes(`page:${currentPage}`);
+  const hasBookmark = bookmarkPage != null && bookmarkPage > 0;
 
   return (
     <div
@@ -459,19 +513,14 @@ function ReaderContent({
         currentPage={currentPage}
         totalPages={totalPages}
         bookmarkPage={bookmarkPage}
-        showFurigana={showFurigana}
-        showRephrase={showRephrase}
         isDarkMode={isDarkMode}
         directoryParam={directoryParam}
         fileNameParam={fileNameParam}
         onPageChange={handlePageChange}
-        onToggleFurigana={handleToggleFurigana}
-        onToggleRephrase={handleToggleRephrase}
-        onOpenRubyLookup={() => setRubyLookupOpen(true)}
       />
 
       <main
-        className="max-w-3xl mx-auto px-4 py-8 pt-4 pb-24"
+        className="max-w-3xl mx-auto px-4 py-8 pt-4 pb-20"
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
@@ -496,19 +545,25 @@ function ReaderContent({
         />
 
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-4 mt-8 pt-4 border-t" style={{ borderColor: isDarkMode ? DARK_COLORS.NEUTRAL : COLORS.NEUTRAL }}>
+          <div
+            className="flex justify-center items-center gap-4 mt-8 pt-4 border-t"
+            style={{ borderColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }}
+          >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 handlePageChange(currentPage - 1);
               }}
               disabled={currentPage <= 1}
-              className="px-4 py-2 rounded-lg disabled:opacity-30 transition-opacity"
-              style={{ backgroundColor: COLORS.SECONDARY, color: '#FFFFFF' }}
+              className="px-5 py-2.5 rounded-xl disabled:opacity-30 transition-all duration-200 text-sm font-medium"
+              style={{
+                backgroundColor: currentPage <= 1 ? (isDarkMode ? DARK_COLORS.NEUTRAL : '#F2F2F7') : '#007AFF',
+                color: currentPage <= 1 ? (isDarkMode ? DARK_COLORS.TEXT : '#1D1D1F') : '#FFFFFF',
+              }}
             >
               Previous
             </button>
-            <span style={{ color: isDarkMode ? DARK_COLORS.TEXT : COLORS.SECONDARY_DARK }}>
+            <span className="text-sm" style={{ color: '#8E8E93' }}>
               {currentPage} / {totalPages}
             </span>
             <button
@@ -517,8 +572,11 @@ function ReaderContent({
                 handlePageChange(currentPage + 1);
               }}
               disabled={currentPage >= totalPages}
-              className="px-4 py-2 rounded-lg disabled:opacity-30 transition-opacity"
-              style={{ backgroundColor: COLORS.SECONDARY, color: '#FFFFFF' }}
+              className="px-5 py-2.5 rounded-xl disabled:opacity-30 transition-all duration-200 text-sm font-medium"
+              style={{
+                backgroundColor: currentPage >= totalPages ? (isDarkMode ? DARK_COLORS.NEUTRAL : '#F2F2F7') : '#007AFF',
+                color: currentPage >= totalPages ? (isDarkMode ? DARK_COLORS.TEXT : '#1D1D1F') : '#FFFFFF',
+              }}
             >
               Next
             </button>
@@ -526,37 +584,162 @@ function ReaderContent({
         )}
       </main>
 
-      <ReaderFAB
+      <ReaderToolbar
         onBookmark={handleBookmark}
         onToggleFurigana={handleToggleFurigana}
         onToggleRephrase={handleToggleRephrase}
         onOpenSettings={() => setSettingsOpen(true)}
-        onGoToBookmark={bookmarkPage ? handleGoToBookmark : undefined}
-        onCopyRange={handleCopyRange}
-        onToggleDarkMode={handleToggleDarkMode}
         onToggleRubyLookup={() => setRubyLookupOpen(prev => !prev)}
+        onOpenMore={handleOpenMore}
         isFuriganaEnabled={showFurigana}
-        isBookmarked={bookmarkText.includes(`page:${currentPage}`)}
+        isBookmarked={isBookmarked}
         showRephrase={showRephrase}
         isDarkMode={isDarkMode}
-        bookmarkPage={bookmarkPage}
-        currentPage={currentPage}
-        totalPages={totalPages}
-        currentPageHeaders={currentPageHeaders}
       />
 
-      <ReaderSettings
-        isOpen={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        fontSize={fontSize}
-        lineHeight={lineHeight}
-        displayMode={displayMode}
-        aiExplanationEnabled={aiExplanationEnabled}
-        onFontSizeChange={handleFontSizeChange}
-        onLineHeightChange={handleLineHeightChange}
-        onDisplayModeChange={handleDisplayModeChange}
-        onAiExplanationChange={handleAiExplanationChange}
-      />
+      <BottomSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Display">
+        <ReaderSettings
+          fontSize={fontSize}
+          lineHeight={lineHeight}
+          displayMode={displayMode}
+          aiExplanationEnabled={aiExplanationEnabled}
+          onFontSizeChange={handleFontSizeChange}
+          onLineHeightChange={handleLineHeightChange}
+          onDisplayModeChange={handleDisplayModeChange}
+          onAiExplanationChange={handleAiExplanationChange}
+        />
+      </BottomSheet>
+
+      <BottomSheet isOpen={moreOpen} onClose={() => setMoreOpen(false)} title="More">
+        <div className="settings-group">
+          <div
+            className="settings-row cursor-pointer"
+            onClick={() => {
+              handleBookmark();
+              setMoreOpen(false);
+            }}
+          >
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5" fill={isBookmarked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+              </svg>
+              <span className="settings-label">Bookmark this page</span>
+            </div>
+          </div>
+
+          {hasBookmark && (
+            <div
+              className="settings-row cursor-pointer"
+              onClick={() => {
+                handleGoToBookmark();
+                setMoreOpen(false);
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                </svg>
+                <span className="settings-label" style={{ color: '#007AFF' }}>Go to bookmark (p.{bookmarkPage})</span>
+              </div>
+            </div>
+          )}
+
+          <div
+            className="settings-row cursor-pointer"
+            onClick={handleCopyPageText}
+          >
+            <div className="flex items-center gap-3">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span className="settings-label">{copyFeedback ? 'Copied!' : 'Copy page text'}</span>
+            </div>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+              <div
+                className="flex items-center gap-3 cursor-pointer"
+                onClick={() => setCopyRangeExpanded(prev => !prev)}
+              >
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="settings-label">Copy range</span>
+                <svg
+                  className="w-4 h-4 ml-auto transition-transform duration-200"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  style={{
+                    color: '#8E8E93',
+                    transform: copyRangeExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                  }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </div>
+
+              {copyRangeExpanded && (
+                <div className="flex items-center gap-2 mt-3 ml-8">
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={startPage}
+                    onChange={(e) => setStartPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
+                    className="w-14 px-2 py-1.5 rounded-lg text-center text-sm"
+                    style={{
+                      border: '1px solid #D1D1D6',
+                      backgroundColor: '#F2F2F7',
+                      color: '#1D1D1F',
+                    }}
+                  />
+                  <span style={{ color: '#8E8E93' }}>-</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={totalPages}
+                    value={endPage}
+                    onChange={(e) => setEndPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
+                    className="w-14 px-2 py-1.5 rounded-lg text-center text-sm"
+                    style={{
+                      border: '1px solid #D1D1D6',
+                      backgroundColor: '#F2F2F7',
+                      color: '#1D1D1F',
+                    }}
+                  />
+                  <button
+                    onClick={handleCopyRangeSubmit}
+                    disabled={startPage > endPage}
+                    className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50"
+                    style={{
+                      backgroundColor: copyRangeFeedback ? '#8E8E93' : '#007AFF',
+                      color: '#FFFFFF',
+                    }}
+                  >
+                    {copyRangeFeedback ? 'Copied!' : 'Copy'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="my-3" style={{ height: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
+
+        <div className="settings-group">
+          <div className="settings-row">
+            <span className="settings-label">Dark mode</span>
+            <button
+              onClick={handleToggleDarkMode}
+              className={`apple-toggle ${isDarkMode ? 'on' : ''}`}
+            >
+              <span className="thumb" />
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
 
       <ExplanationSidebar
         isOpen={explanationOpen}
@@ -593,8 +776,8 @@ export default function ReadPage() {
           <div
             className="w-12 h-12 border-4 rounded-full animate-spin"
             style={{
-              borderColor: COLORS.NEUTRAL,
-              borderTopColor: COLORS.PRIMARY,
+              borderColor: '#E5E5EA',
+              borderTopColor: '#007AFF',
             }}
           />
         </div>
