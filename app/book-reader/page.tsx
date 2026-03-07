@@ -1,16 +1,16 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import ParagraphItem from "@/app/components/ui/ParagraphItem";
+import ParagraphItem from "@/app/components/reading/ParagraphItem";
 import { useEffect, useState, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/components/ui/Sidebar";
-import ReadingControls from "@/app/components/ui/ReadingControls";
+import ReadingControls from "@/app/components/reading/ReadingControls";
 import { CSS_VARS, STORAGE_KEYS, EXPLANATION_CONFIG, READER_CONFIG } from "@/lib/constants";
 
 // Lazy load heavy components
 const ExplanationSidebar = dynamic(
-  () => import("@/app/components/ui/ExplanationSidebar"),
+  () => import("@/app/components/reading/ExplanationSidebar"),
   { ssr: false }
 );
 import { stripFurigana } from "@/lib/utils/furiganaParser";

@@ -130,7 +130,7 @@ export default function RubyLookupSidebar({
           </h2>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-full interactive-close"
             style={{ backgroundColor: '#F2F2F7', color: '#8E8E93' }}
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -166,7 +166,7 @@ export default function RubyLookupSidebar({
             </div>
             <button
               onClick={() => setShowStarredOnly(!showStarredOnly)}
-              className="w-11 h-11 flex items-center justify-center rounded-xl transition-colors"
+              className="w-11 h-11 flex items-center justify-center rounded-xl interactive-pill"
               style={{
                 backgroundColor: showStarredOnly ? '#007AFF' : '#F2F2F7',
                 color: showStarredOnly ? '#FFFFFF' : '#8E8E93',
@@ -199,7 +199,7 @@ export default function RubyLookupSidebar({
               <p className="mb-4 text-sm" style={{ color: '#8E8E93' }}>No entries yet</p>
               <Link
                 href={`/ruby-registry?directory=${encodeURIComponent(directory)}&bookName=${encodeURIComponent(bookName)}`}
-                className="text-sm font-medium"
+                className="text-sm font-medium interactive-link"
                 style={{ color: '#007AFF' }}
               >
                 Set up registry
@@ -241,7 +241,7 @@ export default function RubyLookupSidebar({
                       )}
                       <button
                         onClick={() => toggleStar(entry.kanji)}
-                        className="p-1 transition-colors"
+                        className="p-1 interactive-star"
                         title={isStarred ? 'Unstar' : 'Star'}
                       >
                         <svg
@@ -272,7 +272,7 @@ export default function RubyLookupSidebar({
         >
           <Link
             href={`/ruby-registry?directory=${encodeURIComponent(directory)}&bookName=${encodeURIComponent(bookName)}`}
-            className="text-sm font-medium"
+            className="text-sm font-medium interactive-link"
             style={{ color: '#007AFF' }}
           >
             Edit Registry

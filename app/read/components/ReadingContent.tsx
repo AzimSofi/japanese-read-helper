@@ -7,12 +7,12 @@ import { READER_CONFIG } from "@/lib/constants";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 
 const CollapsibleItem = dynamic(
-  () => import("@/app/components/ui/CollapsibleItem"),
+  () => import("@/app/components/reading/CollapsibleItem"),
   { ssr: false }
 );
 
 const ParagraphItem = dynamic(
-  () => import("@/app/components/ui/ParagraphItem"),
+  () => import("@/app/components/reading/ParagraphItem"),
   { ssr: false }
 );
 

@@ -13,7 +13,7 @@ import {
   API_ROUTES,
 } from '@/lib/constants';
 import ProgressBar from './components/ProgressBar';
-import ReaderToolbar from './components/ReaderToolbar';
+import ReaderFAB from './components/ReaderFAB';
 import ReaderSettings from './components/ReaderSettings';
 import ReadingContent from './components/ReadingContent';
 import ReaderHeader from './components/ReaderHeader';
@@ -23,12 +23,12 @@ import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { parseMarkdown } from '@/lib/utils/markdownParser';
 
 const ExplanationSidebar = dynamic(
-  () => import('@/app/components/ui/ExplanationSidebar'),
+  () => import('@/app/components/reading/ExplanationSidebar'),
   { ssr: false }
 );
 
 const RubyLookupSidebar = dynamic(
-  () => import('@/app/components/ui/RubyLookupSidebar'),
+  () => import('@/app/components/reading/RubyLookupSidebar'),
   { ssr: false }
 );
 
@@ -40,24 +40,27 @@ const FloatingStickyNotes = dynamic(
 function SearchParamsReader({
   children,
 }: {
-  children: (params: { directory: string | null; fileName: string | null; page: number }) => React.ReactNode;
+  children: (params: { directory: string | null; fileName: string | null; page: number; hasExplicitPage: boolean }) => React.ReactNode;
 }) {
   const searchParams = useSearchParams();
   const directory = searchParams.get('directory');
   const fileName = searchParams.get('fileName');
+  const hasExplicitPage = searchParams.has('page');
   const page = parseInt(searchParams.get('page') || '1', 10);
 
-  return <>{children({ directory, fileName, page })}</>;
+  return <>{children({ directory, fileName, page, hasExplicitPage })}</>;
 }
 
 function ReaderContent({
   directoryParam,
   fileNameParam,
   pageParam,
+  hasExplicitPage,
 }: {
   directoryParam: string | null;
   fileNameParam: string | null;
   pageParam: number;
+  hasExplicitPage: boolean;
 }) {
   const router = useRouter();
 
@@ -75,17 +78,12 @@ function ReaderContent({
   const [isDarkMode, setIsDarkMode] = useState(false);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [explanationOpen, setExplanationOpen] = useState(false);
   const [rubyLookupOpen, setRubyLookupOpen] = useState(false);
   const [selectedSentence, setSelectedSentence] = useState('');
   const [sentenceContext, setSentenceContext] = useState('');
 
   const [copyFeedback, setCopyFeedback] = useState(false);
-  const [copyRangeExpanded, setCopyRangeExpanded] = useState(false);
-  const [startPage, setStartPage] = useState(1);
-  const [endPage, setEndPage] = useState(1);
-  const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
 
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
 
@@ -248,13 +246,28 @@ function ReaderContent({
     return Math.floor(itemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
   }, [bookmarkText, content]);
 
+  const [didAutoNavigate, setDidAutoNavigate] = useState(false);
+
+  useEffect(() => {
+    if (isLoading || didAutoNavigate) return;
+    if (!hasExplicitPage && bookmarkPage && bookmarkPage > 1 && currentPage !== bookmarkPage) {
+      setDidAutoNavigate(true);
+      const params = new URLSearchParams();
+      if (directoryParam) params.set('directory', directoryParam);
+      if (fileNameParam) params.set('fileName', fileNameParam);
+      params.set('page', bookmarkPage.toString());
+      router.replace(`/read?${params.toString()}`);
+      return;
+    }
+  }, [isLoading, hasExplicitPage, bookmarkPage, currentPage, directoryParam, fileNameParam, router, didAutoNavigate]);
+
   useEffect(() => {
     if (isLoading) return;
 
     const scrollToBookmark = () => {
       const bookmarkElement = document.getElementById('bookmark');
       if (bookmarkElement) {
-        bookmarkElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        bookmarkElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     };
 
@@ -273,24 +286,6 @@ function ReaderContent({
     },
     [directoryParam, fileNameParam, router, totalPages]
   );
-
-  const handleBookmark = async () => {
-    try {
-      const response = await fetch(API_ROUTES.WRITE_BOOKMARK, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          target: fullFilePath,
-          content: `page:${currentPage}`,
-        }),
-      });
-      if (response.ok) {
-        setBookmarkText(`page:${currentPage}`);
-      }
-    } catch (err) {
-      console.error('Failed to save bookmark:', err);
-    }
-  };
 
   const handleToggleFurigana = () => {
     const newValue = !showFurigana;
@@ -364,7 +359,7 @@ function ReaderContent({
     if (currentPage === bookmarkPage) {
       const bookmarkElement = document.getElementById('bookmark');
       if (bookmarkElement) {
-        bookmarkElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        bookmarkElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } else {
       handlePageChange(bookmarkPage);
@@ -383,55 +378,6 @@ function ReaderContent({
       console.error('Failed to copy:', error);
     }
   }, [currentPageHeaders]);
-
-  const handleCopyRange = useCallback(async (sp: number, ep: number) => {
-    if (!content) return;
-
-    let items: { head?: string; text?: string }[] = [];
-    if (content.includes('>>')) {
-      items = parseMarkdown(content);
-    } else {
-      items = content
-        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
-        .map(p => p.trim())
-        .filter(p => p.length > 0)
-        .map(p => ({ text: p }));
-    }
-
-    const startIndex = (sp - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
-    const endIndex = ep * PAGINATION_CONFIG.ITEMS_PER_PAGE;
-    const rangeItems = items.slice(startIndex, endIndex);
-
-    const textToCopy = rangeItems
-      .map(item => stripFurigana(item.head || item.text || ''))
-      .join('\n');
-
-    await navigator.clipboard.writeText(textToCopy);
-  }, [content]);
-
-  const handleCopyRangeSubmit = useCallback(async () => {
-    if (startPage > endPage || startPage < 1 || endPage > totalPages) return;
-
-    try {
-      await handleCopyRange(startPage, endPage);
-      setCopyRangeFeedback(true);
-      setTimeout(() => {
-        setCopyRangeFeedback(false);
-        setCopyRangeExpanded(false);
-      }, 1000);
-    } catch (error) {
-      console.error('Failed to copy range:', error);
-    }
-  }, [startPage, endPage, totalPages, handleCopyRange]);
-
-  const handleOpenMore = useCallback(() => {
-    setStartPage(currentPage);
-    setEndPage(currentPage);
-    setCopyRangeExpanded(false);
-    setCopyFeedback(false);
-    setCopyRangeFeedback(false);
-    setMoreOpen(true);
-  }, [currentPage]);
 
   if (isLoading) {
     return (
@@ -495,7 +441,6 @@ function ReaderContent({
     ? { bg: DARK_COLORS.BASE, surface: DARK_COLORS.SURFACE, text: DARK_COLORS.TEXT }
     : { bg: READER_THEME.SURFACE_MUTED, surface: READER_THEME.SURFACE, text: '#000000' };
 
-  const isBookmarked = bookmarkText.includes(`page:${currentPage}`);
   const hasBookmark = bookmarkPage != null && bookmarkPage > 0;
 
   return (
@@ -520,7 +465,7 @@ function ReaderContent({
       />
 
       <main
-        className="max-w-3xl mx-auto px-4 py-8 pt-4 pb-20"
+        className="max-w-3xl mx-auto px-4 py-8 pt-4 pb-12"
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
@@ -584,17 +529,21 @@ function ReaderContent({
         )}
       </main>
 
-      <ReaderToolbar
-        onBookmark={handleBookmark}
+      <ReaderFAB
         onToggleFurigana={handleToggleFurigana}
         onToggleRephrase={handleToggleRephrase}
         onOpenSettings={() => setSettingsOpen(true)}
+        onGoToBookmark={handleGoToBookmark}
+        onCopyPageText={handleCopyPageText}
+        onToggleDarkMode={handleToggleDarkMode}
         onToggleRubyLookup={() => setRubyLookupOpen(prev => !prev)}
-        onOpenMore={handleOpenMore}
         isFuriganaEnabled={showFurigana}
-        isBookmarked={isBookmarked}
         showRephrase={showRephrase}
         isDarkMode={isDarkMode}
+        hasBookmark={hasBookmark}
+        bookmarkPage={bookmarkPage}
+        currentPage={currentPage}
+        copyFeedback={copyFeedback}
       />
 
       <BottomSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Display">
@@ -608,137 +557,6 @@ function ReaderContent({
           onDisplayModeChange={handleDisplayModeChange}
           onAiExplanationChange={handleAiExplanationChange}
         />
-      </BottomSheet>
-
-      <BottomSheet isOpen={moreOpen} onClose={() => setMoreOpen(false)} title="More">
-        <div className="settings-group">
-          <div
-            className="settings-row cursor-pointer"
-            onClick={() => {
-              handleBookmark();
-              setMoreOpen(false);
-            }}
-          >
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5" fill={isBookmarked ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-              </svg>
-              <span className="settings-label">Bookmark this page</span>
-            </div>
-          </div>
-
-          {hasBookmark && (
-            <div
-              className="settings-row cursor-pointer"
-              onClick={() => {
-                handleGoToBookmark();
-                setMoreOpen(false);
-              }}
-            >
-              <div className="flex items-center gap-3">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-                <span className="settings-label" style={{ color: '#007AFF' }}>Go to bookmark (p.{bookmarkPage})</span>
-              </div>
-            </div>
-          )}
-
-          <div
-            className="settings-row cursor-pointer"
-            onClick={handleCopyPageText}
-          >
-            <div className="flex items-center gap-3">
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span className="settings-label">{copyFeedback ? 'Copied!' : 'Copy page text'}</span>
-            </div>
-          </div>
-
-          {totalPages > 1 && (
-            <div className="settings-row" style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-              <div
-                className="flex items-center gap-3 cursor-pointer"
-                onClick={() => setCopyRangeExpanded(prev => !prev)}
-              >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{ color: '#007AFF' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <span className="settings-label">Copy range</span>
-                <svg
-                  className="w-4 h-4 ml-auto transition-transform duration-200"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  style={{
-                    color: '#8E8E93',
-                    transform: copyRangeExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                  }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
-              </div>
-
-              {copyRangeExpanded && (
-                <div className="flex items-center gap-2 mt-3 ml-8">
-                  <input
-                    type="number"
-                    min={1}
-                    max={totalPages}
-                    value={startPage}
-                    onChange={(e) => setStartPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
-                    className="w-14 px-2 py-1.5 rounded-lg text-center text-sm"
-                    style={{
-                      border: '1px solid #D1D1D6',
-                      backgroundColor: '#F2F2F7',
-                      color: '#1D1D1F',
-                    }}
-                  />
-                  <span style={{ color: '#8E8E93' }}>-</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={totalPages}
-                    value={endPage}
-                    onChange={(e) => setEndPage(Math.max(1, Math.min(totalPages, parseInt(e.target.value) || 1)))}
-                    className="w-14 px-2 py-1.5 rounded-lg text-center text-sm"
-                    style={{
-                      border: '1px solid #D1D1D6',
-                      backgroundColor: '#F2F2F7',
-                      color: '#1D1D1F',
-                    }}
-                  />
-                  <button
-                    onClick={handleCopyRangeSubmit}
-                    disabled={startPage > endPage}
-                    className="px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 disabled:opacity-50"
-                    style={{
-                      backgroundColor: copyRangeFeedback ? '#8E8E93' : '#007AFF',
-                      color: '#FFFFFF',
-                    }}
-                  >
-                    {copyRangeFeedback ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="my-3" style={{ height: '1px', backgroundColor: 'rgba(0,0,0,0.06)' }} />
-
-        <div className="settings-group">
-          <div className="settings-row">
-            <span className="settings-label">Dark mode</span>
-            <button
-              onClick={handleToggleDarkMode}
-              className={`apple-toggle ${isDarkMode ? 'on' : ''}`}
-            >
-              <span className="thumb" />
-            </button>
-          </div>
-        </div>
       </BottomSheet>
 
       <ExplanationSidebar
@@ -784,11 +602,12 @@ export default function ReadPage() {
       }
     >
       <SearchParamsReader>
-        {({ directory, fileName, page }) => (
+        {({ directory, fileName, page, hasExplicitPage }) => (
           <ReaderContent
             directoryParam={directory}
             fileNameParam={fileName}
             pageParam={page}
+            hasExplicitPage={hasExplicitPage}
           />
         )}
       </SearchParamsReader>

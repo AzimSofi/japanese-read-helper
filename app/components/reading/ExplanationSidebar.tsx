@@ -238,7 +238,7 @@ export default function ExplanationSidebar({
                   </span>
                   <button
                     onClick={() => setForceRegenerate(true)}
-                    className="text-xs font-medium"
+                    className="text-xs font-medium interactive-link"
                     style={{ color: '#007AFF' }}
                   >
                     Regenerate
@@ -248,7 +248,7 @@ export default function ExplanationSidebar({
             </div>
             <button
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full interactive-close"
               style={{ backgroundColor: '#F2F2F7', color: '#8E8E93' }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -283,7 +283,7 @@ export default function ExplanationSidebar({
                   <button
                     key={modeKey}
                     onClick={() => setMode(modeKey as ExplanationMode)}
-                    className="px-3.5 py-1.5 rounded-full text-xs font-medium transition-all"
+                    className="px-3.5 py-1.5 rounded-full text-xs font-medium interactive-pill"
                     style={{
                       backgroundColor: isActive ? '#007AFF' : 'transparent',
                       color: isActive ? '#FFFFFF' : '#636366',
@@ -300,7 +300,7 @@ export default function ExplanationSidebar({
             <div>
               <button
                 onClick={() => setContextSizeExpanded(!contextSizeExpanded)}
-                className="text-xs font-medium flex items-center gap-1"
+                className="text-xs font-medium flex items-center gap-1 interactive-link"
                 style={{ color: '#8E8E93' }}
               >
                 Context: {contextSize} chars

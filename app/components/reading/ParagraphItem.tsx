@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import TranslateIcon from "@/app/components/icons/TranslateIcon";
-import BookImage from "@/app/components/ui/BookImage";
+import BookImage from "@/app/components/reading/BookImage";
 import { EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
