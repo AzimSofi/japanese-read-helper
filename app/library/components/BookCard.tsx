@@ -7,6 +7,8 @@ interface BookCardProps {
   directory: string;
   progress: number;
   totalCharacters?: number;
+  directoryTag: string;
+  bookmarkPage?: number | null;
 }
 
 export default function BookCard({
@@ -14,30 +16,41 @@ export default function BookCard({
   directory,
   progress,
   totalCharacters,
+  directoryTag,
+  bookmarkPage,
 }: BookCardProps) {
-  const displayName = fileName.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
-  const readUrl = `/read?directory=${encodeURIComponent(directory)}&fileName=${encodeURIComponent(fileName)}`;
+  const displayName = fileName
+    .replace(/-rephrase-furigana$/, '')
+    .replace(/-rephrase$/, '')
+    .replace(/-furigana$/, '')
+    .replace(/-/g, ' ')
+    .replace(/^\w/, c => c.toUpperCase());
+  const pageParam = bookmarkPage && bookmarkPage > 1 ? `&page=${bookmarkPage}` : '';
+  const readUrl = `/read?directory=${encodeURIComponent(directory)}&fileName=${encodeURIComponent(fileName)}${pageParam}`;
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
   return (
     <Link href={readUrl} className="block group">
       <div
-        className="relative rounded-2xl overflow-hidden"
+        className="relative rounded-2xl overflow-hidden interactive-card"
         style={{
           backgroundColor: '#FFFFFF',
           boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
-          transition: 'transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.02)';
-          e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)';
-          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)';
         }}
       >
         <div className="aspect-[3/4] flex flex-col">
+          <div className="px-3 pt-3">
+            <span
+              className="inline-block px-2 py-0.5 rounded-md text-xs font-medium"
+              style={{
+                backgroundColor: '#F2F2F7',
+                color: '#8E8E93',
+              }}
+            >
+              {directoryTag}
+            </span>
+          </div>
+
           <div className="flex-1 flex items-center justify-center px-4">
             <h3
               className="text-center font-semibold text-base leading-snug"

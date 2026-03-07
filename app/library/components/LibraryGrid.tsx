@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { API_ROUTES } from '@/lib/constants';
-import DirectorySection from './DirectorySection';
+import BookCard from './BookCard';
 
 interface FileListResponse {
   directories: string[];
@@ -15,10 +15,38 @@ interface BookProgressData {
   totalCharacters: number;
   bookmarkPage: number | null;
   totalPages: number;
+  bookmarkUpdatedAt: string | null;
+  createdAt: string | null;
 }
 
 interface BookProgress {
   [key: string]: BookProgressData;
+}
+
+type SortMode = 'last-read' | 'last-added' | 'progress' | 'title';
+
+interface FlatBook {
+  fileName: string;
+  directory: string;
+  progress: number;
+  totalCharacters: number;
+  bookmarkPage: number | null;
+  bookmarkUpdatedAt: string | null;
+  createdAt: string | null;
+}
+
+const SORT_OPTIONS: { value: SortMode; label: string }[] = [
+  { value: 'last-read', label: 'Last Read' },
+  { value: 'last-added', label: 'Last Added' },
+  { value: 'progress', label: 'Progress' },
+  { value: 'title', label: 'Title' },
+];
+
+function formatDirectoryTag(directory: string): string {
+  const topLevel = directory.split('/')[0];
+  return topLevel
+    .replace(/-/g, ' ')
+    .replace(/^\w/, c => c.toUpperCase());
 }
 
 export default function LibraryGrid() {
@@ -26,6 +54,7 @@ export default function LibraryGrid() {
   const [bookProgress, setBookProgress] = useState<BookProgress>({});
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [sortMode, setSortMode] = useState<SortMode>('last-read');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -56,10 +85,50 @@ export default function LibraryGrid() {
     fetchData();
   }, []);
 
-  const sortedDirectories = useMemo(() => {
+  const sortedBooks = useMemo(() => {
     if (!fileData) return [];
-    return [...fileData.directories].sort((a, b) => a.localeCompare(b));
-  }, [fileData]);
+
+    const books: FlatBook[] = [];
+    for (const directory of fileData.directories) {
+      const files = fileData.filesByDirectory[directory] || [];
+      for (const fileName of files) {
+        const key = `${directory}/${fileName}`;
+        const pd = bookProgress[key];
+        books.push({
+          fileName,
+          directory,
+          progress: pd?.progress || 0,
+          totalCharacters: pd?.totalCharacters || 0,
+          bookmarkPage: pd?.bookmarkPage || null,
+          bookmarkUpdatedAt: pd?.bookmarkUpdatedAt || null,
+          createdAt: pd?.createdAt || null,
+        });
+      }
+    }
+
+    books.sort((a, b) => {
+      switch (sortMode) {
+        case 'last-read': {
+          const aTime = a.bookmarkUpdatedAt ? new Date(a.bookmarkUpdatedAt).getTime() : 0;
+          const bTime = b.bookmarkUpdatedAt ? new Date(b.bookmarkUpdatedAt).getTime() : 0;
+          return bTime - aTime;
+        }
+        case 'last-added': {
+          const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return bTime - aTime;
+        }
+        case 'progress':
+          return b.progress - a.progress;
+        case 'title':
+          return a.fileName.localeCompare(b.fileName);
+        default:
+          return 0;
+      }
+    });
+
+    return books;
+  }, [fileData, bookProgress, sortMode]);
 
   if (isLoading) {
     return (
@@ -93,7 +162,7 @@ export default function LibraryGrid() {
     );
   }
 
-  if (!fileData || sortedDirectories.length === 0) {
+  if (sortedBooks.length === 0) {
     return (
       <div
         className="p-8 rounded-2xl text-center"
@@ -113,28 +182,36 @@ export default function LibraryGrid() {
   }
 
   return (
-    <div className="space-y-2">
-      {sortedDirectories.map((directory) => {
-        const files = fileData.filesByDirectory[directory] || [];
-        const books = files.map((fileName) => {
-          const key = `${directory}/${fileName}`;
-          const progressData = bookProgress[key] || { progress: 0, totalCharacters: 0 };
-          return {
-            fileName,
-            progress: progressData.progress,
-            totalCharacters: progressData.totalCharacters,
-          };
-        });
+    <div>
+      <div className="flex items-center gap-2 mb-6">
+        {SORT_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            onClick={() => setSortMode(option.value)}
+            className="px-3 py-1.5 rounded-full text-sm font-medium interactive-pill"
+            style={{
+              backgroundColor: sortMode === option.value ? '#007AFF' : '#E5E5EA',
+              color: sortMode === option.value ? '#FFFFFF' : '#1D1D1F',
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
 
-        return (
-          <DirectorySection
-            key={directory}
-            directory={directory}
-            books={books}
-            defaultExpanded={sortedDirectories.length <= 3}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
+        {sortedBooks.map((book) => (
+          <BookCard
+            key={`${book.directory}/${book.fileName}`}
+            fileName={book.fileName}
+            directory={book.directory}
+            progress={book.progress}
+            totalCharacters={book.totalCharacters}
+            directoryTag={formatDirectoryTag(book.directory)}
+            bookmarkPage={book.bookmarkPage}
           />
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
