@@ -1,6 +1,5 @@
 'use client';
 
-import { READER_THEME, COLORS } from '@/lib/constants';
 import Link from 'next/link';
 
 interface BookCardProps {
@@ -8,6 +7,8 @@ interface BookCardProps {
   directory: string;
   progress: number;
   totalCharacters?: number;
+  directoryTag: string;
+  bookmarkPage?: number | null;
 }
 
 export default function BookCard({
@@ -15,68 +16,75 @@ export default function BookCard({
   directory,
   progress,
   totalCharacters,
+  directoryTag,
+  bookmarkPage,
 }: BookCardProps) {
-  const displayName = fileName.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase());
-  const readUrl = `/read?directory=${encodeURIComponent(directory)}&fileName=${encodeURIComponent(fileName)}`;
+  const displayName = fileName
+    .replace(/-rephrase-furigana$/, '')
+    .replace(/-rephrase$/, '')
+    .replace(/-furigana$/, '')
+    .replace(/-/g, ' ')
+    .replace(/^\w/, c => c.toUpperCase());
+  const pageParam = bookmarkPage && bookmarkPage > 1 ? `&page=${bookmarkPage}` : '';
+  const readUrl = `/read?directory=${encodeURIComponent(directory)}&fileName=${encodeURIComponent(fileName)}${pageParam}`;
+  const clampedProgress = Math.min(100, Math.max(0, progress));
 
   return (
-    <Link
-      href={readUrl}
-      className="block group"
-    >
+    <Link href={readUrl} className="block group">
       <div
-        className="relative rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:-translate-y-1 border"
+        className="relative rounded-2xl overflow-hidden interactive-card"
         style={{
-          backgroundColor: READER_THEME.SURFACE,
-          borderColor: COLORS.NEUTRAL,
+          backgroundColor: '#FFFFFF',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.04)',
         }}
       >
         <div className="aspect-[3/4] flex flex-col">
-          <div className="flex-1 p-4 flex items-center justify-center">
+          <div className="px-3 pt-3">
+            <span
+              className="inline-block px-2 py-0.5 rounded-md text-xs font-medium"
+              style={{
+                backgroundColor: '#F2F2F7',
+                color: '#8E8E93',
+              }}
+            >
+              {directoryTag}
+            </span>
+          </div>
+
+          <div className="flex-1 flex items-center justify-center px-4">
             <h3
-              className="text-center font-medium text-lg leading-tight"
-              style={{ color: COLORS.PRIMARY_DARK }}
+              className="text-center font-semibold text-base leading-snug"
+              style={{ color: '#1D1D1F' }}
             >
               {displayName}
             </h3>
           </div>
 
-          <div className="p-3 border-t" style={{ borderColor: COLORS.NEUTRAL }}>
+          <div className="px-3 pb-3">
+            <div className="flex justify-between items-center mb-1.5" style={{ fontSize: '11px' }}>
+              <span style={{ color: '#8E8E93' }}>
+                {Math.round(clampedProgress)}%
+              </span>
+              {totalCharacters && (
+                <span style={{ color: '#8E8E93' }}>
+                  {totalCharacters.toLocaleString()} chars
+                </span>
+              )}
+            </div>
             <div
-              className="h-2 rounded-full overflow-hidden mb-2"
-              style={{ backgroundColor: READER_THEME.PROGRESS_TRACK }}
+              className="h-1 rounded-full overflow-hidden"
+              style={{ backgroundColor: '#E5E5EA' }}
             >
               <div
-                className="h-full rounded-full transition-all duration-300"
+                className="h-full rounded-full"
                 style={{
-                  width: `${Math.min(100, Math.max(0, progress))}%`,
-                  backgroundColor: READER_THEME.PROGRESS_FILL,
+                  width: `${clampedProgress}%`,
+                  backgroundColor: '#007AFF',
+                  transition: 'width 0.3s ease',
                 }}
               />
             </div>
-
-            <div className="flex justify-between items-center text-xs" style={{ color: COLORS.SECONDARY_DARK }}>
-              <span>{Math.round(progress)}%</span>
-              {totalCharacters && (
-                <span>{totalCharacters.toLocaleString()} chars</span>
-              )}
-            </div>
           </div>
-        </div>
-
-        <div
-          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center justify-center"
-          style={{ backgroundColor: 'rgba(226, 161, 111, 0.1)' }}
-        >
-          <span
-            className="px-4 py-2 rounded-lg text-sm font-medium"
-            style={{
-              backgroundColor: COLORS.PRIMARY,
-              color: '#FFFFFF',
-            }}
-          >
-            Read
-          </span>
         </div>
       </div>
     </Link>

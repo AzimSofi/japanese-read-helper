@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/middleware/auth';
-import { upsertTextEntry, upsertBookmark, initializeBookmarksForFiles } from '@/lib/db/queries';
+import { upsertTextEntry, upsertBookmark, initializeBookmarksForFiles, backfillTextMetadata } from '@/lib/db/queries';
 
 interface TextEntryUpload {
   fileName: string;
@@ -37,12 +37,14 @@ export async function POST(request: NextRequest) {
     return handleBookmark(request);
   } else if (action === 'bulk-seed') {
     return handleBulkSeed(request);
+  } else if (action === 'backfill-metadata') {
+    return handleBackfillMetadata();
   }
 
   return NextResponse.json(
     {
       success: false,
-      message: 'Invalid action. Use action=text-entries, action=bookmarks, or action=bulk-seed',
+      message: 'Invalid action. Use action=text-entries, action=bookmarks, action=bulk-seed, or action=backfill-metadata',
     },
     { status: 400 }
   );
@@ -148,6 +150,26 @@ async function handleBookmark(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error in handleBookmark:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+async function handleBackfillMetadata() {
+  try {
+    const count = await backfillTextMetadata();
+    return NextResponse.json({
+      success: true,
+      message: `Backfilled metadata for ${count} entries`,
+    });
+  } catch (error) {
+    console.error('Error in handleBackfillMetadata:', error);
     return NextResponse.json(
       {
         success: false,

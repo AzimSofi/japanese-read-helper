@@ -35,6 +35,8 @@ export interface TextEntry {
   file_name: string;
   directory: string;
   content: string;
+  total_pages?: number;
+  total_characters?: number;
   created_at?: Date;
 }
 
@@ -119,6 +121,8 @@ export const CREATE_TABLES_SQL = `
     file_name VARCHAR(255) NOT NULL,
     directory VARCHAR(255) NOT NULL,
     content TEXT NOT NULL,
+    total_pages INT DEFAULT 0,
+    total_characters INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(file_name, directory)
   );

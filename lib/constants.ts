@@ -209,14 +209,14 @@ export const TTS_CONFIG = {
 
 export type TTSVoiceGender = 'FEMALE' | 'MALE';
 
-// カラーパレット
+// カラーパレット (Apple Design Language)
 export const COLORS = {
-  BASE: '#FFF0DD',              // 背景・ハイライト
-  NEUTRAL: '#D1D3D8',           // サーフェス・境界線
-  PRIMARY: '#E2A16F',           // 重要アクション・AI処理
-  PRIMARY_DARK: '#d18a54',      // hoverフィードバック
-  SECONDARY: '#86B0BD',         // 通常操作・入力系
-  SECONDARY_DARK: '#6a98a8',    // hoverフィードバック
+  BASE: '#F2F2F7',
+  NEUTRAL: '#D1D1D6',
+  PRIMARY: '#007AFF',
+  PRIMARY_DARK: '#0051D5',
+  SECONDARY: '#8E8E93',
+  SECONDARY_DARK: '#636366',
 } as const;
 
 // CSS変数（インラインスタイルで使用）
@@ -231,23 +231,23 @@ export const CSS_VARS = {
 
 // Dark mode color palette
 export const DARK_COLORS = {
-  BASE: '#1a1a2e',
-  SURFACE: '#16213e',
-  NEUTRAL: '#4a4a5a',
-  PRIMARY: '#9a6b52',
-  PRIMARY_MUTED: '#7a5540',
-  SECONDARY: '#4a6a7a',
-  TEXT: '#e8e8e8',
+  BASE: '#000000',
+  SURFACE: '#1C1C1E',
+  NEUTRAL: '#38383A',
+  PRIMARY: '#0A84FF',
+  PRIMARY_MUTED: '#0A84FF80',
+  SECONDARY: '#48484A',
+  TEXT: '#F2F2F7',
 };
 
 // Minimal Reader Theme
 export const READER_THEME = {
-  SURFACE: '#FFF0DD',
-  SURFACE_MUTED: '#FFF8F0',
-  FAB_BG: '#E2A16F',
+  SURFACE: '#FFFFFF',
+  SURFACE_MUTED: '#F2F2F7',
+  FAB_BG: '#007AFF',
   FAB_ICON: '#FFFFFF',
-  PROGRESS_TRACK: '#D1D3D8',
-  PROGRESS_FILL: '#86B0BD',
+  PROGRESS_TRACK: '#E5E5EA',
+  PROGRESS_FILL: '#007AFF',
   TRANSITION_FAST: '150ms',
   TRANSITION_NORMAL: '300ms',
 } as const;

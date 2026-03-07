@@ -176,7 +176,7 @@ export default function TopNavigation() {
           {/* モバイル：ハンバーガーメニューアイコン */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            className="md:hidden p-2 rounded-lg interactive-nav-btn"
             aria-label="メニューを開く"
           >
             <svg
@@ -445,7 +445,7 @@ export default function TopNavigation() {
           {/* 折りたたみトグルボタン */}
           <button
             onClick={toggleTopNavCollapse}
-            className="p-1 rounded-lg hover:bg-gray-100 transition-all ml-auto"
+            className="p-1 rounded-lg interactive-nav-btn ml-auto"
             aria-label={isCollapsed ? 'ナビゲーションを展開' : 'ナビゲーションを折りたたむ'}
             style={{ color: CSS_VARS.PRIMARY }}
           >
@@ -575,7 +575,7 @@ export default function TopNavigation() {
             <h2 className="text-lg font-semibold">メニュー</h2>
             <button
               onClick={closeMobileMenu}
-              className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="p-2 rounded-lg interactive-nav-btn"
               aria-label="メニューを閉じる"
             >
               <svg

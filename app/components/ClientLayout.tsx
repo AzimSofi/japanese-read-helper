@@ -18,7 +18,7 @@ interface ClientLayoutProps {
   children: React.ReactNode;
 }
 
-const MINIMAL_LAYOUT_PATHS = ['/library', '/read'];
+const MINIMAL_LAYOUT_PATHS = ['/library', '/read', '/login'];
 
 export default function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname();

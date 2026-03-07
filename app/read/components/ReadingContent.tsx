@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import dynamic from 'next/dynamic';
-import { parseMarkdown } from '@/lib/utils/markdownParser';
-import { READER_CONFIG, READER_THEME, COLORS, DARK_COLORS } from '@/lib/constants';
-import { stripFurigana } from '@/lib/utils/furiganaParser';
+import { useMemo } from "react";
+import dynamic from "next/dynamic";
+import { parseMarkdown } from "@/lib/utils/markdownParser";
+import { READER_CONFIG } from "@/lib/constants";
+import { stripFurigana } from "@/lib/utils/furiganaParser";
 
 const CollapsibleItem = dynamic(
-  () => import('@/app/components/ui/CollapsibleItem'),
+  () => import("@/app/components/reading/CollapsibleItem"),
   { ssr: false }
 );
 
 const ParagraphItem = dynamic(
-  () => import('@/app/components/ui/ParagraphItem'),
+  () => import("@/app/components/reading/ParagraphItem"),
   { ssr: false }
 );
 
-type ContentType = 'rephrase' | 'furigana' | 'plain';
+type ContentType = "rephrase" | "furigana" | "plain";
 
 interface ReadingContentProps {
   content: string;
@@ -26,7 +26,7 @@ interface ReadingContentProps {
   showFurigana: boolean;
   fontSize: number;
   lineHeight: number;
-  displayMode: 'collapsed' | 'expanded';
+  displayMode: "collapsed" | "expanded";
   aiExplanationEnabled: boolean;
   currentPage: number;
   itemsPerPage: number;
@@ -37,18 +37,18 @@ interface ReadingContentProps {
 }
 
 function detectContentType(text: string): ContentType {
-  if (text.includes('>>') && (text.includes('<') || text.includes('\u003c'))) {
-    return 'rephrase';
+  if (text.includes(">>") && (text.includes("<") || text.includes("\u003c"))) {
+    return "rephrase";
   }
   if (/<ruby>/.test(text) || /[^\[\]]+\[[^\[\]]+\]/.test(text)) {
-    return 'furigana';
+    return "furigana";
   }
-  return 'plain';
+  return "plain";
 }
 
 function normalizeForComparison(text: string): string {
   const stripped = stripFurigana(text);
-  return stripped.replace(/[\r\n]/g, '').trim();
+  return stripped.replace(/[\r\n]/g, "").trim();
 }
 
 export default function ReadingContent({
@@ -73,14 +73,14 @@ export default function ReadingContent({
   const fullFilePath = directory ? `${directory}/${fileName}` : fileName;
 
   const parsedItems = useMemo(() => {
-    if (contentType === 'rephrase') {
+    if (contentType === "rephrase") {
       return parseMarkdown(content);
     }
     return content
       .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
-      .map(p => p.trim())
-      .filter(p => p.length > 0)
-      .map(p => ({ text: p }));
+      .map((p) => p.trim())
+      .filter((p) => p.length > 0)
+      .map((p) => ({ text: p }));
   }, [content, contentType]);
 
   const paginatedItems = useMemo(() => {
@@ -92,17 +92,20 @@ export default function ReadingContent({
   if (parsedItems.length === 0) {
     return (
       <div
-        className="p-8 text-center rounded-xl"
-        style={{ backgroundColor: READER_THEME.SURFACE }}
+        className="p-8 text-center rounded-2xl"
+        style={{
+          backgroundColor: "#FFFFFF",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.06)",
+        }}
       >
-        <p style={{ color: COLORS.SECONDARY_DARK }}>No content to display</p>
+        <p style={{ color: "#8E8E93" }}>No content to display</p>
       </div>
     );
   }
 
-  if (contentType === 'rephrase') {
+  if (contentType === "rephrase") {
     return (
-      <div className="space-y-2">
+      <div className="space-y-1">
         {paginatedItems.map((item, index) => {
           const typedItem = item as { head: string; subItems: string[] };
           const normalizedHead = normalizeForComparison(typedItem.head);
@@ -114,10 +117,10 @@ export default function ReadingContent({
           return (
             <CollapsibleItem
               key={`${currentPage}-${index}`}
-              {...(isBookmarked ? { id: 'bookmark' } : {})}
+              {...(isBookmarked ? { id: "bookmark" } : {})}
               head={typedItem.head}
               subItems={typedItem.subItems}
-              initialDropdownState={displayMode === 'expanded'}
+              initialDropdownState={displayMode === "expanded"}
               showFurigana={showFurigana}
               aiExplanationEnabled={aiExplanationEnabled}
               isDarkMode={isDarkMode}
@@ -146,7 +149,7 @@ export default function ReadingContent({
         return (
           <ParagraphItem
             key={`${currentPage}-${index}`}
-            {...(isBookmarked ? { id: 'bookmark' } : {})}
+            {...(isBookmarked ? { id: "bookmark" } : {})}
             text={typedItem.text}
             isBookmarked={isBookmarked}
             fileName={fullFilePath}

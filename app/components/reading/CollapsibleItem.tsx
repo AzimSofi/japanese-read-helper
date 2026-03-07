@@ -4,12 +4,10 @@ import React, { useEffect, useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import TranslateIcon from "@/app/components/icons/TranslateIcon";
-import ChevronUp from "@/app/components/icons/ChevronUp";
-import ChevronDown from "@/app/components/icons/ChevronDown";
-import BookImage from "@/app/components/ui/BookImage";
-import TTSButton from "@/app/components/ui/TTSButton";
+import BookImage from "@/app/components/reading/BookImage";
+import TTSButton from "@/app/components/reading/TTSButton";
 import { useSearchParams } from "next/navigation";
-import { CSS_VARS, EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
+import { EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
 interface CollapsibleItemProps {
@@ -19,9 +17,7 @@ interface CollapsibleItemProps {
   initialDropdownState?: boolean;
   onSubmitSuccess: () => void;
   showFurigana?: boolean;
-  /** AI解説機能の有効/無効（無効時はテキスト選択可能） */
   aiExplanationEnabled?: boolean;
-  /** ダークモードの有効/無効 */
   isDarkMode?: boolean;
   onSentenceClick?: (sentence: string) => void;
   imageMap?: Record<string, string>;
@@ -32,7 +28,6 @@ interface CollapsibleItemProps {
     sentence: string;
     paragraphText: string;
   }) => void;
-  /** 長押し時に連続再生を開始するコールバック */
   onStartContinuousPlay?: () => void;
 }
 
@@ -57,10 +52,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   const fileNameParam = searchParams.get("fileName");
   const highlightWord = searchParams.get("highlight");
 
-  // Construct full file path (directory/fileName) to match how page.tsx handles it
-  const fileName: string = (directoryParam && fileNameParam
-    ? `${directoryParam}/${fileNameParam}`
-    : fileNameParam) || "text-1";
+  const fileName: string =
+    (directoryParam && fileNameParam
+      ? `${directoryParam}/${fileNameParam}`
+      : fileNameParam) || "text-1";
 
   const [isOpen, setIsOpen] = useState(initialDropdownState);
   const [loading, setLoading] = useState(false);
@@ -70,30 +65,30 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   const [translatedText, setTranslatedText] = useState<string | null>(null);
   const [translating, setTranslating] = useState(false);
 
-  // Listen for vocabulary mode changes
   useEffect(() => {
     const handleVocabularyModeChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ enabled: boolean }>;
       setVocabularyMode(customEvent.detail.enabled);
     };
 
-    // Initialize from localStorage
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('vocabulary_mode');
+    if (typeof window !== "undefined") {
+      const stored = localStorage.getItem("vocabulary_mode");
       if (stored !== null) {
-        setVocabularyMode(stored === 'true');
+        setVocabularyMode(stored === "true");
       }
     }
 
-    window.addEventListener('vocabularyModeChanged', handleVocabularyModeChange);
-    return () => window.removeEventListener('vocabularyModeChanged', handleVocabularyModeChange);
+    window.addEventListener("vocabularyModeChanged", handleVocabularyModeChange);
+    return () =>
+      window.removeEventListener(
+        "vocabularyModeChanged",
+        handleVocabularyModeChange
+      );
   }, []);
 
-  // Handle word highlighting when navigating from vocabulary page
   useEffect(() => {
     if (highlightWord && head.includes(highlightWord)) {
       setShouldHighlight(true);
-      // Remove highlight after 3 seconds
       const timer = setTimeout(() => {
         setShouldHighlight(false);
       }, 3000);
@@ -114,10 +109,9 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     let reading: string = "";
     let meaning: string = "";
     if (item.includes("[") && item.includes("]")) {
-      if (item.split("[")[1].split("]")[0].includes("・")) {
-        //　例：>>ジッパー[チャック、ファスナー]＊ノック[ドアなどを軽く叩くこと]　つまり　単語[意味]＊…
-        reading = item.split("[")[1].split("・")[0];
-        meaning = item.split("[")[1].split("・")[1].replace("]", "").trim();
+      if (item.split("[")[1].split("]")[0].includes("\u30FB")) {
+        reading = item.split("[")[1].split("\u30FB")[0];
+        meaning = item.split("[")[1].split("\u30FB")[1].replace("]", "").trim();
       } else {
         reading = "";
         meaning = item.split("[")[1].split("]")[0];
@@ -133,8 +127,8 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     subItem: string
   ): { kanji: string; reading: string; meaning: string }[] {
     let parsed: string[] = [];
-    if (subItem.includes("＊")) {
-      parsed = subItem.split("＊");
+    if (subItem.includes("\uFF0A")) {
+      parsed = subItem.split("\uFF0A");
     } else if (subItem.includes("]")) {
       parsed = subItem.split("]");
       const mappedParsed = parsed.map((element) => {
@@ -142,16 +136,16 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       });
       mappedParsed.pop();
       parsed = mappedParsed;
-    } else if (subItem.includes("、")) {
-      parsed = subItem.split("、");
+    } else if (subItem.includes("\u3001")) {
+      parsed = subItem.split("\u3001");
     } else {
       if (
         !(
-          subItem === "無い" ||
-          subItem === "ない" ||
-          subItem === "無し" ||
-          subItem === "なし" ||
-          subItem === "無"
+          subItem === "\u7121\u3044" ||
+          subItem === "\u306A\u3044" ||
+          subItem === "\u7121\u3057" ||
+          subItem === "\u306A\u3057" ||
+          subItem === "\u7121"
         )
       ) {
         console.error("Error: ", subItem);
@@ -161,7 +155,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     const words: { kanji: string; reading: string; meaning: string }[] = [];
     const multipleDefinition: string[] = [];
     parsed.forEach((item) => {
-      if (item.includes("[") /*&& item.includes("・")*/ && item.includes("]")) {
+      if (item.includes("[") && item.includes("]")) {
         words.push(KanjiReadingMeaningSplit(item));
       } else {
         multipleDefinition.push(item);
@@ -173,31 +167,6 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     });
     return words;
   }
-
-  const itemRef = React.useRef<HTMLDivElement>(null);
-  const headRef = React.useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-  const [headSize, setHeadSize] = useState<{ width: number; height: number }>({
-    width: 0,
-    height: 0,
-  });
-  useEffect(() => {
-    if (itemRef.current) {
-      setSize({
-        width: itemRef.current.offsetWidth,
-        height: itemRef.current.offsetHeight,
-      });
-    }
-    if (headRef.current) {
-      setHeadSize({
-        width: headRef.current.offsetWidth,
-        height: headRef.current.offsetHeight,
-      });
-    }
-  }, [itemRef]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +180,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         body: JSON.stringify({ target: fileName, content: head }),
       });
       if (!response.ok) {
-        throw new Error("失敗");
+        throw new Error("Failed");
       }
       onSubmitSuccess();
       setLoading(false);
@@ -223,19 +192,16 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   const handleTranslateClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
 
-    // Toggle back to original text if already showing translation
     if (showTranslation) {
       setShowTranslation(false);
       return;
     }
 
-    // If we already have a translation, just show it
     if (translatedText) {
       setShowTranslation(true);
       return;
     }
 
-    // Fetch translation
     try {
       setTranslating(true);
       const response = await fetch("/api/translate", {
@@ -260,20 +226,13 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     }
   };
 
-  // Extract text from a Range while excluding <rt> (furigana) elements
   const extractTextWithoutRuby = (range: Range): string => {
-    // Clone the selection content to avoid modifying the actual DOM
     const fragment = range.cloneContents();
-
-    // Remove all <rt> elements (furigana) from the cloned fragment
-    const rtElements = fragment.querySelectorAll('rt');
-    rtElements.forEach(rt => rt.remove());
-
-    // Now get the text content (with <rt> removed)
-    return fragment.textContent || '';
+    const rtElements = fragment.querySelectorAll("rt");
+    rtElements.forEach((rt) => rt.remove());
+    return fragment.textContent || "";
   };
 
-  // Handle text selection in vocabulary mode
   const handleTextSelection = () => {
     if (!vocabularyMode || !onVocabularySelect) return;
 
@@ -281,35 +240,30 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     if (!selection || selection.rangeCount === 0) return;
 
     const range = selection.getRangeAt(0);
-
-    // Use DOM traversal to extract text without furigana
     const cleanedText = extractTextWithoutRuby(range).trim();
 
     if (!cleanedText) return;
 
-    // Call the vocabulary select handler with the cleaned word and context
     onVocabularySelect({
       word: cleanedText,
-      sentence: head, // Use the full head as sentence context
-      paragraphText: head, // Full paragraph for location reference
+      sentence: head,
+      paragraphText: head,
     });
 
-    // Clear selection
     selection.removeAllRanges();
   };
 
-  // 文を区切り文字で分割
   const splitIntoSentences = (text: string): string[] => {
     const delimiters: readonly string[] = EXPLANATION_CONFIG.SENTENCE_DELIMITERS;
     const sentences: string[] = [];
-    let currentSentence = '';
+    let currentSentence = "";
 
     for (let i = 0; i < text.length; i++) {
       currentSentence += text[i];
 
       if (delimiters.includes(text[i])) {
         sentences.push(currentSentence.trim());
-        currentSentence = '';
+        currentSentence = "";
       }
     }
 
@@ -317,7 +271,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
       sentences.push(currentSentence.trim());
     }
 
-    return sentences.filter(s => s.length > 0);
+    return sentences.filter((s) => s.length > 0);
   };
 
   const handleTripleClickSelect = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -333,16 +287,16 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     }
   };
 
-  // 振り仮名付きテキストをレンダリング
-  const renderTextWithFurigana = (text: string, isClickable: boolean = false) => {
-    // AI解説無効時またはクリック不可の場合は単純なテキストレンダリング
+  const renderTextWithFurigana = (
+    text: string,
+    isClickable: boolean = false
+  ) => {
     if (!isClickable || !aiExplanationEnabled) {
       const segments = parseFurigana(text);
       const html = segmentsToHTML(segments, showFurigana);
       return <span dangerouslySetInnerHTML={{ __html: html }} />;
     }
 
-    // クリック可能な場合は文ごとに分割
     const sentences = splitIntoSentences(text);
 
     return (
@@ -359,23 +313,28 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                 e.stopPropagation();
                 if (!vocabularyMode) onSentenceClick?.(sentence);
               }}
-              className={onSentenceClick && !vocabularyMode ? "cursor-pointer hover:bg-opacity-50 transition-colors rounded px-1" : ""}
+              className={
+                onSentenceClick && !vocabularyMode
+                  ? "cursor-pointer transition-colors rounded-md px-1"
+                  : ""
+              }
               style={
                 onSentenceClick && !vocabularyMode
                   ? {
-                      backgroundColor: 'transparent',
-                      transition: 'background-color 0.2s',
+                      backgroundColor: "transparent",
+                      transition: "background-color 0.2s ease",
                     }
                   : {}
               }
               onMouseEnter={(e) => {
                 if (onSentenceClick && !vocabularyMode) {
-                  e.currentTarget.style.backgroundColor = `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`;
+                  e.currentTarget.style.backgroundColor =
+                    "rgba(0, 122, 255, 0.06)";
                 }
               }}
               onMouseLeave={(e) => {
                 if (onSentenceClick && !vocabularyMode) {
-                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.backgroundColor = "transparent";
                 }
               }}
             />
@@ -385,78 +344,73 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     );
   };
 
-  // 画像プレースホルダーを検出
   const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/g;
   const hasImage = IMAGE_PATTERN.test(head);
 
-  // テキストと画像を分割して処理
   const parseContentWithImages = (content: string) => {
-    const parts: Array<{ type: 'text' | 'image'; content: string }> = [];
+    const parts: Array<{ type: "text" | "image"; content: string }> = [];
     let lastIndex = 0;
     const regex = /\[IMAGE:([^\]]+)\]/g;
     let match;
 
     while ((match = regex.exec(content)) !== null) {
-      // 画像の前のテキスト
       if (match.index > lastIndex) {
         const textBefore = content.substring(lastIndex, match.index);
         if (textBefore.trim()) {
-          parts.push({ type: 'text', content: textBefore });
+          parts.push({ type: "text", content: textBefore });
         }
       }
 
-      // 画像プレースホルダー
       const imageName = match[1];
-      parts.push({ type: 'image', content: imageName });
+      parts.push({ type: "image", content: imageName });
 
       lastIndex = regex.lastIndex;
     }
 
-    // 画像の後のテキスト
     if (lastIndex < content.length) {
       const textAfter = content.substring(lastIndex);
       if (textAfter.trim()) {
-        parts.push({ type: 'text', content: textAfter });
+        parts.push({ type: "text", content: textAfter });
       }
     }
 
     return parts;
   };
 
-  // 画像を含むコンテンツをレンダリング
   const renderHeadWithImages = () => {
-    // Show translation if enabled
     if (showTranslation && translatedText) {
-      return <span style={{ fontStyle: 'normal' }}>{translatedText}</span>;
+      return (
+        <span style={{ color: isDarkMode ? "#E5E5EA" : "#636366" }}>
+          {translatedText}
+        </span>
+      );
     }
 
     if (!hasImage) {
-      // 画像がない場合は通常のテキストレンダリング
       return renderTextWithFurigana(head, true);
     }
 
-    // 画像がある場合はパーツごとにレンダリング
     const parts = parseContentWithImages(head);
 
     return (
       <div className="head-content">
         {parts.map((part, index) => {
-          if (part.type === 'text') {
+          if (part.type === "text") {
             return (
               <div key={index} className="whitespace-pre-wrap">
                 {renderTextWithFurigana(part.content, true)}
               </div>
             );
           } else {
-            // 画像のパスを構築 - imageMapで実際のファイル名を検索
             const originalName = part.content;
-            const actualFileName = imageMap?.[originalName] || imageMap?.[`image/${originalName}`] || originalName;
-            // For nested directories (e.g., bookv2-furigana/book-name/), bookDirectory already contains the full path
-            // For flat directories (e.g., bookv2-furigana/), we need to add bookFileName
-            const isNestedDirectory = bookDirectory?.includes('/');
+            const actualFileName =
+              imageMap?.[originalName] ||
+              imageMap?.[`image/${originalName}`] ||
+              originalName;
+            const isNestedDirectory = bookDirectory?.includes("/");
             const imagePath = isNestedDirectory
               ? `/${bookDirectory}/images/${actualFileName}`
-              : `/${bookDirectory}/${bookFileName?.replace(/-rephrase$/, '')}/images/${actualFileName}`;
+              : `/${bookDirectory}/${bookFileName?.replace(/-rephrase$/, "")}/images/${actualFileName}`;
 
             return (
               <BookImage
@@ -472,61 +426,118 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     );
   };
 
-  const darkStyles = {
-    base: DARK_COLORS.SURFACE,
-    text: DARK_COLORS.TEXT,
-    subText: '#c0c0c0',
-    subBg: '#2a2a3e',
+  const isBookmarked = id === "bookmark";
+
+  const containerStyle: React.CSSProperties = shouldHighlight
+    ? {
+        backgroundColor: isDarkMode
+          ? "rgba(10, 132, 255, 0.08)"
+          : "rgba(0, 122, 255, 0.06)",
+        borderLeft: "none",
+        transition: "background-color 3s ease, border-left 3s ease",
+      }
+    : isBookmarked
+      ? {
+          borderLeft: `4px solid ${isDarkMode ? DARK_COLORS.PRIMARY : "#007AFF"}`,
+          backgroundColor: isDarkMode
+            ? "rgba(10, 132, 255, 0.06)"
+            : "rgba(0, 122, 255, 0.03)",
+        }
+      : {};
+
+  const buttonBaseStyle: React.CSSProperties = {
+    width: "32px",
+    height: "32px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "8px",
+    border: "none",
+    background: "none",
+    cursor: "pointer",
+    transition: "transform 0.15s ease, background-color 0.15s ease",
+    flexShrink: 0,
   };
 
+  const hoverBg = isDarkMode
+    ? "rgba(255, 255, 255, 0.06)"
+    : "rgba(0, 0, 0, 0.04)";
+
   return (
-    <div className="collapsibleItem relative" id={id}>
+    <div className="collapsibleItem" id={id}>
       <div
-        className="p-3 my-2 rounded-lg transition-all duration-500"
-        style={
-          shouldHighlight
-            ? {
-                backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 40%, transparent)`,
-                boxShadow: '0 0 20px rgba(226, 161, 111, 0.5)',
-              }
-            : id === "bookmark"
-            ? { backgroundColor: isDarkMode ? darkStyles.base : CSS_VARS.BASE }
-            : {}
-        }
+        className="p-4 my-4 rounded-xl"
+        style={{
+          transition: "background-color 3s ease, border-left 0.2s ease",
+          ...containerStyle,
+        }}
         id="collapsible-item"
-        ref={itemRef}
       >
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0">
             <div
-              className={"head-text font-bold text-lg whitespace-pre-wrap"}
-              ref={headRef}
+              className="head-text font-bold text-lg whitespace-pre-wrap"
               onMouseUp={handleTextSelection}
               onClickCapture={handleTripleClickSelect}
-              style={(vocabularyMode || !aiExplanationEnabled) ? { userSelect: 'text', cursor: 'text' } : {}}
+              style={{
+                color: isDarkMode ? DARK_COLORS.TEXT : "#1D1D1F",
+                ...(vocabularyMode || !aiExplanationEnabled
+                  ? { userSelect: "text" as const, cursor: "text" }
+                  : {}),
+              }}
             >
               {renderHeadWithImages()}
             </div>
           </div>
-          <div className="flex items-center gap-1 flex-shrink-0 pt-1">
+          <div className="flex items-center gap-0.5 flex-shrink-0 pt-0.5">
             <TTSButton text={head} onLongPress={onStartContinuousPlay} />
             <button
               disabled={translating}
               onClick={handleTranslateClick}
-              className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
-              style={{ opacity: translating ? 0.5 : 1 }}
+              style={{
+                ...buttonBaseStyle,
+                opacity: translating ? 0.5 : 1,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = hoverBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = "transparent";
+              }}
+              onMouseDown={(e) => {
+                e.currentTarget.style.transform = "scale(0.9)";
+              }}
+              onMouseUp={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+              }}
               aria-label="Translate"
             >
               <TranslateIcon isActive={showTranslation} />
             </button>
-            <form onSubmit={handleSubmit} onClick={(e) => e.stopPropagation()} className="inline-flex">
+            <form
+              onSubmit={handleSubmit}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex"
+            >
               <button
                 disabled={loading}
                 type="submit"
-                className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                style={buttonBaseStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = hoverBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = "scale(0.9)";
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
                 aria-label="Bookmark"
               >
-                {id === "bookmark" ? <BookmarkFilled /> : <BookmarkUnfilled />}
+                {isBookmarked ? <BookmarkFilled /> : <BookmarkUnfilled />}
               </button>
             </form>
             {subItems.length > 0 && (
@@ -535,26 +546,64 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
                   e.stopPropagation();
                   toggleOpen();
                 }}
-                className="p-1 hover:bg-gray-100 rounded transition-colors cursor-pointer select-none"
+                style={buttonBaseStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = hoverBg;
+                  const svg = e.currentTarget.querySelector("svg");
+                  if (svg) svg.style.fill = "#8E8E93";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                  const svg = e.currentTarget.querySelector("svg");
+                  if (svg) svg.style.fill = "#D1D1D6";
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = "scale(0.9)";
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
                 aria-label={isOpen ? "Collapse" : "Expand"}
               >
-                {isOpen ? <ChevronUp /> : <ChevronDown />}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 640 640"
+                  width="16"
+                  height="16"
+                  style={{
+                    fill: "#D1D1D6",
+                    transition: "transform 200ms ease, fill 200ms ease",
+                    transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  }}
+                >
+                  <path d="M297.4 470.6C309.9 483.1 330.2 483.1 342.7 470.6L534.7 278.6C547.2 266.1 547.2 245.8 534.7 233.3C522.2 220.8 501.9 220.8 489.4 233.3L320 402.7L150.6 233.4C138.1 220.9 117.8 220.9 105.3 233.4C92.8 245.9 92.8 266.2 105.3 278.7L297.3 470.7z" />
+                </svg>
               </button>
             )}
           </div>
         </div>
         {isOpen && (
-          <div className="ml-4 mt-2">
+          <div className="mt-3">
             {subItems.map((subItem, index) => (
               <div
                 key={index}
-                className="sub-item-text my-1 rounded-lg"
+                className="sub-item-text rounded-xl mb-2"
                 onClick={handleTripleClickSelect}
-                style={isDarkMode ? {
-                  color: darkStyles.subText,
-                  backgroundColor: darkStyles.subBg,
-                  padding: '8px 12px',
-                } : {}}
+                style={
+                  isDarkMode
+                    ? {
+                        color: "#E5E5EA",
+                        backgroundColor: "#2C2C2E",
+                        border: `1px solid ${DARK_COLORS.NEUTRAL}`,
+                        padding: "12px 16px",
+                      }
+                    : {
+                        color: "#636366",
+                        backgroundColor: "rgba(0, 122, 255, 0.03)",
+                        border: "1px solid rgba(0, 122, 255, 0.06)",
+                        padding: "12px 16px",
+                      }
+                }
               >
                 {index === 4 ? "" : renderTextWithFurigana(subItem, false)}
               </div>

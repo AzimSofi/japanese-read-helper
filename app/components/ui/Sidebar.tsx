@@ -86,7 +86,7 @@ export default function Sidebar({
         {/* 表示/隠す ボタン */}
         <button
           onClick={() => setDropdownAlwaysOpen(!dropdownAlwaysOpen)}
-          className="px-4 py-2.5 rounded-lg font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 border"
+          className="px-4 py-2.5 rounded-lg font-medium shadow-lg interactive-pill border"
           style={{
             backgroundColor: dropdownAlwaysOpen ? CSS_VARS.BASE : CSS_VARS.NEUTRAL,
             borderColor: CSS_VARS.NEUTRAL,
@@ -182,7 +182,7 @@ export default function Sidebar({
         <a
           href="#"
           onClick={scrollToBookmark}
-          className="px-4 py-2.5 rounded-lg border font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 text-center"
+          className="px-4 py-2.5 rounded-lg border font-medium shadow-lg interactive-pill text-center"
           style={{
             backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 20%, transparent)`,
             borderColor: CSS_VARS.PRIMARY,
@@ -196,7 +196,7 @@ export default function Sidebar({
         {allHeaders.length > 0 && (
           <button
             onClick={handleCopyHeaders}
-            className="px-4 py-2.5 rounded-lg border font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 active:scale-95 text-center"
+            className="px-4 py-2.5 rounded-lg border font-medium shadow-lg interactive-pill text-center"
             style={{
               backgroundColor: copyFeedback
                 ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`
@@ -288,7 +288,7 @@ export default function Sidebar({
               {/* 表示/隠す ボタン */}
               <button
                 onClick={() => setDropdownAlwaysOpen(!dropdownAlwaysOpen)}
-                className="px-3 py-2 rounded-lg font-medium shadow-md transition-all active:scale-95 border text-xs whitespace-nowrap"
+                className="px-3 py-2 rounded-lg font-medium shadow-md interactive-pill border text-xs whitespace-nowrap"
                 style={{
                   backgroundColor: dropdownAlwaysOpen ? CSS_VARS.BASE : CSS_VARS.NEUTRAL,
                   borderColor: CSS_VARS.NEUTRAL,
@@ -355,7 +355,7 @@ export default function Sidebar({
               {allHeaders.length > 0 && (
                 <button
                   onClick={handleCopyHeaders}
-                  className="px-3 py-2 rounded-lg border font-medium shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
+                  className="px-3 py-2 rounded-lg border font-medium shadow-md interactive-pill text-xs whitespace-nowrap"
                   style={{
                     backgroundColor: copyFeedback
                       ? `color-mix(in srgb, ${CSS_VARS.SECONDARY} 30%, transparent)`
@@ -369,7 +369,7 @@ export default function Sidebar({
               )}
               <button
                 onClick={scrollToBookmark}
-                className="px-4 py-2 rounded-lg border font-medium shadow-md transition-all active:scale-95 text-xs whitespace-nowrap"
+                className="px-4 py-2 rounded-lg border font-medium shadow-md interactive-pill text-xs whitespace-nowrap"
                 style={{
                   backgroundColor: `color-mix(in srgb, ${CSS_VARS.PRIMARY} 20%, transparent)`,
                   borderColor: CSS_VARS.PRIMARY,

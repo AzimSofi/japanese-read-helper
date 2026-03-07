@@ -1,7 +1,5 @@
 'use client';
 
-import { READER_THEME } from '@/lib/constants';
-
 interface ProgressBarProps {
   progress: number;
   currentPage: number;
@@ -11,8 +9,6 @@ interface ProgressBarProps {
 
 export default function ProgressBar({
   progress,
-  currentPage,
-  totalPages,
   visible = true,
 }: ProgressBarProps) {
   if (!visible) return null;
@@ -22,30 +18,17 @@ export default function ProgressBar({
       className="fixed top-0 left-0 right-0 z-50 transition-opacity duration-200"
       style={{ opacity: visible ? 1 : 0 }}
     >
-      <div
-        className="h-1 w-full"
-        style={{ backgroundColor: READER_THEME.PROGRESS_TRACK }}
-      >
+      <div className="h-0.5 w-full">
         <div
-          className="h-full transition-all duration-300 ease-out"
+          className="h-full transition-all duration-300"
           style={{
             width: `${Math.min(100, Math.max(0, progress))}%`,
-            backgroundColor: READER_THEME.PROGRESS_FILL,
+            backgroundColor: '#007AFF',
+            opacity: 0.8,
+            transitionTimingFunction: 'cubic-bezier(0.4, 0, 0.2, 1)',
           }}
         />
       </div>
-
-      {progress > 5 && (
-        <div
-          className="absolute top-1 right-2 text-xs px-2 py-0.5 rounded-b-md transition-opacity duration-200"
-          style={{
-            backgroundColor: `${READER_THEME.SURFACE}E0`,
-            color: READER_THEME.PROGRESS_FILL,
-          }}
-        >
-          {currentPage}/{totalPages}
-        </div>
-      )}
     </div>
   );
 }

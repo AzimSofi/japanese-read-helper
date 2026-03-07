@@ -2,25 +2,23 @@ import { sql } from '@/lib/db/connection';
 import { NextResponse } from 'next/server';
 import { CREATE_TABLES_SQL } from '@/lib/db/schema';
 
-/**
- * Initialize database tables
- * Call this endpoint once after setting up Vercel Postgres
- * GET /api/init-db
- */
+const MIGRATIONS_SQL = `
+  ALTER TABLE text_entries ADD COLUMN IF NOT EXISTS total_pages INT DEFAULT 0;
+  ALTER TABLE text_entries ADD COLUMN IF NOT EXISTS total_characters INT DEFAULT 0;
+`;
+
 export async function GET() {
   try {
-    // Execute the schema creation SQL
-    // Use sql.unsafe() for raw SQL (works with postgres library)
-    // @vercel/postgres also supports this method
-    if (typeof sql.unsafe === 'function') {
-      // Local development with postgres library
-      await sql.unsafe(CREATE_TABLES_SQL);
-    } else if (typeof sql.query === 'function') {
-      // Production with @vercel/postgres
-      await sql.query(CREATE_TABLES_SQL);
-    } else {
-      throw new Error('Unsupported database client');
-    }
+    const execSql = typeof sql.unsafe === 'function'
+      ? sql.unsafe.bind(sql)
+      : typeof sql.query === 'function'
+        ? sql.query.bind(sql)
+        : null;
+
+    if (!execSql) throw new Error('Unsupported database client');
+
+    await execSql(CREATE_TABLES_SQL);
+    await execSql(MIGRATIONS_SQL);
 
     return NextResponse.json({
       message: 'Database tables created successfully',
