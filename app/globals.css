@@ -243,6 +243,15 @@ input[type="range"]::-moz-range-thumb {
   background: transparent;
 }
 
+.segmented-control button:not(.active):hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.segmented-control button:not(.active):active {
+  background: rgba(0, 0, 0, 0.08);
+  transform: scale(0.97);
+}
+
 .segmented-control button.active {
   background: #FFFFFF;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -311,4 +320,131 @@ input[type="range"]::-moz-range-thumb {
   font-size: 12px;
   color: #8E8E93;
   margin-top: 1px;
+}
+
+/* Apple-style interactive elements */
+
+.interactive-pill {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.interactive-pill:hover {
+  filter: brightness(0.94);
+  transform: scale(1.04);
+}
+
+.interactive-pill:active {
+  transform: scale(0.96);
+  filter: brightness(0.9);
+}
+
+.interactive-close {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.interactive-close:hover {
+  background-color: #E5E5EA !important;
+  transform: scale(1.08);
+}
+
+.interactive-close:active {
+  transform: scale(0.92);
+  background-color: #D1D1D6 !important;
+}
+
+.interactive-link {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interactive-link:hover {
+  opacity: 0.75;
+}
+
+.interactive-link:active {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+.interactive-card {
+  transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1), box-shadow 0.35s cubic-bezier(0.32, 0.72, 0, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.interactive-card:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06) !important;
+}
+
+.interactive-card:active {
+  transform: scale(0.98);
+}
+
+.interactive-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.interactive-btn:hover {
+  filter: brightness(0.92);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.interactive-btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.88);
+}
+
+.interactive-btn:disabled {
+  pointer-events: none;
+}
+
+.interactive-page-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.interactive-page-btn:hover:not(:disabled) {
+  background-color: rgba(0, 122, 255, 0.08) !important;
+  transform: scale(1.06);
+}
+
+.interactive-page-btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.interactive-star {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.interactive-star:hover {
+  transform: scale(1.2);
+}
+
+.interactive-star:active {
+  transform: scale(0.85);
+}
+
+.interactive-nav-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.interactive-nav-btn:hover {
+  background-color: rgba(0, 0, 0, 0.04);
+  transform: scale(1.05);
+}
+
+.interactive-nav-btn:active {
+  transform: scale(0.92);
+  background-color: rgba(0, 0, 0, 0.08);
 }

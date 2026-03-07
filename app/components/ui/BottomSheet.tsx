@@ -112,7 +112,7 @@ export default function BottomSheet({
               <h2 className="text-lg font-semibold" style={{ color: '#1D1D1F' }}>{title}</h2>
               <button
                 onClick={onClose}
-                className="w-8 h-8 flex items-center justify-center rounded-full transition-colors"
+                className="w-8 h-8 flex items-center justify-center rounded-full interactive-close"
                 style={{ backgroundColor: '#F2F2F7', color: '#8E8E93' }}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>

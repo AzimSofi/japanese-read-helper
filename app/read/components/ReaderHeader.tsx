@@ -60,7 +60,7 @@ export default function ReaderHeader({
         <div className="flex items-center justify-between h-full">
           <button
             onClick={() => router.push('/library')}
-            className="flex items-center gap-1 transition-all duration-200 hover:opacity-70 flex-shrink-0"
+            className="flex items-center gap-1 interactive-nav-btn flex-shrink-0 rounded-lg px-2 py-1"
             style={{ color: '#007AFF' }}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -73,7 +73,7 @@ export default function ReaderHeader({
             <button
               onClick={() => onPageChange(currentPage - 1)}
               disabled={currentPage <= 1}
-              className="p-1.5 rounded-lg disabled:opacity-30 transition-all duration-200 hover:bg-black/5"
+              className="p-1.5 rounded-lg disabled:opacity-30 interactive-nav-btn"
               style={{ color: theme.textMuted }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -110,7 +110,7 @@ export default function ReaderHeader({
             <button
               onClick={() => onPageChange(currentPage + 1)}
               disabled={currentPage >= totalPages}
-              className="p-1.5 rounded-lg disabled:opacity-30 transition-all duration-200 hover:bg-black/5"
+              className="p-1.5 rounded-lg disabled:opacity-30 interactive-nav-btn"
               style={{ color: theme.textMuted }}
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -123,7 +123,7 @@ export default function ReaderHeader({
             {bookmarkPage && bookmarkPage !== currentPage && (
               <button
                 onClick={() => onPageChange(bookmarkPage)}
-                className="text-sm font-medium transition-all duration-200 hover:opacity-70"
+                className="text-sm font-medium interactive-link"
                 style={{ color: '#007AFF' }}
                 title={`Go to bookmark (page ${bookmarkPage})`}
               >

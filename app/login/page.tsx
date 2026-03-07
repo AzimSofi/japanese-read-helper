@@ -112,7 +112,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl font-semibold text-white text-base transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+            className="w-full py-3 px-4 rounded-xl font-semibold text-white text-base interactive-btn disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: loading ? '#8E8E93' : '#007AFF',
             }}
