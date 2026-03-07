@@ -1,16 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #fff0dd82;
-  --foreground: #171717;
+  --background: #F2F2F7;
+  --foreground: #1D1D1F;
 
-  /* Color Palette */
-  --color-base: #FFF0DD;
-  --color-neutral: #D1D3D8;
-  --color-primary: #E2A16F;
-  --color-primary-dark: #d18a54;
-  --color-secondary: #86B0BD;
-  --color-secondary-dark: #6a98a8;
+  --color-base: #F2F2F7;
+  --color-neutral: #D1D1D6;
+  --color-primary: #007AFF;
+  --color-primary-dark: #0051D5;
+  --color-secondary: #8E8E93;
+  --color-secondary-dark: #636366;
 }
 
 @theme inline {
@@ -23,15 +22,15 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-  /* zoom: 125%; Adjust zoom level */
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', system-ui, sans-serif;
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
   padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Add padding only on desktop */
 @media (min-width: 768px) {
   body {
     padding: 0 1rem;
@@ -39,23 +38,20 @@ body {
 }
 
 ::selection {
-  background-color: color-mix(in srgb, var(--color-primary) 30%, transparent);
-  color: black;
+  background-color: rgba(0, 122, 255, 0.2);
+  color: inherit;
 }
 
+/* Reading content typography */
 .collapsibleItem,
 .collapsibleItem p {
   font-size: 1.3rem !important;
-  font-family: Noto Serif JP;
+  font-family: 'Noto Serif JP', serif;
   font-weight: 500;
-  line-height: 1.5;
+  line-height: 1.7;
+  letter-spacing: 0.01em;
 }
 
-ruby {
-  /* font-size: 1.5rem; */
-}
-
-/* Prevent furigana (ruby annotations) from being selected */
 rt {
   user-select: none;
   -webkit-user-select: none;
@@ -64,8 +60,11 @@ rt {
 }
 
 .sub-item-text {
-  background: var(--color-neutral);
+  background: rgba(0, 122, 255, 0.04);
+  border: 1px solid rgba(0, 122, 255, 0.08);
   font-size: large;
+  border-radius: 12px;
+  padding: 12px 16px;
 }
 
 .head-text {
@@ -73,7 +72,6 @@ rt {
   font-size: large;
 }
 
-/* Desktop sidebar - hidden by default, shown at xl */
 .desktop-sidebar {
   display: none;
 }
@@ -85,18 +83,17 @@ rt {
   }
 }
 
-/* Main content container - proper spacing below fixed navbar */
 .main-content {
-  padding-top: 12rem; /* 192px - enough for full navbar */
+  padding-top: 12rem;
 }
 
 @media (min-width: 768px) {
   .main-content {
-    padding-top: 11rem; /* 176px - navbar is slightly smaller on desktop */
+    padding-top: 11rem;
   }
 }
 
-/* Minimal Reader Styles */
+/* Reader content */
 .reader-content {
   font-family: "Noto Serif JP", serif;
   font-weight: 400;
@@ -108,72 +105,210 @@ rt {
 
 .reader-content rt {
   font-size: 0.5em;
-  color: var(--color-secondary-dark);
+  color: var(--color-secondary);
 }
 
-/* Range slider styling for settings */
+/* Apple-style range slider */
 input[type="range"] {
   -webkit-appearance: none;
   appearance: none;
-  height: 8px;
-  border-radius: 4px;
+  height: 4px;
+  border-radius: 2px;
   outline: none;
+  background: #E5E5EA;
 }
 
 input[type="range"]::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: #FFFFFF;
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: transform 0.15s ease;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
-  transform: scale(1.1);
+  transform: scale(1.08);
+}
+
+input[type="range"]::-webkit-slider-thumb:active {
+  transform: scale(1.04);
 }
 
 input[type="range"]::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--color-primary);
+  background: #FFFFFF;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
-/* FAB animation */
-@keyframes fabFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.fab-button-animate {
-  animation: fabFadeIn 0.2s ease-out forwards;
-}
-
-/* Library grid animations */
+/* Library card animation */
 @keyframes cardFadeIn {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .library-card {
-  animation: cardFadeIn 0.3s ease-out forwards;
+  animation: cardFadeIn 0.5s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+/* Apple-style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.22);
+}
+
+/* Toolbar icon button base */
+.toolbar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #007AFF;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.toolbar-btn:hover {
+  background: rgba(0, 122, 255, 0.08);
+}
+
+.toolbar-btn:active {
+  transform: scale(0.92);
+  background: rgba(0, 122, 255, 0.12);
+}
+
+.toolbar-btn.active {
+  background: rgba(0, 122, 255, 0.12);
+  color: #007AFF;
+}
+
+.toolbar-btn.muted {
+  color: #8E8E93;
+}
+
+.toolbar-btn.muted:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* Apple-style segmented control */
+.segmented-control {
+  display: flex;
+  background: rgba(0, 0, 0, 0.06);
+  border-radius: 10px;
+  padding: 2px;
+  gap: 0;
+}
+
+.segmented-control button {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  color: #1D1D1F;
+  background: transparent;
+}
+
+.segmented-control button.active {
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+/* Apple toggle */
+.apple-toggle {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  background: #E5E5EA;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.apple-toggle.on {
+  background: #34C759;
+}
+
+.apple-toggle .thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.06);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apple-toggle.on .thumb {
+  transform: translateX(20px);
+}
+
+/* Grouped settings list (Apple Settings style) */
+.settings-group {
+  background: #FFFFFF;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  min-height: 44px;
+}
+
+.settings-row + .settings-row {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  margin-left: 16px;
+  padding-left: 0;
+}
+
+.settings-label {
+  font-size: 15px;
+  color: #1D1D1F;
+}
+
+.settings-sublabel {
+  font-size: 12px;
+  color: #8E8E93;
+  margin-top: 1px;
 }
