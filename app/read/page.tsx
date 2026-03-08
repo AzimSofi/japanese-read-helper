@@ -448,11 +448,7 @@ function ReaderContent({
       className="min-h-screen transition-colors duration-300"
       style={{ backgroundColor: theme.bg, color: theme.text }}
     >
-      <ProgressBar
-        progress={progress}
-        currentPage={currentPage}
-        totalPages={totalPages}
-      />
+      <ProgressBar progress={progress} />
 
       <ReaderHeader
         currentPage={currentPage}
@@ -546,7 +542,7 @@ function ReaderContent({
         copyFeedback={copyFeedback}
       />
 
-      <BottomSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Display">
+      <BottomSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Display" isDarkMode={isDarkMode}>
         <ReaderSettings
           fontSize={fontSize}
           lineHeight={lineHeight}
