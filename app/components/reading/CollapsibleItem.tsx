@@ -10,6 +10,8 @@ import { useSearchParams } from "next/navigation";
 import { EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
+const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
+
 interface CollapsibleItemProps {
   id?: string;
   head: string;
@@ -183,9 +185,10 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         throw new Error("Failed");
       }
       onSubmitSuccess();
-      setLoading(false);
     } catch (error) {
       console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -344,7 +347,6 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     );
   };
 
-  const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/g;
   const hasImage = IMAGE_PATTERN.test(head);
 
   const parseContentWithImages = (content: string) => {
@@ -464,7 +466,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     : "rgba(0, 0, 0, 0.04)";
 
   return (
-    <div className="collapsibleItem" id={id}>
+    <div className="collapsibleItem" id={id} style={isBookmarked ? { scrollMarginTop: '80px' } : undefined}>
       <div
         className="p-4 my-4 rounded-xl"
         style={{

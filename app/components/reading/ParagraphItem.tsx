@@ -8,6 +8,8 @@ import BookImage from "@/app/components/reading/BookImage";
 import { EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
+const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
+
 interface ParagraphItemProps {
   id?: string;
   text: string;
@@ -97,7 +99,6 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     }
   };
 
-  const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/g;
   const hasImage = IMAGE_PATTERN.test(text);
 
   const parseContentWithImages = (content: string) => {
@@ -284,7 +285,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   };
 
   return (
-    <div className="paragraph-item relative" id={id}>
+    <div className="paragraph-item relative" id={id} style={isBookmarked ? { scrollMarginTop: '80px' } : undefined}>
       <div
         className="p-5 my-3 rounded-xl"
         style={{
