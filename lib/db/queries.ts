@@ -293,19 +293,30 @@ export async function syncTextEntries(
 }
 
 export async function backfillTextMetadata(): Promise<number> {
-  const result = await sql<{ id: number; content: string }>`
-    SELECT id, content FROM text_entries WHERE total_pages = 0 OR total_pages IS NULL
-  `;
-  const rows = normalizeResult(result);
-  for (const row of rows) {
-    const { totalPages, totalCharacters } = computeTextMetadata(row.content);
-    await sql`
-      UPDATE text_entries
-      SET total_pages = ${totalPages}, total_characters = ${totalCharacters}
-      WHERE id = ${row.id}
+  try {
+    const result = await sql<{ id: number; content: string }>`
+      SELECT id, content FROM text_entries WHERE total_pages = 0 OR total_pages IS NULL
     `;
+    const rows = normalizeResult(result);
+    let updated = 0;
+    for (const row of rows) {
+      try {
+        const { totalPages, totalCharacters } = computeTextMetadata(row.content);
+        await sql`
+          UPDATE text_entries
+          SET total_pages = ${totalPages}, total_characters = ${totalCharacters}
+          WHERE id = ${row.id}
+        `;
+        updated++;
+      } catch (rowError) {
+        console.error(`Error backfilling metadata for entry id=${row.id}:`, rowError);
+      }
+    }
+    return updated;
+  } catch (error) {
+    console.error('Error in backfillTextMetadata:', error);
+    throw error;
   }
-  return rows.length;
 }
 
 export async function resetTextEntries(): Promise<number> {
