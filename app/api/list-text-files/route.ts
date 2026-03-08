@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAllTextEntries } from '@/lib/db/queries';
 import type { TextFileListResponse } from '@/lib/types';
 
-export async function GET(): Promise<NextResponse<TextFileListResponse>> {
+export async function GET() {
   try {
     const { directories, filesByDirectory } = await getAllTextEntries();
 
@@ -21,10 +21,6 @@ export async function GET(): Promise<NextResponse<TextFileListResponse>> {
     });
   } catch (error) {
     console.error('Error reading text files:', error);
-    return NextResponse.json({
-      directories: [],
-      filesByDirectory: {},
-      files: []
-    });
+    return NextResponse.json({ error: 'Failed to load text files' }, { status: 500 });
   }
 }

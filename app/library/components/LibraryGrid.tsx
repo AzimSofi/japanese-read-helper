@@ -67,14 +67,13 @@ export default function LibraryGrid() {
         ]);
 
         if (!fileResponse.ok) throw new Error('Failed to load library');
+        if (!progressResponse.ok) throw new Error('Failed to load progress');
 
         const data: FileListResponse = await fileResponse.json();
         setFileData(data);
 
-        if (progressResponse.ok) {
-          const progressData: BookProgress = await progressResponse.json();
-          setBookProgress(progressData);
-        }
+        const progressData: BookProgress = await progressResponse.json();
+        setBookProgress(progressData);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {

@@ -36,7 +36,7 @@ interface EntryRow {
   bookmark_updated_at: string | null;
 }
 
-export async function GET(): Promise<NextResponse<ProgressResponse>> {
+export async function GET() {
   try {
     const result = await sql`
       SELECT
@@ -84,6 +84,6 @@ export async function GET(): Promise<NextResponse<ProgressResponse>> {
     return NextResponse.json(progressData);
   } catch (error) {
     console.error('Error fetching library progress:', error);
-    return NextResponse.json({});
+    return NextResponse.json({ error: 'Failed to fetch library progress' }, { status: 500 });
   }
 }
