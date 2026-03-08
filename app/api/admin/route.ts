@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/middleware/auth';
-import { upsertTextEntry, upsertBookmark, initializeBookmarksForFiles } from '@/lib/db/queries';
+import { upsertTextEntry, upsertBookmark, initializeBookmarksForFiles, backfillTextMetadata } from '@/lib/db/queries';
 
 interface TextEntryUpload {
   fileName: string;
@@ -24,7 +24,6 @@ interface UploadResult {
  * POST /api/admin?action=bulk-seed - Bulk upload multiple entries
  */
 export async function POST(request: NextRequest) {
-  // Check authentication
   const authError = requireAuth(request);
   if (authError) return authError;
 
@@ -37,24 +36,24 @@ export async function POST(request: NextRequest) {
     return handleBookmark(request);
   } else if (action === 'bulk-seed') {
     return handleBulkSeed(request);
+  } else if (action === 'backfill-metadata') {
+    return handleBackfillMetadata();
   }
 
   return NextResponse.json(
     {
       success: false,
-      message: 'Invalid action. Use action=text-entries, action=bookmarks, or action=bulk-seed',
+      message: 'Invalid action. Use action=text-entries, action=bookmarks, action=bulk-seed, or action=backfill-metadata',
     },
     { status: 400 }
   );
 }
 
-// Handler for text entry upload/update
 async function handleTextEntry(request: NextRequest) {
   try {
     const body = await request.json();
     const { fileName, directory = 'bookv2-furigana', content } = body;
 
-    // Validate required fields
     if (!fileName || typeof fileName !== 'string') {
       return NextResponse.json(
         {
@@ -77,10 +76,8 @@ async function handleTextEntry(request: NextRequest) {
       );
     }
 
-    // Upsert text entry
     await upsertTextEntry(fileName, content, directory);
 
-    // Initialize empty bookmark for this file
     await initializeBookmarksForFiles([fileName], directory);
 
     return NextResponse.json({
@@ -105,13 +102,11 @@ async function handleTextEntry(request: NextRequest) {
   }
 }
 
-// Handler for bookmark creation/update
 async function handleBookmark(request: NextRequest) {
   try {
     const body = await request.json();
     const { fileName, directory = 'bookv2-furigana', bookmarkText } = body;
 
-    // Validate required fields
     if (!fileName || typeof fileName !== 'string') {
       return NextResponse.json(
         {
@@ -134,7 +129,6 @@ async function handleBookmark(request: NextRequest) {
       );
     }
 
-    // Upsert bookmark
     await upsertBookmark(fileName, bookmarkText, directory);
 
     return NextResponse.json({
@@ -159,13 +153,31 @@ async function handleBookmark(request: NextRequest) {
   }
 }
 
-// Handler for bulk upload
+async function handleBackfillMetadata() {
+  try {
+    const count = await backfillTextMetadata();
+    return NextResponse.json({
+      success: true,
+      message: `Backfilled metadata for ${count} entries`,
+    });
+  } catch (error) {
+    console.error('Error in handleBackfillMetadata:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Server Error',
+        message: error instanceof Error ? error.message : 'Unknown error occurred',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 async function handleBulkSeed(request: NextRequest) {
   try {
     const body = await request.json();
     const { entries } = body;
 
-    // Validate entries array
     if (!Array.isArray(entries)) {
       return NextResponse.json(
         {
@@ -192,11 +204,9 @@ async function handleBulkSeed(request: NextRequest) {
     let succeeded = 0;
     let failed = 0;
 
-    // Process each entry
     for (const entry of entries) {
       const { fileName, directory = 'bookv2-furigana', content } = entry as TextEntryUpload;
 
-      // Validate individual entry
       if (!fileName || typeof fileName !== 'string') {
         results.push({
           fileName: fileName || 'unknown',
@@ -219,7 +229,6 @@ async function handleBulkSeed(request: NextRequest) {
         continue;
       }
 
-      // Attempt to upsert
       try {
         await upsertTextEntry(fileName, content, directory);
         await initializeBookmarksForFiles([fileName], directory);

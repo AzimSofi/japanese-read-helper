@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState } from 'react';
-import Image from 'next/image';
 import { CSS_VARS } from '@/lib/constants';
 
 interface BookImageProps {
@@ -11,11 +10,6 @@ interface BookImageProps {
   chapterName?: string;
 }
 
-/**
- * BookImage Component
- *
- * Displays images from EPUB books with proper styling and loading states
- */
 const BookImage: React.FC<BookImageProps> = ({
   fileName,
   imagePath,
@@ -25,12 +19,7 @@ const BookImage: React.FC<BookImageProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Construct the image URL
-  // In development: /bookv2-furigana/book-title/images/illustration-001.jpg
-  // In production: Vercel Blob URL (already in imagePath)
-  const imageUrl = imagePath.startsWith('http') || imagePath.startsWith('blob:')
-    ? imagePath // Production Vercel Blob URL
-    : imagePath; // Local development path
+  const imageUrl = imagePath;
 
   if (hasError) {
     return (

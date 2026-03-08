@@ -85,3 +85,9 @@ public/bookv3-rephrase/*
 
 # Keep directory structure with .gitkeep files
 !public/**/.gitkeep
+
+# Screenshots and temporary files
+*.png
+*.log
+snapshot.md
+page5-snapshot.md
