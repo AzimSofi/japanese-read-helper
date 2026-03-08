@@ -322,6 +322,44 @@ input[type="range"]::-moz-range-thumb {
   margin-top: 1px;
 }
 
+/* Dark mode overrides for BottomSheet */
+.dark-sheet .segmented-control {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark-sheet .segmented-control button {
+  color: #F2F2F7;
+}
+
+.dark-sheet .segmented-control button.active {
+  background: #2C2C2E;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.dark-sheet .segmented-control button:not(.active):hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark-sheet .apple-toggle {
+  background: #38383A;
+}
+
+.dark-sheet .settings-group {
+  background: #2C2C2E;
+}
+
+.dark-sheet .settings-row + .settings-row {
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark-sheet .settings-label {
+  color: #F2F2F7;
+}
+
+.dark-sheet .settings-sublabel {
+  color: #98989D;
+}
+
 /* Apple-style interactive elements */
 
 .interactive-pill {
