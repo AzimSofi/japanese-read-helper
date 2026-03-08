@@ -24,7 +24,6 @@ interface UploadResult {
  * POST /api/admin?action=bulk-seed - Bulk upload multiple entries
  */
 export async function POST(request: NextRequest) {
-  // Check authentication
   const authError = requireAuth(request);
   if (authError) return authError;
 
@@ -50,13 +49,11 @@ export async function POST(request: NextRequest) {
   );
 }
 
-// Handler for text entry upload/update
 async function handleTextEntry(request: NextRequest) {
   try {
     const body = await request.json();
     const { fileName, directory = 'bookv2-furigana', content } = body;
 
-    // Validate required fields
     if (!fileName || typeof fileName !== 'string') {
       return NextResponse.json(
         {
@@ -79,10 +76,8 @@ async function handleTextEntry(request: NextRequest) {
       );
     }
 
-    // Upsert text entry
     await upsertTextEntry(fileName, content, directory);
 
-    // Initialize empty bookmark for this file
     await initializeBookmarksForFiles([fileName], directory);
 
     return NextResponse.json({
@@ -107,13 +102,11 @@ async function handleTextEntry(request: NextRequest) {
   }
 }
 
-// Handler for bookmark creation/update
 async function handleBookmark(request: NextRequest) {
   try {
     const body = await request.json();
     const { fileName, directory = 'bookv2-furigana', bookmarkText } = body;
 
-    // Validate required fields
     if (!fileName || typeof fileName !== 'string') {
       return NextResponse.json(
         {
@@ -136,7 +129,6 @@ async function handleBookmark(request: NextRequest) {
       );
     }
 
-    // Upsert bookmark
     await upsertBookmark(fileName, bookmarkText, directory);
 
     return NextResponse.json({
@@ -181,13 +173,11 @@ async function handleBackfillMetadata() {
   }
 }
 
-// Handler for bulk upload
 async function handleBulkSeed(request: NextRequest) {
   try {
     const body = await request.json();
     const { entries } = body;
 
-    // Validate entries array
     if (!Array.isArray(entries)) {
       return NextResponse.json(
         {
@@ -214,11 +204,9 @@ async function handleBulkSeed(request: NextRequest) {
     let succeeded = 0;
     let failed = 0;
 
-    // Process each entry
     for (const entry of entries) {
       const { fileName, directory = 'bookv2-furigana', content } = entry as TextEntryUpload;
 
-      // Validate individual entry
       if (!fileName || typeof fileName !== 'string') {
         results.push({
           fileName: fileName || 'unknown',
@@ -241,7 +229,6 @@ async function handleBulkSeed(request: NextRequest) {
         continue;
       }
 
-      // Attempt to upsert
       try {
         await upsertTextEntry(fileName, content, directory);
         await initializeBookmarksForFiles([fileName], directory);
