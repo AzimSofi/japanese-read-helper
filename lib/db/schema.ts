@@ -107,9 +107,11 @@ export const CREATE_TABLES_SQL = `
     file_name VARCHAR(255) NOT NULL,
     directory VARCHAR(255) NOT NULL,
     bookmark_text TEXT NOT NULL,
+    bookmark_page INT,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(file_name, directory)
   );
+  ALTER TABLE bookmarks ADD COLUMN IF NOT EXISTS bookmark_page INT;
 
   -- Create index for faster lookups
   CREATE INDEX IF NOT EXISTS idx_bookmarks_file_directory

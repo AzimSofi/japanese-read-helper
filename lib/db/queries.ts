@@ -40,15 +40,17 @@ export async function getBookmark(
 export async function upsertBookmark(
   fileName: string,
   bookmarkText: string,
-  directory: string = 'public'
+  directory: string = 'public',
+  bookmarkPage?: number
 ): Promise<void> {
   try {
     await sql`
-      INSERT INTO bookmarks (file_name, directory, bookmark_text, updated_at)
-      VALUES (${fileName}, ${directory}, ${bookmarkText}, CURRENT_TIMESTAMP)
+      INSERT INTO bookmarks (file_name, directory, bookmark_text, bookmark_page, updated_at)
+      VALUES (${fileName}, ${directory}, ${bookmarkText}, ${bookmarkPage ?? null}, CURRENT_TIMESTAMP)
       ON CONFLICT (file_name, directory)
       DO UPDATE SET
         bookmark_text = ${bookmarkText},
+        bookmark_page = ${bookmarkPage ?? null},
         updated_at = CURRENT_TIMESTAMP
     `;
   } catch (error) {
