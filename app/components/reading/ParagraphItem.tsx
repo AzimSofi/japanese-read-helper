@@ -21,6 +21,7 @@ interface ParagraphItemProps {
   fontSize: number;
   lineHeight: number;
   imageMap?: Record<string, string>;
+  currentPage?: number;
 }
 
 const ParagraphItem: React.FC<ParagraphItemProps> = ({
@@ -34,6 +35,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   fontSize,
   lineHeight,
   imageMap,
+  currentPage,
 }) => {
   const [loading, setLoading] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
@@ -49,7 +51,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ target: fileName, content: text }),
+        body: JSON.stringify({ target: fileName, content: text, page: currentPage }),
       });
       if (!response.ok) {
         throw new Error("Failed");

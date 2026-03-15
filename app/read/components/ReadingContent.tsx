@@ -129,6 +129,7 @@ export default function ReadingContent({
               imageMap={imageMap}
               bookDirectory={directory}
               bookFileName={fileName}
+              currentPage={currentPage}
             />
           );
         })}
@@ -159,6 +160,7 @@ export default function ReadingContent({
             fontSize={fontSize}
             lineHeight={lineHeight}
             imageMap={imageMap}
+            currentPage={currentPage}
           />
         );
       })}

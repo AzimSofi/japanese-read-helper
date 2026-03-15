@@ -25,6 +25,7 @@ interface CollapsibleItemProps {
   imageMap?: Record<string, string>;
   bookDirectory?: string;
   bookFileName?: string;
+  currentPage?: number;
   onVocabularySelect?: (data: {
     word: string;
     sentence: string;
@@ -46,6 +47,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   imageMap,
   bookDirectory,
   bookFileName,
+  currentPage,
   onVocabularySelect,
   onStartContinuousPlay,
 }) => {
@@ -179,7 +181,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ target: fileName, content: head }),
+        body: JSON.stringify({ target: fileName, content: head, page: currentPage }),
       });
       if (!response.ok) {
         throw new Error("Failed");
