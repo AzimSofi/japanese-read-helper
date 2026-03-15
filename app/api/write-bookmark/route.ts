@@ -19,7 +19,7 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
   }
 
   try {
-    const { target, content }: BookmarkRequest = await request.json();
+    const { target, content, page }: BookmarkRequest = await request.json();
 
     if (!target || content === undefined) {
       return NextResponse.json(
@@ -36,14 +36,14 @@ export async function POST(request: Request): Promise<NextResponse<WriteResponse
       );
     }
 
-    // Extract directory and filename
-    // e.g., "bookv1-rephrase/readable-code" -> dir="bookv1-rephrase", file="readable-code"
+    // Extract directory and filename - last segment is file, rest is directory
+    // e.g., "bookv2-furigana/book-name/file-name" -> dir="bookv2-furigana/book-name", file="file-name"
     const parts = target.split('/');
-    const directory = parts.length > 1 ? parts[0] : 'public';
-    const file = parts.length > 1 ? parts.slice(1).join('/') : target;
+    const directory = parts.length > 1 ? parts.slice(0, -1).join('/') : 'public';
+    const file = parts[parts.length - 1];
 
-    console.log(`ブックマーク保存: fileName="${target}", content length=${content.length}`);
-    await upsertBookmark(file, content, directory);
+    console.log(`ブックマーク保存: fileName="${target}", content length=${content.length}, page=${page}`);
+    await upsertBookmark(file, content, directory, page);
     console.log(`ブックマーク保存成功: fileName="${target}"`);
 
     return NextResponse.json({ success: true, message: 'ブックマークを更新しました' });

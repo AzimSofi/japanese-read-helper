@@ -23,11 +23,11 @@ export async function GET(request: Request): Promise<NextResponse<BookmarkRespon
   }
 
   try {
-    // Extract directory and filename
-    // e.g., "bookv1-rephrase/readable-code" -> dir="bookv1-rephrase", file="readable-code"
+    // Extract directory and filename - last segment is file, rest is directory
+    // e.g., "bookv2-furigana/book-name/file-name" -> dir="bookv2-furigana/book-name", file="file-name"
     const parts = fileName.split('/');
-    const directory = parts.length > 1 ? parts[0] : 'public';
-    const file = parts.length > 1 ? parts.slice(1).join('/') : fileName;
+    const directory = parts.length > 1 ? parts.slice(0, -1).join('/') : 'public';
+    const file = parts[parts.length - 1];
 
     const bookmarkContent = await getBookmark(file, directory);
     return NextResponse.json({ text: bookmarkContent });
