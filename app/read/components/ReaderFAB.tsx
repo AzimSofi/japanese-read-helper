@@ -8,6 +8,7 @@ interface ReaderFABProps {
   onOpenSettings: () => void;
   onGoToBookmark?: () => void;
   onCopyPageText: () => void;
+  onCopyPageRange: () => void;
   onToggleDarkMode: () => void;
   onToggleRubyLookup: () => void;
   isFuriganaEnabled: boolean;
@@ -56,6 +57,7 @@ export default function ReaderFAB({
   onOpenSettings,
   onGoToBookmark,
   onCopyPageText,
+  onCopyPageRange,
   onToggleDarkMode,
   onToggleRubyLookup,
   isFuriganaEnabled,
@@ -231,6 +233,15 @@ export default function ReaderFAB({
       action: onCopyPageText,
       active: copyFeedback,
       keepOpen: true,
+    },
+    {
+      icon: (
+        <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h16M4 17h10" />
+        </svg>
+      ),
+      label: 'Copy Range',
+      action: onCopyPageRange,
     },
     {
       icon: <span className="text-xs font-semibold">R</span>,
