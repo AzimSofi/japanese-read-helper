@@ -1,8 +1,5 @@
 import { sql } from './connection';
 import type { Bookmark, TextEntry, QueryResult } from './schema';
-import { PAGINATION_CONFIG, READER_CONFIG } from '@/lib/constants';
-import { parseMarkdown } from '@/lib/utils/markdownParser';
-import { stripFurigana } from '@/lib/utils/furiganaParser';
 
 function normalizeResult<T>(result: QueryResult<T>): T[] {
   if (result && 'rows' in result && Array.isArray(result.rows)) {
@@ -41,16 +38,15 @@ export async function upsertBookmark(
   fileName: string,
   bookmarkText: string,
   directory: string = 'public',
-  bookmarkPage?: number
+  _bookmarkPage?: number
 ): Promise<void> {
   try {
     await sql`
-      INSERT INTO bookmarks (file_name, directory, bookmark_text, bookmark_page, updated_at)
-      VALUES (${fileName}, ${directory}, ${bookmarkText}, ${bookmarkPage ?? null}, CURRENT_TIMESTAMP)
+      INSERT INTO bookmarks (file_name, directory, bookmark_text, updated_at)
+      VALUES (${fileName}, ${directory}, ${bookmarkText}, CURRENT_TIMESTAMP)
       ON CONFLICT (file_name, directory)
       DO UPDATE SET
         bookmark_text = ${bookmarkText},
-        bookmark_page = ${bookmarkPage ?? null},
         updated_at = CURRENT_TIMESTAMP
     `;
   } catch (error) {
@@ -109,30 +105,6 @@ export async function getTextEntry(
   }
 }
 
-function computeTextMetadata(content: string): { totalPages: number; totalCharacters: number } {
-  if (!content) return { totalPages: 0, totalCharacters: 0 };
-
-  let itemCount: number;
-  let totalCharacters: number;
-
-  if (content.includes('>>')) {
-    const items = parseMarkdown(content);
-    itemCount = items.length;
-    totalCharacters = 0;
-    for (const item of items) {
-      if (item.head) {
-        totalCharacters += stripFurigana(item.head).length;
-      }
-    }
-  } else {
-    const paragraphs = content.split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN).filter(p => p.trim());
-    itemCount = paragraphs.length;
-    totalCharacters = stripFurigana(content).length;
-  }
-
-  const totalPages = Math.ceil(itemCount / PAGINATION_CONFIG.ITEMS_PER_PAGE);
-  return { totalPages, totalCharacters };
-}
 
 export async function upsertTextEntry(
   fileName: string,
@@ -140,15 +112,12 @@ export async function upsertTextEntry(
   directory: string = 'public'
 ): Promise<void> {
   try {
-    const { totalPages, totalCharacters } = computeTextMetadata(content);
     await sql`
-      INSERT INTO text_entries (file_name, directory, content, total_pages, total_characters, created_at)
-      VALUES (${fileName}, ${directory}, ${content}, ${totalPages}, ${totalCharacters}, CURRENT_TIMESTAMP)
+      INSERT INTO text_entries (file_name, directory, content, created_at)
+      VALUES (${fileName}, ${directory}, ${content}, CURRENT_TIMESTAMP)
       ON CONFLICT (file_name, directory)
       DO UPDATE SET
         content = ${content},
-        total_pages = ${totalPages},
-        total_characters = ${totalCharacters},
         created_at = CURRENT_TIMESTAMP
     `;
   } catch (error) {
@@ -295,30 +264,7 @@ export async function syncTextEntries(
 }
 
 export async function backfillTextMetadata(): Promise<number> {
-  try {
-    const result = await sql<{ id: number; content: string }>`
-      SELECT id, content FROM text_entries WHERE total_pages = 0 OR total_pages IS NULL
-    `;
-    const rows = normalizeResult(result);
-    let updated = 0;
-    for (const row of rows) {
-      try {
-        const { totalPages, totalCharacters } = computeTextMetadata(row.content);
-        await sql`
-          UPDATE text_entries
-          SET total_pages = ${totalPages}, total_characters = ${totalCharacters}
-          WHERE id = ${row.id}
-        `;
-        updated++;
-      } catch (rowError) {
-        console.error(`Error backfilling metadata for entry id=${row.id}:`, rowError);
-      }
-    }
-    return updated;
-  } catch (error) {
-    console.error('Error in backfillTextMetadata:', error);
-    throw error;
-  }
+  return 0;
 }
 
 export async function resetTextEntries(): Promise<number> {

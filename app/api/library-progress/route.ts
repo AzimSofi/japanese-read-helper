@@ -57,12 +57,21 @@ function calculatePageFromText(bookmarkText: string, content: string): number | 
 interface EntryRow {
   file_name: string;
   directory: string;
-  total_pages: number;
-  total_characters: number;
+  content: string;
   created_at: string;
-  bookmark_page: number | null;
   bookmark_text: string | null;
   bookmark_updated_at: string | null;
+  bookmark_page?: number | null;
+}
+
+function countItems(content: string): number {
+  if (content.includes('>>') && content.includes('<')) {
+    return parseMarkdown(content).length;
+  }
+  return content
+    .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
+    .map(p => p.trim())
+    .filter(p => p.length > 0).length;
 }
 
 export async function GET() {
@@ -71,10 +80,8 @@ export async function GET() {
       SELECT
         t.file_name,
         t.directory,
-        COALESCE(t.total_pages, 0) as total_pages,
-        COALESCE(t.total_characters, 0) as total_characters,
+        t.content,
         t.created_at,
-        b.bookmark_page,
         b.bookmark_text,
         b.updated_at as bookmark_updated_at
       FROM text_entries t
@@ -84,39 +91,17 @@ export async function GET() {
     const rows = normalizeResult<EntryRow>(result);
     const progressData: ProgressResponse = {};
 
-    const needsBackfill = rows.filter(r => r.bookmark_text && !r.bookmark_page);
-
-    if (needsBackfill.length > 0) {
-      const contentResult = await sql`
-        SELECT t.file_name, t.directory, t.content
-        FROM text_entries t
-        INNER JOIN bookmarks b ON t.file_name = b.file_name AND t.directory = b.directory
-        WHERE b.bookmark_text IS NOT NULL
-          AND b.bookmark_text != ''
-          AND b.bookmark_page IS NULL
-      `;
-      const contentRows = normalizeResult<{ file_name: string; directory: string; content: string }>(contentResult);
-      const contentMap = new Map(contentRows.map(r => [`${r.directory}/${r.file_name}`, r.content]));
-
-      for (const row of needsBackfill) {
-        const key = `${row.directory}/${row.file_name}`;
-        const content = contentMap.get(key);
-        if (content && row.bookmark_text) {
-          const page = calculatePageFromText(row.bookmark_text, content);
-          if (page) {
-            row.bookmark_page = page;
-            sql`
-              UPDATE bookmarks SET bookmark_page = ${page}
-              WHERE file_name = ${row.file_name} AND directory = ${row.directory}
-            `.catch(() => {});
-          }
-        }
+    for (const row of rows) {
+      if (row.content && row.bookmark_text) {
+        row.bookmark_page = calculatePageFromText(row.bookmark_text, row.content);
       }
     }
 
     for (const row of rows) {
       const key = `${row.directory}/${row.file_name}`;
-      const totalPages = row.total_pages || 0;
+      const itemCount = countItems(row.content || '');
+      const totalPages = Math.ceil(itemCount / PAGINATION_CONFIG.ITEMS_PER_PAGE);
+      const totalCharacters = (row.content || '').length;
       const bookmarkPage = row.bookmark_page || null;
 
       let progress = 0;
@@ -126,7 +111,7 @@ export async function GET() {
 
       progressData[key] = {
         progress,
-        totalCharacters: row.total_characters || 0,
+        totalCharacters: totalCharacters,
         bookmarkPage,
         totalPages,
         bookmarkUpdatedAt: row.bookmark_updated_at || null,
