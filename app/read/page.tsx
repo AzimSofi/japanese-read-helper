@@ -14,6 +14,7 @@ import {
 } from '@/lib/constants';
 import ProgressBar from './components/ProgressBar';
 import ReaderFAB from './components/ReaderFAB';
+import CopyRangeModal from './components/CopyRangeModal';
 import ReaderSettings from './components/ReaderSettings';
 import ReadingContent from './components/ReadingContent';
 import ReaderHeader from './components/ReaderHeader';
@@ -84,6 +85,8 @@ function ReaderContent({
   const [sentenceContext, setSentenceContext] = useState('');
 
   const [copyFeedback, setCopyFeedback] = useState(false);
+  const [copyRangeOpen, setCopyRangeOpen] = useState(false);
+  const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
 
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
 
@@ -379,6 +382,40 @@ function ReaderContent({
     }
   }, [currentPageHeaders]);
 
+  const handleCopyPageRange = useCallback(async (fromPage: number, toPage: number) => {
+    if (!content) return;
+
+    let items: { head?: string; text?: string }[] = [];
+    if (content.includes('>>')) {
+      items = parseMarkdown(content);
+    } else {
+      items = content
+        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
+        .map(p => p.trim())
+        .filter(p => p.length > 0)
+        .map(p => ({ text: p }));
+    }
+
+    const start = (fromPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const end = toPage * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    const rangeItems = items.slice(start, end);
+
+    const textToCopy = rangeItems
+      .map(item => stripFurigana(item.head || item.text || ''))
+      .join('\n');
+
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopyRangeFeedback(true);
+      setTimeout(() => {
+        setCopyRangeFeedback(false);
+        setCopyRangeOpen(false);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to copy:', error);
+    }
+  }, [content]);
+
   if (isLoading) {
     return (
       <div
@@ -531,6 +568,7 @@ function ReaderContent({
         onOpenSettings={() => setSettingsOpen(true)}
         onGoToBookmark={handleGoToBookmark}
         onCopyPageText={handleCopyPageText}
+        onCopyPageRange={() => setCopyRangeOpen(true)}
         onToggleDarkMode={handleToggleDarkMode}
         onToggleRubyLookup={() => setRubyLookupOpen(prev => !prev)}
         isFuriganaEnabled={showFurigana}
@@ -540,6 +578,16 @@ function ReaderContent({
         bookmarkPage={bookmarkPage}
         currentPage={currentPage}
         copyFeedback={copyFeedback}
+      />
+
+      <CopyRangeModal
+        isOpen={copyRangeOpen}
+        onClose={() => setCopyRangeOpen(false)}
+        onCopy={handleCopyPageRange}
+        currentPage={currentPage}
+        totalPages={totalPages}
+        isDarkMode={isDarkMode}
+        copyFeedback={copyRangeFeedback}
       />
 
       <BottomSheet isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} title="Display" isDarkMode={isDarkMode}>
