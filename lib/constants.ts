@@ -84,6 +84,8 @@ export const API_ROUTES = {
   RUBY_REGISTRY: '/api/ruby-registry',
   // Library
   LIBRARY_PROGRESS: '/api/library-progress',
+  // DB Sync
+  DB_SYNC: '/api/db-sync',
 } as const;
 
 // ページルート
