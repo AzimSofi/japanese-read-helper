@@ -3,8 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3333",
-    "dev-lan": "next dev --hostname 192.168.1.15 --port 3001",
+    "dev": "tsx scripts/dev-with-sync.ts",
+    "dev-lan": "tsx scripts/dev-with-sync.ts --lan",
+    "dev:nosync": "next dev --port 3333",
+    "dev-lan:nosync": "next dev --hostname 192.168.1.15 --port 3001",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
