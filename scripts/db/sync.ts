@@ -10,6 +10,14 @@
 import pg from 'pg';
 import readline from 'readline';
 import dotenv from 'dotenv';
+import {
+  TABLES,
+  computeDiffs,
+  syncDirection,
+  stripQuotes,
+  type DiffResult,
+} from '../../lib/db/sync-core';
+
 dotenv.config({ path: '.env.local' });
 
 const PROD_URL = process.env.PROD_DATABASE_URL;
@@ -20,35 +28,10 @@ if (!PROD_URL || !LOCAL_URL) {
   process.exit(1);
 }
 
-interface TableConfig {
-  name: string;
-  conflictKey: string;
-  orderBy: string;
-  identityCol: string;
-}
-
-const TABLES: TableConfig[] = [
-  { name: '"Book"', conflictKey: 'id', orderBy: '"createdAt"', identityCol: '"fileName"' },
-  { name: '"BookImage"', conflictKey: 'id', orderBy: '"createdAt"', identityCol: '"fileName"' },
-  { name: '"ProcessingHistory"', conflictKey: 'id', orderBy: '"processedAt"', identityCol: 'id' },
-  { name: 'bookmarks', conflictKey: 'id', orderBy: 'updated_at', identityCol: 'file_name' },
-  { name: '"UserBookmark"', conflictKey: 'id', orderBy: '"updatedAt"', identityCol: 'id' },
-  { name: 'vocabulary_entries', conflictKey: 'id', orderBy: 'created_at', identityCol: 'word' },
-  { name: 'text_entries', conflictKey: 'id', orderBy: 'created_at', identityCol: 'file_name' },
-];
-
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
 function ask(question: string): Promise<string> {
   return new Promise(resolve => rl.question(question, resolve));
-}
-
-function stripQuotes(name: string): string {
-  return name.replace(/^"|"$/g, '');
-}
-
-function quoteIdent(name: string): string {
-  return `"${name}"`;
 }
 
 function pad(str: string, len: number): string {
@@ -57,79 +40,6 @@ function pad(str: string, len: number): string {
 
 function padLeft(str: string, len: number): string {
   return str.length >= len ? str : ' '.repeat(len - str.length) + str;
-}
-
-async function getColumns(client: pg.Client, tableName: string): Promise<string[]> {
-  const bare = stripQuotes(tableName);
-  const result = await client.query(
-    `SELECT column_name FROM information_schema.columns
-     WHERE table_name = $1 AND table_schema = 'public'
-     ORDER BY ordinal_position`,
-    [bare]
-  );
-  return result.rows.map((r: { column_name: string }) => r.column_name);
-}
-
-async function getCount(client: pg.Client, table: string): Promise<number> {
-  const bare = stripQuotes(table);
-  try {
-    const result = await client.query(
-      `SELECT COUNT(*) as count FROM "${bare}"`
-    );
-    return parseInt(result.rows[0].count, 10);
-  } catch {
-    return -1;
-  }
-}
-
-async function getIdentities(client: pg.Client, table: TableConfig): Promise<Set<string>> {
-  const bare = stripQuotes(table.name);
-  try {
-    let query: string;
-    if (bare === 'text_entries' || bare === 'bookmarks') {
-      query = `SELECT file_name || '|' || directory as key FROM "${bare}"`;
-    } else {
-      query = `SELECT ${table.identityCol}::text as key FROM "${bare}"`;
-    }
-    const result = await client.query(query);
-    return new Set(result.rows.map((r: { key: string }) => r.key));
-  } catch {
-    return new Set();
-  }
-}
-
-interface DiffResult {
-  table: string;
-  localCount: number;
-  prodCount: number;
-  onlyLocal: string[];
-  onlyProd: string[];
-}
-
-async function computeDiffs(prod: pg.Client, local: pg.Client): Promise<DiffResult[]> {
-  const diffs: DiffResult[] = [];
-
-  for (const table of TABLES) {
-    const [localCount, prodCount, localIds, prodIds] = await Promise.all([
-      getCount(local, table.name),
-      getCount(prod, table.name),
-      getIdentities(local, table),
-      getIdentities(prod, table),
-    ]);
-
-    const onlyLocal = [...localIds].filter(id => !prodIds.has(id));
-    const onlyProd = [...prodIds].filter(id => !localIds.has(id));
-
-    diffs.push({
-      table: stripQuotes(table.name),
-      localCount,
-      prodCount,
-      onlyLocal,
-      onlyProd,
-    });
-  }
-
-  return diffs;
 }
 
 function printDashboard(diffs: DiffResult[]) {
@@ -158,54 +68,11 @@ function printDashboard(diffs: DiffResult[]) {
   console.log();
 }
 
-async function syncDirection(
-  source: pg.Client,
-  target: pg.Client,
-  table: TableConfig,
-  direction: string
-): Promise<number> {
-  const columns = await getColumns(source, table.name);
-  if (columns.length === 0) return 0;
-
-  const sourceRows = await source.query(
-    `SELECT * FROM ${table.name} ORDER BY ${table.orderBy}`
-  );
-
-  if (sourceRows.rows.length === 0) return 0;
-
-  const quotedCols = columns.map(quoteIdent);
-  const colList = quotedCols.join(', ');
-  const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-  const conflictCol = quoteIdent(table.conflictKey);
-  const updateSet = columns
-    .filter(c => c !== table.conflictKey)
-    .map(c => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
-    .join(', ');
-
-  let synced = 0;
-  for (const row of sourceRows.rows) {
-    const values = columns.map(c => row[c]);
-    try {
-      await target.query(
-        `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
-         ON CONFLICT (${conflictCol}) DO UPDATE SET ${updateSet}`,
-        values
-      );
-      synced++;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error(`  [ERR] ${table.name}: ${msg}`);
-    }
-  }
-
-  console.log(`  ${stripQuotes(table.name)}: ${synced} rows ${direction}`);
-  return synced;
-}
-
 async function pullFromProd(prod: pg.Client, local: pg.Client) {
   console.log('\nPulling prod -> local...');
   for (const table of TABLES) {
-    await syncDirection(prod, local, table, '<- prod');
+    const result = await syncDirection(prod, local, table, '<- prod');
+    console.log(`  ${result.table}: ${result.rows} rows <- prod`);
   }
   console.log('Done.\n');
 }
@@ -238,7 +105,8 @@ async function pushToProd(prod: pg.Client, local: pg.Client, diffs: DiffResult[]
   for (const table of TABLES) {
     const diff = missing.find(d => d.table === stripQuotes(table.name));
     if (diff) {
-      await syncDirection(local, prod, table, '-> prod');
+      const result = await syncDirection(local, prod, table, '-> prod');
+      console.log(`  ${result.table}: ${result.rows} rows -> prod`);
     }
   }
   console.log('Done.\n');
@@ -266,7 +134,7 @@ async function showDiff(diffs: DiffResult[]) {
   }
 }
 
-async function fullSync(prod: pg.Client, local: pg.Client, diffs: DiffResult[]) {
+async function fullSyncInteractive(prod: pg.Client, local: pg.Client, diffs: DiffResult[]) {
   const hasMissingInProd = diffs.some(d => d.onlyLocal.length > 0);
   const hasMissingInLocal = diffs.some(d => d.onlyProd.length > 0);
 
@@ -288,7 +156,8 @@ async function fullSync(prod: pg.Client, local: pg.Client, diffs: DiffResult[]) 
   if (hasMissingInLocal) {
     console.log('\nPulling prod -> local...');
     for (const table of TABLES) {
-      await syncDirection(prod, local, table, '<- prod');
+      const result = await syncDirection(prod, local, table, '<- prod');
+      console.log(`  ${result.table}: ${result.rows} rows <- prod`);
     }
   }
 
@@ -297,7 +166,8 @@ async function fullSync(prod: pg.Client, local: pg.Client, diffs: DiffResult[]) 
     for (const table of TABLES) {
       const diff = diffs.find(d => d.table === stripQuotes(table.name));
       if (diff && diff.onlyLocal.length > 0) {
-        await syncDirection(local, prod, table, '-> prod');
+        const result = await syncDirection(local, prod, table, '-> prod');
+        console.log(`  ${result.table}: ${result.rows} rows -> prod`);
       }
     }
   }
@@ -345,7 +215,7 @@ async function main() {
           await showDiff(diffs);
           break;
         case '4':
-          await fullSync(prod, local, diffs);
+          await fullSyncInteractive(prod, local, diffs);
           diffs = await computeDiffs(prod, local);
           printDashboard(diffs);
           break;
