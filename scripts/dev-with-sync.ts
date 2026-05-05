@@ -25,6 +25,7 @@ function parseTimeoutMs(raw: string | undefined, defaultMs: number): number {
 
 const SYNC_TIMEOUT_MS = parseTimeoutMs(process.env.SYNC_TIMEOUT_MS, 60_000);
 const SHUTDOWN_GRACE_MS = 5_000;
+const CONNECT_TIMEOUT_MS = 5_000;
 
 function nextDevArgs(): string[] {
   const lan = process.argv.includes('--lan');
@@ -56,8 +57,15 @@ async function runSync(label: string): Promise<void> {
   }
 
   console.log(`[sync] ${label}: running full sync...`);
-  const prod = new Client({ connectionString: prodUrl, ssl: { rejectUnauthorized: false } });
-  const local = new Client({ connectionString: localUrl });
+  const prod = new Client({
+    connectionString: prodUrl,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+  });
+  const local = new Client({
+    connectionString: localUrl,
+    connectionTimeoutMillis: CONNECT_TIMEOUT_MS,
+  });
 
   let timedOut = false;
   const timer = setTimeout(() => {
