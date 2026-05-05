@@ -18,7 +18,12 @@ import { fullSync, type SyncResult } from '../lib/db/sync-core';
 
 dotenv.config({ path: '.env.local' });
 
-const SYNC_TIMEOUT_MS = Number(process.env.SYNC_TIMEOUT_MS) || 60_000;
+function parseTimeoutMs(raw: string | undefined, defaultMs: number): number {
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultMs;
+}
+
+const SYNC_TIMEOUT_MS = parseTimeoutMs(process.env.SYNC_TIMEOUT_MS, 60_000);
 const SHUTDOWN_GRACE_MS = 5_000;
 
 function nextDevArgs(): string[] {
