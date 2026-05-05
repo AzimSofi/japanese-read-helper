@@ -1,21 +1,73 @@
 import { Client } from 'pg';
 
+export type SyncDirection = 'prod -> local' | 'local -> prod';
+
+type IdentityKey =
+  | { kind: 'column'; col: string }
+  | { kind: 'composite'; cols: [string, string]; sep: string };
+
+type ConflictStrategy =
+  | { kind: 'insert-only' }
+  | { kind: 'last-write-wins'; timestampCol: string };
+
 export interface TableConfig {
   name: string;
   conflictKey: string;
   orderBy: string;
-  identityCol: string;
-  timestampCol: string | null;
+  identity: IdentityKey;
+  strategy: ConflictStrategy;
 }
 
 export const TABLES: TableConfig[] = [
-  { name: '"Book"', conflictKey: 'id', orderBy: '"createdAt"', identityCol: '"fileName"', timestampCol: '"updatedAt"' },
-  { name: '"BookImage"', conflictKey: 'id', orderBy: '"createdAt"', identityCol: '"fileName"', timestampCol: null },
-  { name: '"ProcessingHistory"', conflictKey: 'id', orderBy: '"processedAt"', identityCol: 'id', timestampCol: null },
-  { name: 'bookmarks', conflictKey: 'id', orderBy: 'updated_at', identityCol: 'file_name', timestampCol: 'updated_at' },
-  { name: '"UserBookmark"', conflictKey: 'id', orderBy: '"updatedAt"', identityCol: 'id', timestampCol: '"updatedAt"' },
-  { name: 'vocabulary_entries', conflictKey: 'id', orderBy: 'created_at', identityCol: 'word', timestampCol: 'updated_at' },
-  { name: 'text_entries', conflictKey: 'id', orderBy: 'created_at', identityCol: 'file_name', timestampCol: null },
+  {
+    name: '"Book"',
+    conflictKey: 'id',
+    orderBy: '"createdAt"',
+    identity: { kind: 'column', col: '"fileName"' },
+    strategy: { kind: 'last-write-wins', timestampCol: '"updatedAt"' },
+  },
+  {
+    name: '"BookImage"',
+    conflictKey: 'id',
+    orderBy: '"createdAt"',
+    identity: { kind: 'column', col: '"fileName"' },
+    strategy: { kind: 'insert-only' },
+  },
+  {
+    name: '"ProcessingHistory"',
+    conflictKey: 'id',
+    orderBy: '"processedAt"',
+    identity: { kind: 'column', col: 'id' },
+    strategy: { kind: 'insert-only' },
+  },
+  {
+    name: 'bookmarks',
+    conflictKey: 'id',
+    orderBy: 'updated_at',
+    identity: { kind: 'composite', cols: ['file_name', 'directory'], sep: '|' },
+    strategy: { kind: 'last-write-wins', timestampCol: 'updated_at' },
+  },
+  {
+    name: '"UserBookmark"',
+    conflictKey: 'id',
+    orderBy: '"updatedAt"',
+    identity: { kind: 'column', col: 'id' },
+    strategy: { kind: 'last-write-wins', timestampCol: '"updatedAt"' },
+  },
+  {
+    name: 'vocabulary_entries',
+    conflictKey: 'id',
+    orderBy: 'created_at',
+    identity: { kind: 'column', col: 'word' },
+    strategy: { kind: 'last-write-wins', timestampCol: 'updated_at' },
+  },
+  {
+    name: 'text_entries',
+    conflictKey: 'id',
+    orderBy: 'created_at',
+    identity: { kind: 'composite', cols: ['file_name', 'directory'], sep: '|' },
+    strategy: { kind: 'insert-only' },
+  },
 ];
 
 export function stripQuotes(name: string): string {
@@ -23,7 +75,7 @@ export function stripQuotes(name: string): string {
 }
 
 function quoteIdent(name: string): string {
-  return `"${name}"`;
+  return `"${name.replace(/"/g, '""')}"`;
 }
 
 async function getColumns(client: Client, tableName: string): Promise<string[]> {
@@ -37,33 +89,43 @@ async function getColumns(client: Client, tableName: string): Promise<string[]> 
   return result.rows.map((r: { column_name: string }) => r.column_name);
 }
 
-async function getCount(client: Client, table: string): Promise<number> {
+async function getCount(client: Client, table: string): Promise<number | null> {
   const bare = stripQuotes(table);
   try {
     const result = await client.query(`SELECT COUNT(*) as count FROM "${bare}"`);
     return parseInt(result.rows[0].count, 10);
-  } catch {
-    return -1;
+  } catch (err) {
+    console.error(`[sync-core] getCount(${bare}) failed:`, err instanceof Error ? err.message : err);
+    return null;
   }
 }
 
-async function getIdentities(client: Client, table: TableConfig): Promise<Set<string>> {
+function identityQuery(table: TableConfig): string {
   const bare = stripQuotes(table.name);
+  if (table.identity.kind === 'composite') {
+    const [a, b] = table.identity.cols;
+    return `SELECT ${a} || '${table.identity.sep}' || ${b} as key FROM "${bare}"`;
+  }
+  return `SELECT ${table.identity.col}::text as key FROM "${bare}"`;
+}
+
+async function getIdentities(client: Client, table: TableConfig): Promise<Set<string>> {
   try {
-    const query = (bare === 'text_entries' || bare === 'bookmarks')
-      ? `SELECT file_name || '|' || directory as key FROM "${bare}"`
-      : `SELECT ${table.identityCol}::text as key FROM "${bare}"`;
-    const result = await client.query(query);
+    const result = await client.query(identityQuery(table));
     return new Set(result.rows.map((r: { key: string }) => r.key));
-  } catch {
+  } catch (err) {
+    console.error(
+      `[sync-core] getIdentities(${stripQuotes(table.name)}) failed:`,
+      err instanceof Error ? err.message : err
+    );
     return new Set();
   }
 }
 
 export interface DiffResult {
   table: string;
-  localCount: number;
-  prodCount: number;
+  localCount: number | null;
+  prodCount: number | null;
   onlyLocal: string[];
   onlyProd: string[];
 }
@@ -77,30 +139,28 @@ export async function computeDiffs(prod: Client, local: Client): Promise<DiffRes
       getIdentities(local, table),
       getIdentities(prod, table),
     ]);
-    const onlyLocal = Array.from(localIds).filter(id => !prodIds.has(id));
-    const onlyProd = Array.from(prodIds).filter(id => !localIds.has(id));
     diffs.push({
       table: stripQuotes(table.name),
       localCount,
       prodCount,
-      onlyLocal,
-      onlyProd,
+      onlyLocal: Array.from(localIds).filter(id => !prodIds.has(id)),
+      onlyProd: Array.from(prodIds).filter(id => !localIds.has(id)),
     });
   }
   return diffs;
 }
 
 function buildUpsertSql(table: TableConfig, columns: string[]): string {
-  const quotedCols = columns.map(quoteIdent);
-  const colList = quotedCols.join(', ');
+  const colList = columns.map(quoteIdent).join(', ');
   const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
   const conflictCol = quoteIdent(table.conflictKey);
 
-  if (table.timestampCol === null) {
+  if (table.strategy.kind === 'insert-only') {
     return `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
             ON CONFLICT (${conflictCol}) DO NOTHING`;
   }
 
+  const ts = table.strategy.timestampCol;
   const updateSet = columns
     .filter(c => c !== table.conflictKey)
     .map(c => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
@@ -108,43 +168,47 @@ function buildUpsertSql(table: TableConfig, columns: string[]): string {
 
   return `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
           ON CONFLICT (${conflictCol}) DO UPDATE SET ${updateSet}
-          WHERE EXCLUDED.${table.timestampCol} > ${table.name}.${table.timestampCol}`;
+          WHERE EXCLUDED.${ts} > ${table.name}.${ts}`;
 }
 
 export interface SyncResult {
   table: string;
   rows: number;
-  direction: string;
+  failed: number;
+  direction: SyncDirection;
 }
 
 export async function syncDirection(
   source: Client,
   target: Client,
   table: TableConfig,
-  direction: string
+  direction: SyncDirection
 ): Promise<SyncResult> {
+  const tableName = stripQuotes(table.name);
   const columns = await getColumns(source, table.name);
-  if (columns.length === 0) return { table: stripQuotes(table.name), rows: 0, direction };
+  if (columns.length === 0) return { table: tableName, rows: 0, failed: 0, direction };
 
   const sourceRows = await source.query(
     `SELECT * FROM ${table.name} ORDER BY ${table.orderBy}`
   );
-  if (sourceRows.rows.length === 0) return { table: stripQuotes(table.name), rows: 0, direction };
+  if (sourceRows.rows.length === 0) return { table: tableName, rows: 0, failed: 0, direction };
 
   const sql = buildUpsertSql(table, columns);
 
   let synced = 0;
+  let failed = 0;
   for (const row of sourceRows.rows) {
     const values = columns.map(c => row[c]);
     try {
       await target.query(sql, values);
       synced++;
     } catch (err) {
+      failed++;
       console.error(`  [ERR] ${table.name}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  return { table: stripQuotes(table.name), rows: synced, direction };
+  return { table: tableName, rows: synced, failed, direction };
 }
 
 export async function withClients<T>(
@@ -176,6 +240,23 @@ export async function push(prod: Client, local: Client): Promise<SyncResult[]> {
   const results: SyncResult[] = [];
   for (const table of TABLES) {
     results.push(await syncDirection(local, prod, table, 'local -> prod'));
+  }
+  return results;
+}
+
+export async function pushMissing(
+  prod: Client,
+  local: Client,
+  diffs: DiffResult[]
+): Promise<SyncResult[]> {
+  const tablesWithLocalOnly = new Set(
+    diffs.filter(d => d.onlyLocal.length > 0).map(d => d.table)
+  );
+  const results: SyncResult[] = [];
+  for (const table of TABLES) {
+    if (tablesWithLocalOnly.has(stripQuotes(table.name))) {
+      results.push(await syncDirection(local, prod, table, 'local -> prod'));
+    }
   }
   return results;
 }

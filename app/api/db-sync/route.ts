@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
-import { Client } from 'pg';
 import {
   TABLES,
   computeDiffs,
   syncDirection,
+  pushMissing,
   withClients,
-  stripQuotes,
   type SyncResult,
 } from '@/lib/db/sync-core';
 
@@ -36,10 +35,6 @@ function ensureProdConfigured(): NextResponse | null {
   return null;
 }
 
-function callWithClients<T>(fn: (prod: Client, local: Client) => Promise<T>): Promise<T> {
-  return withClients(process.env.PROD_DATABASE_URL!, process.env.DATABASE_URL!, fn);
-}
-
 export async function GET(request: NextRequest) {
   const authError = await requireSession(request);
   if (authError) return authError;
@@ -48,7 +43,11 @@ export async function GET(request: NextRequest) {
   if (configError) return configError;
 
   try {
-    const diffs = await callWithClients(computeDiffs);
+    const diffs = await withClients(
+      process.env.PROD_DATABASE_URL!,
+      process.env.DATABASE_URL!,
+      computeDiffs
+    );
     return NextResponse.json({ diffs });
   } catch (error) {
     console.error('[db-sync] status error:', error);
@@ -77,27 +76,26 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const results = await callWithClients(async (prod, local) => {
-      const syncResults: SyncResult[] = [];
+    const results = await withClients(
+      process.env.PROD_DATABASE_URL!,
+      process.env.DATABASE_URL!,
+      async (prod, local) => {
+        const syncResults: SyncResult[] = [];
 
-      if (direction === 'pull' || direction === 'full') {
-        for (const table of TABLES) {
-          syncResults.push(await syncDirection(prod, local, table, 'prod -> local'));
-        }
-      }
-
-      if (direction === 'push' || direction === 'full') {
-        const diffs = await computeDiffs(prod, local);
-        for (const table of TABLES) {
-          const diff = diffs.find(d => d.table === stripQuotes(table.name));
-          if (diff && diff.onlyLocal.length > 0) {
-            syncResults.push(await syncDirection(local, prod, table, 'local -> prod'));
+        if (direction === 'pull' || direction === 'full') {
+          for (const table of TABLES) {
+            syncResults.push(await syncDirection(prod, local, table, 'prod -> local'));
           }
         }
-      }
 
-      return syncResults;
-    });
+        if (direction === 'push' || direction === 'full') {
+          const diffs = await computeDiffs(prod, local);
+          syncResults.push(...await pushMissing(prod, local, diffs));
+        }
+
+        return syncResults;
+      }
+    );
 
     return NextResponse.json({ success: true, results });
   } catch (error) {
