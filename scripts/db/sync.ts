@@ -14,8 +14,9 @@ import {
   TABLES,
   computeDiffs,
   syncDirection,
-  stripQuotes,
+  pushMissing,
   type DiffResult,
+  type SyncResult,
 } from '../../lib/db/sync-core';
 
 dotenv.config({ path: '.env.local' });
@@ -42,13 +43,22 @@ function padLeft(str: string, len: number): string {
   return str.length >= len ? str : ' '.repeat(len - str.length) + str;
 }
 
+function renderCount(n: number | null): string {
+  return n === null ? '?' : String(n);
+}
+
+function logSyncResult(r: SyncResult) {
+  const failedSuffix = r.failed > 0 ? `, ${r.failed} failed` : '';
+  console.log(`  ${r.table}: ${r.rows} rows ${r.direction}${failedSuffix}`);
+}
+
 function printDashboard(diffs: DiffResult[]) {
   console.log('\n  ' + pad('Table', 22) + padLeft('Local', 7) + padLeft('Prod', 7) + '   Status');
   console.log('  ' + '-'.repeat(60));
 
   for (const d of diffs) {
-    const localStr = d.localCount === -1 ? 'N/A' : String(d.localCount);
-    const prodStr = d.prodCount === -1 ? 'N/A' : String(d.prodCount);
+    const localStr = renderCount(d.localCount);
+    const prodStr = renderCount(d.prodCount);
     let status = 'in sync';
 
     if (d.onlyLocal.length > 0 && d.onlyProd.length > 0) {
@@ -57,11 +67,15 @@ function printDashboard(diffs: DiffResult[]) {
       status = `+${d.onlyLocal.length} local only`;
     } else if (d.onlyProd.length > 0) {
       status = `+${d.onlyProd.length} prod only`;
+    } else if (d.localCount === null || d.prodCount === null) {
+      status = 'count unavailable';
     } else if (d.localCount !== d.prodCount) {
       status = 'counts differ (same keys)';
     }
 
-    const ok = d.onlyLocal.length === 0 && d.onlyProd.length === 0 && d.localCount === d.prodCount;
+    const ok = d.onlyLocal.length === 0 && d.onlyProd.length === 0
+      && d.localCount !== null && d.prodCount !== null
+      && d.localCount === d.prodCount;
     const marker = ok ? ' ' : '*';
     console.log(`${marker} ${pad(d.table, 22)}${padLeft(localStr, 7)}${padLeft(prodStr, 7)}   ${status}`);
   }
@@ -71,8 +85,8 @@ function printDashboard(diffs: DiffResult[]) {
 async function pullFromProd(prod: pg.Client, local: pg.Client) {
   console.log('\nPulling prod -> local...');
   for (const table of TABLES) {
-    const result = await syncDirection(prod, local, table, '<- prod');
-    console.log(`  ${result.table}: ${result.rows} rows <- prod`);
+    const result = await syncDirection(prod, local, table, 'prod -> local');
+    logSyncResult(result);
   }
   console.log('Done.\n');
 }
@@ -102,13 +116,8 @@ async function pushToProd(prod: pg.Client, local: pg.Client, diffs: DiffResult[]
   }
 
   console.log('\nPushing local -> prod...');
-  for (const table of TABLES) {
-    const diff = missing.find(d => d.table === stripQuotes(table.name));
-    if (diff) {
-      const result = await syncDirection(local, prod, table, '-> prod');
-      console.log(`  ${result.table}: ${result.rows} rows -> prod`);
-    }
-  }
+  const results = await pushMissing(prod, local, diffs);
+  for (const r of results) logSyncResult(r);
   console.log('Done.\n');
 }
 
@@ -156,20 +165,15 @@ async function fullSyncInteractive(prod: pg.Client, local: pg.Client, diffs: Dif
   if (hasMissingInLocal) {
     console.log('\nPulling prod -> local...');
     for (const table of TABLES) {
-      const result = await syncDirection(prod, local, table, '<- prod');
-      console.log(`  ${result.table}: ${result.rows} rows <- prod`);
+      const result = await syncDirection(prod, local, table, 'prod -> local');
+      logSyncResult(result);
     }
   }
 
   if (hasMissingInProd) {
     console.log('\nPushing local -> prod...');
-    for (const table of TABLES) {
-      const diff = diffs.find(d => d.table === stripQuotes(table.name));
-      if (diff && diff.onlyLocal.length > 0) {
-        const result = await syncDirection(local, prod, table, '-> prod');
-        console.log(`  ${result.table}: ${result.rows} rows -> prod`);
-      }
-    }
+    const results = await pushMissing(prod, local, diffs);
+    for (const r of results) logSyncResult(r);
   }
 
   console.log('Done.\n');
