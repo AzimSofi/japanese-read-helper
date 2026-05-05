@@ -5,8 +5,8 @@ import { API_ROUTES } from '@/lib/constants';
 
 interface DiffResult {
   table: string;
-  localCount: number;
-  prodCount: number;
+  localCount: number | null;
+  prodCount: number | null;
   onlyLocal: string[];
   onlyProd: string[];
 }
@@ -14,6 +14,7 @@ interface DiffResult {
 interface SyncResult {
   table: string;
   rows: number;
+  failed: number;
   direction: string;
 }
 
@@ -72,7 +73,7 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
   const hasLocalOnly = diffs?.some(d => d.onlyLocal.length > 0) ?? false;
   const hasProdOnly = diffs?.some(d => d.onlyProd.length > 0) ?? false;
   const allInSync = diffs !== null && !hasLocalOnly && !hasProdOnly &&
-    diffs.every(d => d.localCount === d.prodCount);
+    diffs.every(d => d.localCount !== null && d.prodCount !== null && d.localCount === d.prodCount);
 
   return (
     <div
@@ -143,7 +144,9 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                   </thead>
                   <tbody>
                     {diffs.map((d) => {
-                      const inSync = d.onlyLocal.length === 0 && d.onlyProd.length === 0 && d.localCount === d.prodCount;
+                      const countsKnown = d.localCount !== null && d.prodCount !== null;
+                      const inSync = d.onlyLocal.length === 0 && d.onlyProd.length === 0
+                        && countsKnown && d.localCount === d.prodCount;
                       let status = 'In sync';
                       let statusColor = '#34C759';
                       if (d.onlyLocal.length > 0 && d.onlyProd.length > 0) {
@@ -155,6 +158,9 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                       } else if (d.onlyProd.length > 0) {
                         status = `+${d.onlyProd.length} prod only`;
                         statusColor = '#AF52DE';
+                      } else if (!countsKnown) {
+                        status = 'Count unavailable';
+                        statusColor = '#FF9500';
                       } else if (d.localCount !== d.prodCount) {
                         status = 'Counts differ';
                         statusColor = '#FF9500';
@@ -163,10 +169,10 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                         <tr key={d.table} className="border-t" style={{ borderColor: '#F2F2F7' }}>
                           <td className="py-2.5 px-3 font-mono text-xs" style={{ color: '#1D1D1F' }}>{d.table}</td>
                           <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: '#1D1D1F' }}>
-                            {d.localCount === -1 ? 'N/A' : d.localCount}
+                            {d.localCount === null ? 'N/A' : d.localCount}
                           </td>
                           <td className="py-2.5 px-3 text-right tabular-nums" style={{ color: '#1D1D1F' }}>
-                            {d.prodCount === -1 ? 'N/A' : d.prodCount}
+                            {d.prodCount === null ? 'N/A' : d.prodCount}
                           </td>
                           <td className="py-2.5 px-3">
                             <span
@@ -193,7 +199,7 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm font-medium mb-2" style={{ color: '#34C759' }}>Sync completed</p>
                   {syncResults.map((r, i) => (
                     <p key={i} className="text-xs" style={{ color: '#1D1D1F' }}>
-                      {r.table}: {r.rows} rows ({r.direction})
+                      {r.table}: {r.rows} rows ({r.direction}){r.failed > 0 ? `, ${r.failed} failed` : ''}
                     </p>
                   ))}
                 </div>
