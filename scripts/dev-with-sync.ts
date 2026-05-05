@@ -11,42 +11,33 @@
  */
 
 import { spawn, type ChildProcess } from 'child_process';
-import dotenv from 'dotenv';
+import { resolve } from 'node:path';
 import { Client } from 'pg';
-import { fullSync, withClients, type SyncResult } from '../lib/db/sync-core';
+import dotenv from 'dotenv';
+import { fullSync, type SyncResult } from '../lib/db/sync-core';
 
 dotenv.config({ path: '.env.local' });
 
 const SYNC_TIMEOUT_MS = 10_000;
+const SHUTDOWN_GRACE_MS = 5_000;
 
 function nextDevArgs(): string[] {
   const lan = process.argv.includes('--lan');
   return lan
-    ? ['next', 'dev', '--hostname', '192.168.1.15', '--port', '3001']
-    : ['next', 'dev', '--port', '3333'];
+    ? ['dev', '--hostname', '192.168.1.15', '--port', '3001']
+    : ['dev', '--port', '3333'];
 }
 
 function summarize(label: string, results: SyncResult[]) {
-  const meaningful = results.filter(r => r.rows > 0);
+  const meaningful = results.filter(r => r.rows > 0 || r.failed > 0);
   if (meaningful.length === 0) {
     console.log(`[sync] ${label}: nothing to transfer`);
     return;
   }
   console.log(`[sync] ${label}:`);
   for (const r of meaningful) {
-    console.log(`  ${r.table}: ${r.rows} rows ${r.direction}`);
-  }
-}
-
-async function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timer: NodeJS.Timeout | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    if (timer) clearTimeout(timer);
+    const failedSuffix = r.failed > 0 ? `, ${r.failed} failed` : '';
+    console.log(`  ${r.table}: ${r.rows} rows ${r.direction}${failedSuffix}`);
   }
 }
 
@@ -60,26 +51,45 @@ async function runSync(label: string): Promise<void> {
   }
 
   console.log(`[sync] ${label}: running full sync...`);
+  const prod = new Client({ connectionString: prodUrl, ssl: { rejectUnauthorized: false } });
+  const local = new Client({ connectionString: localUrl });
+
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    prod.end().catch(() => {});
+    local.end().catch(() => {});
+  }, SYNC_TIMEOUT_MS);
+
   try {
-    const results = await withTimeout(
-      withClients(prodUrl, localUrl, (prod: Client, local: Client) => fullSync(prod, local)),
-      SYNC_TIMEOUT_MS,
-      `${label} sync`
-    );
+    await Promise.all([prod.connect(), local.connect()]);
+    const results = await fullSync(prod, local);
     summarize(label, results);
   } catch (err) {
-    console.warn(`[sync] ${label} failed: ${err instanceof Error ? err.message : String(err)}`);
+    if (timedOut) {
+      console.warn(`[sync] ${label} timed out after ${SYNC_TIMEOUT_MS}ms`);
+    } else {
+      console.warn(`[sync] ${label} failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
     console.warn('[sync] continuing without sync');
+  } finally {
+    clearTimeout(timer);
+    if (!timedOut) {
+      await prod.end().catch(() => {});
+      await local.end().catch(() => {});
+    }
   }
 }
 
 function spawnNextDev(): ChildProcess {
-  const [cmd, ...args] = nextDevArgs();
-  const child = spawn(cmd, args, {
+  // Spawn node with next's bin path directly so the child is a real Node
+  // process (not cmd.exe on Windows). The terminal's Ctrl+C is broadcast to
+  // every process attached to the console group, so next dev gets the signal
+  // naturally and shuts down gracefully without us calling child.kill.
+  const nextBin = resolve(process.cwd(), 'node_modules/next/dist/bin/next');
+  return spawn(process.execPath, [nextBin, ...nextDevArgs()], {
     stdio: 'inherit',
-    shell: process.platform === 'win32',
   });
-  return child;
 }
 
 async function main() {
@@ -94,11 +104,15 @@ async function main() {
       process.exit(130);
     }
     shuttingDown = true;
-    console.log('\n[sync] Ctrl+C received, stopping next dev and pushing to prod...');
+    console.log('\n[sync] Ctrl+C received, waiting for next dev to exit then running shutdown sync...');
     console.log('[sync] press Ctrl+C again to skip shutdown sync');
-    if (!child.killed) {
-      child.kill('SIGINT');
-    }
+
+    setTimeout(() => {
+      if (child.exitCode === null && !child.killed) {
+        console.log(`[sync] next dev did not exit within ${SHUTDOWN_GRACE_MS}ms, forcing kill`);
+        child.kill('SIGKILL');
+      }
+    }, SHUTDOWN_GRACE_MS).unref();
   };
   process.on('SIGINT', handleSigint);
 
