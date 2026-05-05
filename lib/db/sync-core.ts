@@ -6,13 +6,17 @@ type IdentityKey =
   | { kind: 'column'; col: string }
   | { kind: 'composite'; cols: [string, string]; sep: string };
 
+type ConflictKey =
+  | { kind: 'column'; col: string }
+  | { kind: 'composite'; cols: string[] };
+
 type ConflictStrategy =
   | { kind: 'insert-only' }
   | { kind: 'last-write-wins'; timestampCol: string };
 
 export interface TableConfig {
   name: string;
-  conflictKey: string;
+  conflictKey: ConflictKey;
   orderBy: string;
   identity: IdentityKey;
   strategy: ConflictStrategy;
@@ -21,49 +25,49 @@ export interface TableConfig {
 export const TABLES: TableConfig[] = [
   {
     name: '"Book"',
-    conflictKey: 'id',
+    conflictKey: { kind: 'column', col: 'fileName' },
     orderBy: '"createdAt"',
     identity: { kind: 'column', col: '"fileName"' },
     strategy: { kind: 'last-write-wins', timestampCol: '"updatedAt"' },
   },
   {
     name: '"BookImage"',
-    conflictKey: 'id',
+    conflictKey: { kind: 'column', col: 'id' },
     orderBy: '"createdAt"',
     identity: { kind: 'column', col: '"fileName"' },
     strategy: { kind: 'insert-only' },
   },
   {
     name: '"ProcessingHistory"',
-    conflictKey: 'id',
+    conflictKey: { kind: 'column', col: 'id' },
     orderBy: '"processedAt"',
     identity: { kind: 'column', col: 'id' },
     strategy: { kind: 'insert-only' },
   },
   {
     name: 'bookmarks',
-    conflictKey: 'id',
+    conflictKey: { kind: 'composite', cols: ['file_name', 'directory'] },
     orderBy: 'updated_at',
     identity: { kind: 'composite', cols: ['file_name', 'directory'], sep: '|' },
     strategy: { kind: 'last-write-wins', timestampCol: 'updated_at' },
   },
   {
     name: '"UserBookmark"',
-    conflictKey: 'id',
+    conflictKey: { kind: 'composite', cols: ['bookId', 'userId'] },
     orderBy: '"updatedAt"',
     identity: { kind: 'column', col: 'id' },
     strategy: { kind: 'last-write-wins', timestampCol: '"updatedAt"' },
   },
   {
     name: 'vocabulary_entries',
-    conflictKey: 'id',
+    conflictKey: { kind: 'column', col: 'id' },
     orderBy: 'created_at',
     identity: { kind: 'column', col: 'word' },
     strategy: { kind: 'last-write-wins', timestampCol: 'updated_at' },
   },
   {
     name: 'text_entries',
-    conflictKey: 'id',
+    conflictKey: { kind: 'composite', cols: ['file_name', 'directory'] },
     orderBy: 'created_at',
     identity: { kind: 'composite', cols: ['file_name', 'directory'], sep: '|' },
     strategy: { kind: 'insert-only' },
@@ -150,24 +154,32 @@ export async function computeDiffs(prod: Client, local: Client): Promise<DiffRes
   return diffs;
 }
 
+function conflictColumns(key: ConflictKey): string[] {
+  return key.kind === 'column' ? [key.col] : key.cols;
+}
+
 function buildUpsertSql(table: TableConfig, columns: string[]): string {
   const colList = columns.map(quoteIdent).join(', ');
   const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-  const conflictCol = quoteIdent(table.conflictKey);
+
+  const conflictCols = conflictColumns(table.conflictKey);
+  const conflictExpr = conflictCols.map(quoteIdent).join(', ');
 
   if (table.strategy.kind === 'insert-only') {
     return `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
-            ON CONFLICT (${conflictCol}) DO NOTHING`;
+            ON CONFLICT (${conflictExpr}) DO NOTHING`;
   }
 
   const ts = table.strategy.timestampCol;
+  // Never overwrite the conflict columns or the primary key on update.
+  const excludedFromUpdate = new Set<string>([...conflictCols, 'id']);
   const updateSet = columns
-    .filter(c => c !== table.conflictKey)
+    .filter(c => !excludedFromUpdate.has(c))
     .map(c => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
     .join(', ');
 
   return `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
-          ON CONFLICT (${conflictCol}) DO UPDATE SET ${updateSet}
+          ON CONFLICT (${conflictExpr}) DO UPDATE SET ${updateSet}
           WHERE EXCLUDED.${ts} > ${table.name}.${ts}`;
 }
 
