@@ -14,6 +14,7 @@ interface DiffResult {
 interface SyncResult {
   table: string;
   rows: number;
+  skipped: number;
   failed: number;
   direction: string;
 }
@@ -199,7 +200,7 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                   <p className="text-sm font-medium mb-2" style={{ color: '#34C759' }}>Sync completed</p>
                   {syncResults.map((r, i) => (
                     <p key={i} className="text-xs" style={{ color: '#1D1D1F' }}>
-                      {r.table}: {r.rows} rows ({r.direction}){r.failed > 0 ? `, ${r.failed} failed` : ''}
+                      {r.table}: {r.rows} rows ({r.direction}){r.skipped > 0 ? `, ${r.skipped} skipped` : ''}{r.failed > 0 ? `, ${r.failed} failed` : ''}
                     </p>
                   ))}
                 </div>

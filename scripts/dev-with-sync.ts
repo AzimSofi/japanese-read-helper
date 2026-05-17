@@ -35,15 +35,16 @@ function nextDevArgs(): string[] {
 }
 
 function summarize(label: string, results: SyncResult[]) {
-  const meaningful = results.filter(r => r.rows > 0 || r.failed > 0);
+  const meaningful = results.filter(r => r.rows > 0 || r.skipped > 0 || r.failed > 0);
   if (meaningful.length === 0) {
     console.log(`[sync] ${label}: nothing to transfer`);
     return;
   }
   console.log(`[sync] ${label}:`);
   for (const r of meaningful) {
+    const skippedSuffix = r.skipped > 0 ? `, ${r.skipped} skipped` : '';
     const failedSuffix = r.failed > 0 ? `, ${r.failed} failed` : '';
-    console.log(`  ${r.table}: ${r.rows} rows ${r.direction}${failedSuffix}`);
+    console.log(`  ${r.table}: ${r.rows} rows ${r.direction}${skippedSuffix}${failedSuffix}`);
   }
 }
 
