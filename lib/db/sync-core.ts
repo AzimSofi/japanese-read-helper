@@ -25,7 +25,13 @@ export interface TableConfig {
 export const TABLES: TableConfig[] = [
   {
     name: '"Book"',
-    conflictKey: { kind: 'column', col: 'fileName' },
+    // Conflict on id (cuid), not fileName: BookImage, UserBookmark, and
+    // ProcessingHistory FK to Book.id. Resolving conflicts on fileName would
+    // keep the target's id while incoming child rows still reference the
+    // source's id, leaving child FK references dangling. In this app's
+    // workflow books are only ingested via the EPUB pipeline on a single
+    // machine, so cuids stay consistent across DBs and id-conflict is safe.
+    conflictKey: { kind: 'column', col: 'id' },
     orderBy: '"createdAt"',
     identity: { kind: 'column', col: '"fileName"' },
     strategy: { kind: 'last-write-wins', timestampCol: '"updatedAt"' },
