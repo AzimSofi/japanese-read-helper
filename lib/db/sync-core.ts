@@ -216,6 +216,19 @@ export interface SyncResult {
 
 const BATCH_SIZE = 25;
 
+function isConnectionClosed(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const msg = err.message;
+  return msg.includes('Client was closed')
+    || msg.includes('Connection terminated')
+    || msg.includes('Client has encountered a connection error');
+}
+
+function rowIdentityLog(table: TableConfig, row: Record<string, unknown>): string {
+  const cols = conflictColumns(table.conflictKey);
+  return cols.map(c => `${c}=${row[c]}`).join(',');
+}
+
 export async function syncDirection(
   source: Client,
   target: Client,
@@ -231,6 +244,7 @@ export async function syncDirection(
   );
   if (sourceRows.rows.length === 0) return { table: tableName, rows: 0, failed: 0, direction };
 
+  const singleRowSql = buildBatchUpsertSql(table, columns, 1);
   let synced = 0;
   let failed = 0;
   for (let start = 0; start < sourceRows.rows.length; start += BATCH_SIZE) {
@@ -245,10 +259,33 @@ export async function syncDirection(
       await target.query(sql, values);
       synced += batch.length;
     } catch (err) {
-      failed += batch.length;
+      // A dead connection will fail every remaining batch identically — bail
+      // out so the wrapper's outer catch can report one error instead of N.
+      if (isConnectionClosed(err)) {
+        throw new Error(`[sync-core] ${tableName}: target connection closed mid-sync`);
+      }
+      // Data error: one poison row aborted the whole batch atomically. Retry
+      // row-by-row to land the valid rows and pinpoint the offender.
       console.error(
-        `  [ERR] ${table.name} (batch of ${batch.length}): ${err instanceof Error ? err.message : String(err)}`
+        `  [WARN] ${table.name} (batch of ${batch.length}) failed, retrying per-row: ` +
+        `${err instanceof Error ? err.message : String(err)}`
       );
+      for (const row of batch) {
+        const singleValues = columns.map(c => row[c]);
+        try {
+          await target.query(singleRowSql, singleValues);
+          synced++;
+        } catch (rowErr) {
+          if (isConnectionClosed(rowErr)) {
+            throw new Error(`[sync-core] ${tableName}: target connection closed mid-sync`);
+          }
+          failed++;
+          console.error(
+            `  [ERR] ${table.name} row (${rowIdentityLog(table, row)}): ` +
+            `${rowErr instanceof Error ? rowErr.message : String(rowErr)}`
+          );
+        }
+      }
     }
   }
 
