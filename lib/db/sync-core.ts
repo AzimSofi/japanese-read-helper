@@ -174,15 +174,21 @@ function conflictColumns(key: ConflictKey): readonly string[] {
   return key.kind === 'column' ? [key.col] : key.cols;
 }
 
-function buildUpsertSql(table: TableConfig, columns: string[]): string {
+function buildBatchUpsertSql(table: TableConfig, columns: string[], batchSize: number): string {
   const colList = columns.map(quoteIdent).join(', ');
-  const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
+
+  const rowPlaceholders: string[] = [];
+  for (let batchI = 0; batchI < batchSize; batchI++) {
+    const cols = columns.map((_, colI) => `$${batchI * columns.length + colI + 1}`).join(', ');
+    rowPlaceholders.push(`(${cols})`);
+  }
+  const valuesClause = rowPlaceholders.join(', ');
 
   const conflictCols = conflictColumns(table.conflictKey);
   const conflictExpr = conflictCols.map(quoteIdent).join(', ');
 
   if (table.strategy.kind === 'insert-only') {
-    return `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
+    return `INSERT INTO ${table.name} (${colList}) VALUES ${valuesClause}
             ON CONFLICT (${conflictExpr}) DO NOTHING`;
   }
 
@@ -196,7 +202,7 @@ function buildUpsertSql(table: TableConfig, columns: string[]): string {
     .map(c => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
     .join(', ');
 
-  return `INSERT INTO ${table.name} (${colList}) VALUES (${placeholders})
+  return `INSERT INTO ${table.name} (${colList}) VALUES ${valuesClause}
           ON CONFLICT (${conflictExpr}) DO UPDATE SET ${updateSet}
           WHERE EXCLUDED.${ts} > ${table.name}.${ts}`;
 }
@@ -207,6 +213,8 @@ export interface SyncResult {
   failed: number;
   direction: SyncDirection;
 }
+
+const BATCH_SIZE = 25;
 
 export async function syncDirection(
   source: Client,
@@ -223,18 +231,24 @@ export async function syncDirection(
   );
   if (sourceRows.rows.length === 0) return { table: tableName, rows: 0, failed: 0, direction };
 
-  const sql = buildUpsertSql(table, columns);
-
   let synced = 0;
   let failed = 0;
-  for (const row of sourceRows.rows) {
-    const values = columns.map(c => row[c]);
+  for (let start = 0; start < sourceRows.rows.length; start += BATCH_SIZE) {
+    const batch = sourceRows.rows.slice(start, start + BATCH_SIZE);
+    const sql = buildBatchUpsertSql(table, columns, batch.length);
+    const values: unknown[] = [];
+    for (const row of batch) {
+      for (const c of columns) values.push(row[c]);
+    }
+
     try {
       await target.query(sql, values);
-      synced++;
+      synced += batch.length;
     } catch (err) {
-      failed++;
-      console.error(`  [ERR] ${table.name}: ${err instanceof Error ? err.message : String(err)}`);
+      failed += batch.length;
+      console.error(
+        `  [ERR] ${table.name} (batch of ${batch.length}): ${err instanceof Error ? err.message : String(err)}`
+      );
     }
   }
 
