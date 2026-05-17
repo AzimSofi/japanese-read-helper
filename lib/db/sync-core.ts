@@ -12,6 +12,10 @@ type ConflictKey =
 
 const FILE_DIR_PAIR = ['file_name', 'directory'] as const;
 
+// Every table in this schema names its surrogate primary key `id`. If that
+// assumption ever changes, lift this into a per-table TableConfig field.
+const SURROGATE_PK = 'id';
+
 type ConflictStrategy =
   | { kind: 'insert-only' }
   | { kind: 'last-write-wins'; timestampCol: string };
@@ -183,8 +187,10 @@ function buildUpsertSql(table: TableConfig, columns: string[]): string {
   }
 
   const ts = table.strategy.timestampCol;
-  // Never overwrite the conflict columns or the primary key on update.
-  const excludedFromUpdate = new Set<string>([...conflictCols, 'id']);
+  // Preserve the target's surrogate PK on conflict so child FK references
+  // already pointing at it stay valid. The conflict columns are likewise
+  // excluded since updating them would change the row's identity.
+  const excludedFromUpdate = new Set<string>([...conflictCols, SURROGATE_PK]);
   const updateSet = columns
     .filter(c => !excludedFromUpdate.has(c))
     .map(c => `${quoteIdent(c)} = EXCLUDED.${quoteIdent(c)}`)
