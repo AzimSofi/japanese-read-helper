@@ -210,6 +210,7 @@ function buildBatchUpsertSql(table: TableConfig, columns: string[], batchSize: n
 export interface SyncResult {
   table: string;
   rows: number;
+  skipped: number;
   failed: number;
   direction: SyncDirection;
 }
@@ -237,15 +238,16 @@ export async function syncDirection(
 ): Promise<SyncResult> {
   const tableName = stripQuotes(table.name);
   const columns = await getColumns(source, table.name);
-  if (columns.length === 0) return { table: tableName, rows: 0, failed: 0, direction };
+  if (columns.length === 0) return { table: tableName, rows: 0, skipped: 0, failed: 0, direction };
 
   const sourceRows = await source.query(
     `SELECT * FROM ${table.name} ORDER BY ${table.orderBy}`
   );
-  if (sourceRows.rows.length === 0) return { table: tableName, rows: 0, failed: 0, direction };
+  if (sourceRows.rows.length === 0) return { table: tableName, rows: 0, skipped: 0, failed: 0, direction };
 
   const singleRowSql = buildBatchUpsertSql(table, columns, 1);
-  let synced = 0;
+  let rows = 0;
+  let skipped = 0;
   let failed = 0;
   for (let start = 0; start < sourceRows.rows.length; start += BATCH_SIZE) {
     const batch = sourceRows.rows.slice(start, start + BATCH_SIZE);
@@ -256,8 +258,10 @@ export async function syncDirection(
     }
 
     try {
-      await target.query(sql, values);
-      synced += batch.length;
+      const result = await target.query(sql, values);
+      const affected = result.rowCount ?? 0;
+      rows += affected;
+      skipped += batch.length - affected;
     } catch (err) {
       // A dead connection will fail every remaining batch identically — bail
       // out so the wrapper's outer catch can report one error instead of N.
@@ -273,8 +277,10 @@ export async function syncDirection(
       for (const row of batch) {
         const singleValues = columns.map(c => row[c]);
         try {
-          await target.query(singleRowSql, singleValues);
-          synced++;
+          const result = await target.query(singleRowSql, singleValues);
+          const affected = result.rowCount ?? 0;
+          rows += affected;
+          skipped += 1 - affected;
         } catch (rowErr) {
           if (isConnectionClosed(rowErr)) {
             throw new Error(`[sync-core] ${tableName}: target connection closed mid-sync`);
@@ -289,7 +295,7 @@ export async function syncDirection(
     }
   }
 
-  return { table: tableName, rows: synced, failed, direction };
+  return { table: tableName, rows, skipped, failed, direction };
 }
 
 export async function withClients<T>(

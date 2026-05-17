@@ -48,8 +48,9 @@ function renderCount(n: number | null): string {
 }
 
 function logSyncResult(r: SyncResult) {
+  const skippedSuffix = r.skipped > 0 ? `, ${r.skipped} skipped` : '';
   const failedSuffix = r.failed > 0 ? `, ${r.failed} failed` : '';
-  console.log(`  ${r.table}: ${r.rows} rows ${r.direction}${failedSuffix}`);
+  console.log(`  ${r.table}: ${r.rows} rows ${r.direction}${skippedSuffix}${failedSuffix}`);
 }
 
 function printDashboard(diffs: DiffResult[]) {
