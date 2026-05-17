@@ -4,11 +4,13 @@ export type SyncDirection = 'prod -> local' | 'local -> prod';
 
 type IdentityKey =
   | { kind: 'column'; col: string }
-  | { kind: 'composite'; cols: [string, string]; sep: string };
+  | { kind: 'composite'; cols: readonly [string, string]; sep: string };
 
 type ConflictKey =
   | { kind: 'column'; col: string }
-  | { kind: 'composite'; cols: string[] };
+  | { kind: 'composite'; cols: readonly [string, string, ...string[]] };
+
+const FILE_DIR_PAIR = ['file_name', 'directory'] as const;
 
 type ConflictStrategy =
   | { kind: 'insert-only' }
@@ -52,13 +54,17 @@ export const TABLES: TableConfig[] = [
   },
   {
     name: 'bookmarks',
-    conflictKey: { kind: 'composite', cols: ['file_name', 'directory'] },
+    conflictKey: { kind: 'composite', cols: FILE_DIR_PAIR },
     orderBy: 'updated_at',
-    identity: { kind: 'composite', cols: ['file_name', 'directory'], sep: '|' },
+    identity: { kind: 'composite', cols: FILE_DIR_PAIR, sep: '|' },
     strategy: { kind: 'last-write-wins', timestampCol: 'updated_at' },
   },
   {
     name: '"UserBookmark"',
+    // userId is technically nullable; Postgres treats NULLs as distinct in
+    // unique indexes, so legacy NULL rows would multiply on every sync. The
+    // Prisma schema sets a default of "default", so any row inserted via the
+    // app is safe — but backfill before sync if NULLs ever appear.
     conflictKey: { kind: 'composite', cols: ['bookId', 'userId'] },
     orderBy: '"updatedAt"',
     identity: { kind: 'column', col: 'id' },
@@ -73,9 +79,9 @@ export const TABLES: TableConfig[] = [
   },
   {
     name: 'text_entries',
-    conflictKey: { kind: 'composite', cols: ['file_name', 'directory'] },
+    conflictKey: { kind: 'composite', cols: FILE_DIR_PAIR },
     orderBy: 'created_at',
-    identity: { kind: 'composite', cols: ['file_name', 'directory'], sep: '|' },
+    identity: { kind: 'composite', cols: FILE_DIR_PAIR, sep: '|' },
     strategy: { kind: 'insert-only' },
   },
 ];
@@ -160,7 +166,7 @@ export async function computeDiffs(prod: Client, local: Client): Promise<DiffRes
   return diffs;
 }
 
-function conflictColumns(key: ConflictKey): string[] {
+function conflictColumns(key: ConflictKey): readonly string[] {
   return key.kind === 'column' ? [key.col] : key.cols;
 }
 
