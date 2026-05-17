@@ -216,6 +216,7 @@ export interface SyncResult {
 }
 
 const BATCH_SIZE = 25;
+const PG_MAX_PARAMS = 65535;
 
 function isConnectionClosed(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -239,6 +240,16 @@ export async function syncDirection(
   const tableName = stripQuotes(table.name);
   const columns = await getColumns(source, table.name);
   if (columns.length === 0) return { table: tableName, rows: 0, skipped: 0, failed: 0, direction };
+
+  // Crash early on impossible state: if a future schema widens to where one
+  // batch would exceed PG's hard parameter limit, the cause would otherwise
+  // surface only on the last (partial) batch of large tables.
+  if (columns.length * BATCH_SIZE > PG_MAX_PARAMS) {
+    throw new Error(
+      `[sync-core] ${tableName}: ${columns.length} cols x BATCH_SIZE ${BATCH_SIZE} ` +
+      `exceeds PG param limit ${PG_MAX_PARAMS}; lower BATCH_SIZE or split the schema`
+    );
+  }
 
   const sourceRows = await source.query(
     `SELECT * FROM ${table.name} ORDER BY ${table.orderBy}`
