@@ -138,11 +138,13 @@ export default function ReadingContent({
         const isBookmarked = !!(
           bookmarkText && normalizedText === normalizedBookmark
         );
+        const globalIndex = (currentPage - 1) * itemsPerPage + index;
 
         return (
           <ParagraphItem
             key={`${currentPage}-${index}`}
             {...(isBookmarked ? { id: "bookmark" } : {})}
+            globalIndex={globalIndex}
             text={typedItem.text}
             isBookmarked={isBookmarked}
             fileName={fullFilePath}
