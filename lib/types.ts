@@ -8,6 +8,16 @@ export interface ParsedItem {
   subItems: string[]; // 言い換えバージョンの配列
 }
 
+// オーディオブックの再生単位（本全体を通した連番つき）
+export interface PlayableUnit {
+  globalIndex: number;
+  main: string;
+  sub: string | null;
+}
+
+// オーディオブックで読み上げる対象
+export type AudioBookContentMode = 'main' | 'sub' | 'both';
+
 // 辞書の単語構造（漢字[読み・意味]）
 export interface DictionaryWord {
   kanji: string;

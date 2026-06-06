@@ -2,8 +2,7 @@
 
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
-import { parseMarkdown } from "@/lib/utils/markdownParser";
-import { READER_CONFIG } from "@/lib/constants";
+import { parseReaderItems } from "@/lib/utils/buildPlayableUnits";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
 
 const CollapsibleItem = dynamic(
@@ -72,16 +71,7 @@ export default function ReadingContent({
 
   const fullFilePath = directory ? `${directory}/${fileName}` : fileName;
 
-  const parsedItems = useMemo(() => {
-    if (contentType === "rephrase") {
-      return parseMarkdown(content);
-    }
-    return content
-      .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
-      .map((p) => p.trim())
-      .filter((p) => p.length > 0)
-      .map((p) => ({ text: p }));
-  }, [content, contentType]);
+  const parsedItems = useMemo(() => parseReaderItems(content), [content]);
 
   const paginatedItems = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -113,11 +103,13 @@ export default function ReadingContent({
           const isBookmarked = !!(
             bookmarkText && normalizedHead === normalizedBookmark
           );
+          const globalIndex = (currentPage - 1) * itemsPerPage + index;
 
           return (
             <CollapsibleItem
               key={`${currentPage}-${index}`}
               {...(isBookmarked ? { id: "bookmark" } : {})}
+              globalIndex={globalIndex}
               head={typedItem.head}
               subItems={typedItem.subItems}
               initialDropdownState={displayMode === "expanded"}

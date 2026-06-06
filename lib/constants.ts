@@ -192,6 +192,10 @@ export const STORAGE_KEYS = {
   TTS_VOICE_GENDER: 'tts_voice_gender',
   TTS_ENABLED: 'tts_enabled',
   TTS_LAST_POSITION: 'tts_last_position', // {fileName}_{directory}
+  // オーディオブック設定
+  AUDIOBOOK_ENABLED: 'audiobook_enabled',
+  AUDIOBOOK_KEYBOARD_MODE: 'audiobook_keyboard_mode',
+  AUDIOBOOK_CONTENT_MODE: 'audiobook_content_mode',
 } as const;
 
 // TTS（Text-to-Speech）設定
