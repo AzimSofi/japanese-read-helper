@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { STORAGE_KEYS, TTS_CONFIG, type TTSVoiceGender } from '@/lib/constants';
 import type { AudioBookContentMode, PlayableUnit } from '@/lib/types';
 import { cleanTextForTTS } from '@/lib/utils/ttsTextCleaner';
-import { fetchTTS, clearTTSCache } from '@/lib/utils/ttsCache';
+import { fetchTTS } from '@/lib/utils/ttsCache';
 
 export type AudioBookStatus = 'idle' | 'loading' | 'playing' | 'paused';
 
@@ -250,6 +250,7 @@ export function useAudioBook({
   }, [detachAudio, updateIndex, updateStatus]);
 
   const togglePlayPause = useCallback(() => {
+    if (statusRef.current === 'loading') return;
     if (statusRef.current === 'playing') {
       pause();
       return;
@@ -263,21 +264,21 @@ export function useAudioBook({
   }, [pause, resume, resolveStartIndex, playStep]);
 
   const next = useCallback(() => {
-    const keepAuto = isAutoRef.current || statusRef.current === 'playing';
+    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
     const from = indexRef.current >= 0 ? indexRef.current + 1 : resolveStartIndex();
     const step = stepAtOrAfter(unitsRef.current, from, contentModeRef.current);
     if (step) playStep(step, keepAuto);
   }, [resolveStartIndex, playStep]);
 
   const previous = useCallback(() => {
-    const keepAuto = isAutoRef.current || statusRef.current === 'playing';
+    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
     const from = indexRef.current >= 0 ? indexRef.current - 1 : resolveStartIndex();
     const step = stepAtOrBefore(unitsRef.current, from, contentModeRef.current);
     if (step) playStep(step, keepAuto);
   }, [resolveStartIndex, playStep]);
 
   const replay = useCallback(() => {
-    const keepAuto = isAutoRef.current || statusRef.current === 'playing';
+    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
     const step = stepAtOrAfter(unitsRef.current, resolveStartIndex(), contentModeRef.current);
     if (step) playStep(step, keepAuto);
   }, [resolveStartIndex, playStep]);
@@ -287,7 +288,7 @@ export function useAudioBook({
     const units2 = unitsRef.current;
     if (targetIndex < 0 || targetIndex >= units2.length) return;
     if (!partText(units2[targetIndex], 'sub')) return;
-    const keepAuto = statusRef.current === 'playing' || isAutoRef.current;
+    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
     playStep({ index: targetIndex, part: 'sub' }, keepAuto);
   }, [resolveStartIndex, playStep]);
 
@@ -316,7 +317,6 @@ export function useAudioBook({
     return () => {
       playTokenRef.current++;
       detachAudio();
-      clearTTSCache();
     };
   }, [detachAudio]);
 
