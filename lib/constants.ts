@@ -194,7 +194,6 @@ export const STORAGE_KEYS = {
   TTS_LAST_POSITION: 'tts_last_position', // {fileName}_{directory}
   // オーディオブック設定
   AUDIOBOOK_ENABLED: 'audiobook_enabled',
-  AUDIOBOOK_KEYBOARD_MODE: 'audiobook_keyboard_mode',
   AUDIOBOOK_CONTENT_MODE: 'audiobook_content_mode',
 } as const;
 
