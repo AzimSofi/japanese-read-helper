@@ -21,7 +21,9 @@ import ReaderHeader from './components/ReaderHeader';
 import BottomSheet from '@/app/components/ui/BottomSheet';
 import { useBookMetadata } from '@/app/hooks/useBookMetadata';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
-import { parseMarkdown } from '@/lib/utils/markdownParser';
+import { buildPlayableUnits } from '@/lib/utils/buildPlayableUnits';
+import { useAudioBook } from '@/app/hooks/useAudioBook';
+import type { AudioBookContentMode } from '@/lib/types';
 
 const ExplanationSidebar = dynamic(
   () => import('@/app/components/reading/ExplanationSidebar'),
@@ -35,6 +37,11 @@ const RubyLookupSidebar = dynamic(
 
 const FloatingStickyNotes = dynamic(
   () => import('./components/FloatingStickyNotes'),
+  { ssr: false }
+);
+
+const AudioPlayerBar = dynamic(
+  () => import('./components/AudioPlayerBar'),
   { ssr: false }
 );
 
@@ -77,6 +84,10 @@ function ReaderContent({
   const [showRephrase, setShowRephrase] = useState(false);
   const [aiExplanationEnabled, setAiExplanationEnabled] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const [audiobookEnabled, setAudiobookEnabled] = useState(false);
+  const [keyboardMode, setKeyboardMode] = useState(false);
+  const [contentMode, setContentMode] = useState<AudioBookContentMode>('main');
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [explanationOpen, setExplanationOpen] = useState(false);
@@ -121,6 +132,14 @@ function ReaderContent({
 
     const storedDarkMode = localStorage.getItem(STORAGE_KEYS.READER_DARK_MODE);
     if (storedDarkMode) setIsDarkMode(storedDarkMode === 'true');
+
+    const storedAudiobook = localStorage.getItem(STORAGE_KEYS.AUDIOBOOK_ENABLED);
+    if (storedAudiobook) setAudiobookEnabled(storedAudiobook === 'true');
+
+    const storedContentMode = localStorage.getItem(STORAGE_KEYS.AUDIOBOOK_CONTENT_MODE);
+    if (storedContentMode === 'main' || storedContentMode === 'sub' || storedContentMode === 'both') {
+      setContentMode(storedContentMode);
+    }
   }, []);
 
   useEffect(() => {
@@ -177,42 +196,18 @@ function ReaderContent({
     fetchData();
   }, [fullFilePath, router]);
 
-  const totalItems = useMemo(() => {
-    if (!content) return 0;
-    if (content.includes('>>')) {
-      const headingCount = (content.match(/^< /gm) || []).length;
-      return headingCount || 1;
-    }
-    return content.split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN).filter(p => p.trim()).length;
-  }, [content]);
+  const playableUnits = useMemo(() => buildPlayableUnits(content), [content]);
+  const totalItems = playableUnits.length;
 
   const totalPages = Math.ceil(totalItems / PAGINATION_CONFIG.ITEMS_PER_PAGE);
   const currentPage = Math.min(Math.max(1, pageParam), totalPages || 1);
   const progress = totalPages > 0 ? (currentPage / totalPages) * 100 : 0;
 
   const currentPageHeaders = useMemo(() => {
-    if (!content) return [];
-
-    let items: { head?: string; text?: string }[] = [];
-    if (content.includes('>>')) {
-      items = parseMarkdown(content);
-    } else {
-      items = content
-        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
-        .map(p => p.trim())
-        .filter(p => p.length > 0)
-        .map(p => ({ text: p }));
-    }
-
     const start = (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
     const end = start + PAGINATION_CONFIG.ITEMS_PER_PAGE;
-    const pageItems = items.slice(start, end);
-
-    return pageItems.map(item => {
-      const text = item.head || item.text || '';
-      return stripFurigana(text);
-    });
-  }, [content, currentPage]);
+    return playableUnits.slice(start, end).map(unit => stripFurigana(unit.main));
+  }, [playableUnits, currentPage]);
 
   const bookmarkPage = useMemo(() => {
     if (!bookmarkText) return null;
@@ -222,32 +217,53 @@ function ReaderContent({
       return parseInt(match[1], 10);
     }
 
-    if (!content) return null;
-
     const normalizedBookmark = stripFurigana(bookmarkText).replace(/[\r\n]/g, '').trim();
     if (!normalizedBookmark) return null;
 
-    let items: { head?: string; text?: string }[] = [];
-    if (content.includes('>>')) {
-      items = parseMarkdown(content);
-    } else {
-      items = content
-        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
-        .map(p => p.trim())
-        .filter(p => p.length > 0)
-        .map(p => ({ text: p }));
-    }
-
-    const itemIndex = items.findIndex(item => {
-      const itemText = item.head || item.text || '';
-      const normalizedItem = stripFurigana(itemText).replace(/[\r\n]/g, '').trim();
-      return normalizedItem === normalizedBookmark;
-    });
+    const itemIndex = playableUnits.findIndex(
+      unit => stripFurigana(unit.main).replace(/[\r\n]/g, '').trim() === normalizedBookmark
+    );
 
     if (itemIndex === -1) return null;
 
     return Math.floor(itemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
-  }, [bookmarkText, content]);
+  }, [bookmarkText, playableUnits]);
+
+  const getStartIndex = useCallback(
+    () => (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE,
+    [currentPage]
+  );
+
+  const {
+    status: audioStatus,
+    index: audioIndex,
+    total: audioTotal,
+    speed: audioSpeed,
+    togglePlayPause,
+    next: audioNext,
+    previous: audioPrev,
+    replay: audioReplay,
+    playSub: audioPlaySub,
+    setSpeed: setAudioSpeed,
+    stop: stopAudioBook,
+  } = useAudioBook({
+    units: playableUnits,
+    contentMode,
+    fileName: fileNameParam || undefined,
+    directory: directoryParam || undefined,
+    getStartIndex,
+  });
+
+  const buildReadHref = useCallback(
+    (page: number) => {
+      const params = new URLSearchParams();
+      if (directoryParam) params.set('directory', directoryParam);
+      if (fileNameParam) params.set('fileName', fileNameParam);
+      params.set('page', page.toString());
+      return `/read?${params.toString()}`;
+    },
+    [directoryParam, fileNameParam]
+  );
 
   const [didAutoNavigate, setDidAutoNavigate] = useState(false);
 
@@ -255,17 +271,13 @@ function ReaderContent({
     if (isLoading || didAutoNavigate) return;
     if (!hasExplicitPage && bookmarkPage && bookmarkPage > 1 && currentPage !== bookmarkPage) {
       setDidAutoNavigate(true);
-      const params = new URLSearchParams();
-      if (directoryParam) params.set('directory', directoryParam);
-      if (fileNameParam) params.set('fileName', fileNameParam);
-      params.set('page', bookmarkPage.toString());
-      router.replace(`/read?${params.toString()}`);
-      return;
+      router.replace(buildReadHref(bookmarkPage));
     }
-  }, [isLoading, hasExplicitPage, bookmarkPage, currentPage, directoryParam, fileNameParam, router, didAutoNavigate]);
+  }, [isLoading, hasExplicitPage, bookmarkPage, currentPage, buildReadHref, router, didAutoNavigate]);
 
   useEffect(() => {
     if (isLoading) return;
+    if (audiobookEnabled && audioStatus !== 'idle') return;
 
     const scrollToBookmark = () => {
       const bookmarkElement = document.getElementById('bookmark');
@@ -276,18 +288,62 @@ function ReaderContent({
 
     const timer = setTimeout(scrollToBookmark, 100);
     return () => clearTimeout(timer);
-  }, [currentPage, isLoading, bookmarkText]);
+  }, [currentPage, isLoading, bookmarkText, audiobookEnabled, audioStatus]);
+
+  useEffect(() => {
+    if (!audiobookEnabled || audioIndex < 0) return;
+    const targetPage = Math.floor(audioIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+    if (targetPage === currentPage) return;
+    router.replace(buildReadHref(targetPage));
+  }, [audioIndex, audiobookEnabled, currentPage, buildReadHref, router]);
+
+  useEffect(() => {
+    if (!audiobookEnabled || audioIndex < 0) return;
+    const targetPage = Math.floor(audioIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+    if (targetPage !== currentPage) return;
+    const timer = setTimeout(() => {
+      const activeItem = document.querySelector(`[data-global-index="${audioIndex}"]`);
+      if (activeItem) activeItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [audioIndex, audiobookEnabled, currentPage]);
+
+  useEffect(() => {
+    if (!audiobookEnabled || !keyboardMode) return;
+
+    const keyActions: Record<string, () => void> = {
+      ArrowDown: togglePlayPause,
+      ArrowRight: audioNext,
+      ArrowLeft: audioPrev,
+      ArrowUp: audioReplay,
+      '\\': audioPlaySub,
+    };
+
+    const handleAudioKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)) return;
+      if (settingsOpen || explanationOpen || rubyLookupOpen) return;
+      if (e.key === 'Escape') {
+        setKeyboardMode(false);
+        return;
+      }
+      const action = keyActions[e.key];
+      if (!action) return;
+      e.preventDefault();
+      action();
+    };
+
+    window.addEventListener('keydown', handleAudioKey);
+    return () => window.removeEventListener('keydown', handleAudioKey);
+  }, [audiobookEnabled, keyboardMode, settingsOpen, explanationOpen, rubyLookupOpen, togglePlayPause, audioNext, audioPrev, audioReplay, audioPlaySub]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
       if (newPage < 1 || newPage > totalPages) return;
-      const params = new URLSearchParams();
-      if (directoryParam) params.set('directory', directoryParam);
-      if (fileNameParam) params.set('fileName', fileNameParam);
-      params.set('page', newPage.toString());
-      router.push(`/read?${params.toString()}`);
+      stopAudioBook();
+      router.push(buildReadHref(newPage));
     },
-    [directoryParam, fileNameParam, router, totalPages]
+    [totalPages, buildReadHref, router, stopAudioBook]
   );
 
   const handleToggleFurigana = () => {
@@ -331,6 +387,24 @@ function ReaderContent({
     const newValue = !isDarkMode;
     setIsDarkMode(newValue);
     localStorage.setItem(STORAGE_KEYS.READER_DARK_MODE, newValue.toString());
+  };
+
+  const handleAudiobookChange = (enabled: boolean) => {
+    setAudiobookEnabled(enabled);
+    localStorage.setItem(STORAGE_KEYS.AUDIOBOOK_ENABLED, enabled.toString());
+    if (!enabled) {
+      stopAudioBook();
+      setKeyboardMode(false);
+    }
+  };
+
+  const handleContentModeChange = (mode: AudioBookContentMode) => {
+    setContentMode(mode);
+    localStorage.setItem(STORAGE_KEYS.AUDIOBOOK_CONTENT_MODE, mode);
+  };
+
+  const handleToggleKeyboardMode = () => {
+    setKeyboardMode(prev => !prev);
   };
 
   const handleSentenceClick = (sentence: string) => {
@@ -383,25 +457,11 @@ function ReaderContent({
   }, [currentPageHeaders]);
 
   const handleCopyPageRange = useCallback(async (fromPage: number, toPage: number) => {
-    if (!content) return;
-
-    let items: { head?: string; text?: string }[] = [];
-    if (content.includes('>>')) {
-      items = parseMarkdown(content);
-    } else {
-      items = content
-        .split(READER_CONFIG.PARAGRAPH_SPLIT_PATTERN)
-        .map(p => p.trim())
-        .filter(p => p.length > 0)
-        .map(p => ({ text: p }));
-    }
-
     const start = (fromPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
     const end = toPage * PAGINATION_CONFIG.ITEMS_PER_PAGE;
-    const rangeItems = items.slice(start, end);
-
-    const textToCopy = rangeItems
-      .map(item => stripFurigana(item.head || item.text || ''))
+    const textToCopy = playableUnits
+      .slice(start, end)
+      .map(unit => stripFurigana(unit.main))
       .join('\n');
 
     try {
@@ -414,7 +474,7 @@ function ReaderContent({
     } catch (error) {
       console.error('Failed to copy:', error);
     }
-  }, [content]);
+  }, [playableUnits]);
 
   if (isLoading) {
     return (
@@ -502,6 +562,7 @@ function ReaderContent({
         style={{
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
+          paddingBottom: audiobookEnabled ? 140 : undefined,
         }}
       >
         <ReadingContent
@@ -600,6 +661,8 @@ function ReaderContent({
           onLineHeightChange={handleLineHeightChange}
           onDisplayModeChange={handleDisplayModeChange}
           onAiExplanationChange={handleAiExplanationChange}
+          audiobookEnabled={audiobookEnabled}
+          onAudiobookChange={handleAudiobookChange}
         />
       </BottomSheet>
 
@@ -623,6 +686,25 @@ function ReaderContent({
         directory={directoryParam?.split('/')[0] || ''}
         bookName={directoryParam?.split('/').slice(1).join('/') || ''}
       />
+
+      {audiobookEnabled && (
+        <AudioPlayerBar
+          status={audioStatus}
+          index={audioIndex}
+          total={audioTotal}
+          contentMode={contentMode}
+          speed={audioSpeed}
+          isDarkMode={isDarkMode}
+          keyboardMode={keyboardMode}
+          onTogglePlay={togglePlayPause}
+          onPrev={audioPrev}
+          onNext={audioNext}
+          onContentModeChange={handleContentModeChange}
+          onSpeedChange={setAudioSpeed}
+          onToggleKeyboardMode={handleToggleKeyboardMode}
+          onClose={() => handleAudiobookChange(false)}
+        />
+      )}
     </div>
   );
 }
