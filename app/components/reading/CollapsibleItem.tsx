@@ -4,10 +4,11 @@ import React, { useEffect, useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import TranslateIcon from "@/app/components/icons/TranslateIcon";
+import StartHereIcon from "@/app/components/icons/StartHereIcon";
 import BookImage from "@/app/components/reading/BookImage";
 import TTSButton from "@/app/components/reading/TTSButton";
 import { useSearchParams } from "next/navigation";
-import { EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
+import { COLORS, EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
 const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
@@ -27,6 +28,9 @@ interface CollapsibleItemProps {
   bookDirectory?: string;
   bookFileName?: string;
   currentPage?: number;
+  audiobookEnabled?: boolean;
+  isStartCursor?: boolean;
+  onStartFromHere?: (unitIndex: number) => void;
   onVocabularySelect?: (data: {
     word: string;
     sentence: string;
@@ -50,6 +54,9 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   bookDirectory,
   bookFileName,
   currentPage,
+  audiobookEnabled,
+  isStartCursor,
+  onStartFromHere,
   onVocabularySelect,
   onStartContinuousPlay,
 }) => {
@@ -442,14 +449,19 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         borderLeft: "none",
         transition: "background-color 3s ease, border-left 3s ease",
       }
-    : isBookmarked
+    : isStartCursor
       ? {
-          borderLeft: `4px solid ${isDarkMode ? DARK_COLORS.PRIMARY : "#007AFF"}`,
-          backgroundColor: isDarkMode
-            ? "rgba(10, 132, 255, 0.06)"
-            : "rgba(0, 122, 255, 0.03)",
+          borderLeft: `4px solid ${COLORS.START_CURSOR}`,
+          backgroundColor: "rgba(255, 149, 0, 0.06)",
         }
-      : {};
+      : isBookmarked
+        ? {
+            borderLeft: `4px solid ${isDarkMode ? DARK_COLORS.PRIMARY : "#007AFF"}`,
+            backgroundColor: isDarkMode
+              ? "rgba(10, 132, 255, 0.06)"
+              : "rgba(0, 122, 255, 0.03)",
+          }
+        : {};
 
   const buttonBaseStyle: React.CSSProperties = {
     width: "32px",
@@ -496,6 +508,31 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
             </div>
           </div>
           <div className="flex items-center gap-0.5 flex-shrink-0 pt-0.5">
+            {audiobookEnabled && onStartFromHere && globalIndex != null && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onStartFromHere(globalIndex);
+                }}
+                style={buttonBaseStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = hoverBg;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "transparent";
+                }}
+                onMouseDown={(e) => {
+                  e.currentTarget.style.transform = "scale(0.9)";
+                }}
+                onMouseUp={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+                aria-label="Set audio start here"
+                title="Start audio from here"
+              >
+                <StartHereIcon isActive={isStartCursor} />
+              </button>
+            )}
             <TTSButton text={head} onLongPress={onStartContinuousPlay} />
             <button
               disabled={translating}

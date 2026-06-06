@@ -33,6 +33,9 @@ interface ReadingContentProps {
   onBookmarkSuccess: () => void;
   onSentenceClick?: (sentence: string) => void;
   imageMap?: Record<string, string>;
+  audiobookEnabled?: boolean;
+  startCursorIndex?: number;
+  onStartFromHere?: (unitIndex: number) => void;
 }
 
 function detectContentType(text: string): ContentType {
@@ -66,6 +69,9 @@ export default function ReadingContent({
   onBookmarkSuccess,
   onSentenceClick,
   imageMap,
+  audiobookEnabled,
+  startCursorIndex,
+  onStartFromHere,
 }: ReadingContentProps) {
   const contentType = useMemo(() => detectContentType(content), [content]);
 
@@ -122,6 +128,9 @@ export default function ReadingContent({
               bookDirectory={directory}
               bookFileName={fileName}
               currentPage={currentPage}
+              audiobookEnabled={audiobookEnabled}
+              isStartCursor={startCursorIndex === globalIndex}
+              onStartFromHere={onStartFromHere}
             />
           );
         })}
@@ -155,6 +164,9 @@ export default function ReadingContent({
             lineHeight={lineHeight}
             imageMap={imageMap}
             currentPage={currentPage}
+            audiobookEnabled={audiobookEnabled}
+            isStartCursor={startCursorIndex === globalIndex}
+            onStartFromHere={onStartFromHere}
           />
         );
       })}
