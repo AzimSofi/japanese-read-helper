@@ -1,0 +1,281 @@
+'use client';
+
+import { DARK_COLORS, READER_THEME } from '@/lib/constants';
+import type { AudioBookContentMode } from '@/lib/types';
+import type { AudioBookStatus } from '@/app/hooks/useAudioBook';
+
+const SPEED_PRESETS = [0.75, 1.0, 1.25, 1.5];
+
+const CONTENT_MODES: { value: AudioBookContentMode; label: string }[] = [
+  { value: 'main', label: 'Main' },
+  { value: 'sub', label: 'Sub' },
+  { value: 'both', label: 'Both' },
+];
+
+interface AudioPlayerBarProps {
+  status: AudioBookStatus;
+  index: number;
+  total: number;
+  contentMode: AudioBookContentMode;
+  speed: number;
+  isDarkMode: boolean;
+  keyboardMode: boolean;
+  onTogglePlay: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  onContentModeChange: (mode: AudioBookContentMode) => void;
+  onSpeedChange: (speed: number) => void;
+  onToggleKeyboardMode: () => void;
+  onClose: () => void;
+}
+
+function PlayGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+function PauseGlyph() {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="6" y="5" width="4" height="14" rx="1" />
+      <rect x="14" y="5" width="4" height="14" rx="1" />
+    </svg>
+  );
+}
+
+function PrevGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="5" y="6" width="2.5" height="12" rx="1" />
+      <path d="M20 6v12L9.5 12z" />
+    </svg>
+  );
+}
+
+function NextGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <rect x="16.5" y="6" width="2.5" height="12" rx="1" />
+      <path d="M4 6v12l10.5-6z" />
+    </svg>
+  );
+}
+
+function KeyboardGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function nextSpeed(current: number): number {
+  const presetIndex = SPEED_PRESETS.indexOf(current);
+  if (presetIndex === -1) return 1.0;
+  return SPEED_PRESETS[(presetIndex + 1) % SPEED_PRESETS.length];
+}
+
+export default function AudioPlayerBar({
+  status,
+  index,
+  total,
+  contentMode,
+  speed,
+  isDarkMode,
+  keyboardMode,
+  onTogglePlay,
+  onPrev,
+  onNext,
+  onContentModeChange,
+  onSpeedChange,
+  onToggleKeyboardMode,
+  onClose,
+}: AudioPlayerBarProps) {
+  const surface = isDarkMode ? DARK_COLORS.SURFACE : READER_THEME.SURFACE;
+  const textColor = isDarkMode ? DARK_COLORS.TEXT : '#1D1D1F';
+  const subtle = isDarkMode ? '#9A9AA0' : '#8E8E93';
+  const accent = isDarkMode ? DARK_COLORS.PRIMARY : READER_THEME.PROGRESS_FILL;
+  const trackColor = isDarkMode ? DARK_COLORS.NEUTRAL : READER_THEME.PROGRESS_TRACK;
+
+  const position = total > 0 ? Math.min(total, Math.max(0, index + 1)) : 0;
+  const progressPercent = total > 0 ? (position / total) * 100 : 0;
+  const isPlaying = status === 'playing';
+  const isLoading = status === 'loading';
+
+  const ghostButtonStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    border: 'none',
+    background: 'none',
+    cursor: 'pointer',
+    color: textColor,
+    borderRadius: 10,
+    width: 40,
+    height: 40,
+    flexShrink: 0,
+  };
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 40,
+        backgroundColor: surface,
+        borderTop: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'}`,
+        boxShadow: '0 -2px 16px rgba(0,0,0,0.10)',
+      }}
+    >
+      <div style={{ position: 'relative', height: 3, backgroundColor: trackColor }}>
+        <div
+          style={{
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: `${progressPercent}%`,
+            backgroundColor: accent,
+            transition: 'width 200ms ease',
+          }}
+        />
+      </div>
+
+      <div
+        className="max-w-3xl mx-auto px-4"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          gap: 12,
+          paddingTop: 10,
+          paddingBottom: 'calc(10px + env(safe-area-inset-bottom, 0px))',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button style={ghostButtonStyle} onClick={onPrev} aria-label="Previous sentence">
+            <PrevGlyph />
+          </button>
+          <button
+            onClick={onTogglePlay}
+            aria-label={isPlaying ? 'Pause' : 'Play'}
+            style={{
+              ...ghostButtonStyle,
+              width: 48,
+              height: 48,
+              borderRadius: 24,
+              backgroundColor: accent,
+              color: '#FFFFFF',
+            }}
+          >
+            {isLoading ? (
+              <span
+                className="animate-spin"
+                style={{
+                  width: 18,
+                  height: 18,
+                  borderRadius: '50%',
+                  borderWidth: 2,
+                  borderStyle: 'solid',
+                  borderColor: 'rgba(255,255,255,0.4)',
+                  borderTopColor: '#FFFFFF',
+                }}
+              />
+            ) : isPlaying ? (
+              <PauseGlyph />
+            ) : (
+              <PlayGlyph />
+            )}
+          </button>
+          <button style={ghostButtonStyle} onClick={onNext} aria-label="Next sentence">
+            <NextGlyph />
+          </button>
+        </div>
+
+        <div
+          style={{
+            display: 'inline-flex',
+            borderRadius: 9,
+            padding: 2,
+            backgroundColor: isDarkMode ? DARK_COLORS.NEUTRAL : '#E5E5EA',
+          }}
+        >
+          {CONTENT_MODES.map((mode) => {
+            const active = mode.value === contentMode;
+            return (
+              <button
+                key={mode.value}
+                onClick={() => onContentModeChange(mode.value)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: 7,
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: active ? 600 : 400,
+                  backgroundColor: active ? surface : 'transparent',
+                  color: active ? textColor : subtle,
+                  boxShadow: active ? '0 1px 2px rgba(0,0,0,0.12)' : 'none',
+                }}
+              >
+                {mode.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+          <span style={{ fontSize: 13, color: subtle, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'right' }}>
+            {position} / {total}
+          </span>
+          <button
+            onClick={() => onSpeedChange(nextSpeed(speed))}
+            aria-label="Playback speed"
+            style={{
+              border: 'none',
+              background: 'none',
+              cursor: 'pointer',
+              color: textColor,
+              fontSize: 13,
+              fontWeight: 600,
+              padding: '6px 8px',
+              borderRadius: 8,
+              minWidth: 46,
+            }}
+          >
+            {speed.toFixed(2).replace(/0$/, '')}x
+          </button>
+          <button
+            onClick={onToggleKeyboardMode}
+            aria-label="Toggle keyboard control mode"
+            aria-pressed={keyboardMode}
+            style={{
+              ...ghostButtonStyle,
+              width: 36,
+              height: 36,
+              color: keyboardMode ? '#FFFFFF' : subtle,
+              backgroundColor: keyboardMode ? accent : 'transparent',
+            }}
+          >
+            <KeyboardGlyph />
+          </button>
+          <button
+            onClick={onClose}
+            aria-label="Close audiobook player"
+            style={{ ...ghostButtonStyle, width: 36, height: 36, color: subtle }}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+              <path d="M6 6l12 12M18 6L6 18" strokeLinecap="round" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
