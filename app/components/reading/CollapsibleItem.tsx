@@ -30,6 +30,7 @@ interface CollapsibleItemProps {
   currentPage?: number;
   audiobookEnabled?: boolean;
   isStartCursor?: boolean;
+  isPlaying?: boolean;
   onStartFromHere?: (unitIndex: number) => void;
   onVocabularySelect?: (data: {
     word: string;
@@ -56,6 +57,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   currentPage,
   audiobookEnabled,
   isStartCursor,
+  isPlaying,
   onStartFromHere,
   onVocabularySelect,
   onStartContinuousPlay,
@@ -441,7 +443,12 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
 
   const isBookmarked = id === "bookmark";
 
-  const containerStyle: React.CSSProperties = shouldHighlight
+  const containerStyle: React.CSSProperties = isPlaying
+    ? {
+        borderLeft: `4px solid ${COLORS.PLAYING}`,
+        backgroundColor: "rgba(52, 199, 89, 0.08)",
+      }
+    : shouldHighlight
     ? {
         backgroundColor: isDarkMode
           ? "rgba(10, 132, 255, 0.08)"

@@ -590,6 +590,7 @@ function ReaderContent({
           imageMap={imageMap}
           audiobookEnabled={audiobookEnabled}
           startCursorIndex={audioStartCursor}
+          playingIndex={audioStatus === 'idle' ? -1 : audioIndex}
           onStartFromHere={setStartCursor}
         />
 

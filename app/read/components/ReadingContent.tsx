@@ -35,6 +35,7 @@ interface ReadingContentProps {
   imageMap?: Record<string, string>;
   audiobookEnabled?: boolean;
   startCursorIndex?: number;
+  playingIndex?: number;
   onStartFromHere?: (unitIndex: number) => void;
 }
 
@@ -71,6 +72,7 @@ export default function ReadingContent({
   imageMap,
   audiobookEnabled,
   startCursorIndex,
+  playingIndex,
   onStartFromHere,
 }: ReadingContentProps) {
   const contentType = useMemo(() => detectContentType(content), [content]);
@@ -130,6 +132,7 @@ export default function ReadingContent({
               currentPage={currentPage}
               audiobookEnabled={audiobookEnabled}
               isStartCursor={startCursorIndex === globalIndex}
+              isPlaying={playingIndex === globalIndex}
               onStartFromHere={onStartFromHere}
             />
           );
@@ -166,6 +169,7 @@ export default function ReadingContent({
             currentPage={currentPage}
             audiobookEnabled={audiobookEnabled}
             isStartCursor={startCursorIndex === globalIndex}
+            isPlaying={playingIndex === globalIndex}
             onStartFromHere={onStartFromHere}
           />
         );
