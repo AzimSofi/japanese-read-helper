@@ -315,6 +315,37 @@ function ReaderContent({
     return () => clearTimeout(timer);
   }, [audioIndex, audiobookEnabled, currentPage]);
 
+  const refetchBookmark = useCallback(async () => {
+    try {
+      const res = await fetch(
+        `${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fullFilePath)}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setBookmarkText(data.text || '');
+      }
+    } catch (err) {
+      console.error('Failed to refetch bookmark:', err);
+    }
+  }, [fullFilePath]);
+
+  const bookmarkPlayingSentence = useCallback(async () => {
+    if (audioStatus === 'idle' || audioIndex < 0) return;
+    const unit = playableUnits[audioIndex];
+    if (!unit) return;
+    const page = Math.floor(audioIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+    try {
+      const res = await fetch('/api/write-bookmark', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ target: fullFilePath, content: unit.main, page }),
+      });
+      if (res.ok) refetchBookmark();
+    } catch (err) {
+      console.error('Failed to bookmark playing sentence:', err);
+    }
+  }, [audioStatus, audioIndex, playableUnits, fullFilePath, refetchBookmark]);
+
   useEffect(() => {
     if (!audiobookEnabled || !keyboardMode) return;
 
@@ -324,6 +355,8 @@ function ReaderContent({
       ArrowLeft: audioPrev,
       ArrowDown: audioReplay,
       '\\': audioPlaySub,
+      b: bookmarkPlayingSentence,
+      B: bookmarkPlayingSentence,
     };
 
     const handleAudioKey = (e: KeyboardEvent) => {
@@ -342,7 +375,7 @@ function ReaderContent({
 
     window.addEventListener('keydown', handleAudioKey);
     return () => window.removeEventListener('keydown', handleAudioKey);
-  }, [audiobookEnabled, keyboardMode, settingsOpen, explanationOpen, rubyLookupOpen, togglePlayPause, audioNext, audioPrev, audioReplay, audioPlaySub]);
+  }, [audiobookEnabled, keyboardMode, settingsOpen, explanationOpen, rubyLookupOpen, togglePlayPause, audioNext, audioPrev, audioReplay, audioPlaySub, bookmarkPlayingSentence]);
 
   const handlePageChange = useCallback(
     (newPage: number) => {
@@ -423,19 +456,6 @@ function ReaderContent({
     setExplanationOpen(true);
   };
 
-  const refetchBookmark = async () => {
-    try {
-      const res = await fetch(
-        `${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fullFilePath)}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setBookmarkText(data.text || '');
-      }
-    } catch (err) {
-      console.error('Failed to refetch bookmark:', err);
-    }
-  };
 
   const handleGoToBookmark = useCallback(() => {
     if (!bookmarkPage) return;
