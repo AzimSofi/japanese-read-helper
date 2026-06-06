@@ -26,6 +26,7 @@ interface ParagraphItemProps {
   currentPage?: number;
   audiobookEnabled?: boolean;
   isStartCursor?: boolean;
+  isPlaying?: boolean;
   onStartFromHere?: (unitIndex: number) => void;
 }
 
@@ -44,6 +45,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   currentPage,
   audiobookEnabled,
   isStartCursor,
+  isPlaying,
   onStartFromHere,
 }) => {
   const [loading, setLoading] = useState(false);
@@ -300,17 +302,21 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
       <div
         className="p-5 my-3 rounded-xl"
         style={{
-          backgroundColor: isStartCursor
-            ? "rgba(255, 149, 0, 0.06)"
-            : isBookmarked
-              ? "rgba(0, 122, 255, 0.03)"
-              : "transparent",
-          borderLeft: isStartCursor
-            ? `4px solid ${COLORS.START_CURSOR}`
-            : isBookmarked
-              ? "4px solid #007AFF"
-              : "none",
-          border: isStartCursor || isBookmarked ? undefined : "1px solid rgba(0, 0, 0, 0.04)",
+          backgroundColor: isPlaying
+            ? "rgba(52, 199, 89, 0.08)"
+            : isStartCursor
+              ? "rgba(255, 149, 0, 0.06)"
+              : isBookmarked
+                ? "rgba(0, 122, 255, 0.03)"
+                : "transparent",
+          borderLeft: isPlaying
+            ? `4px solid ${COLORS.PLAYING}`
+            : isStartCursor
+              ? `4px solid ${COLORS.START_CURSOR}`
+              : isBookmarked
+                ? "4px solid #007AFF"
+                : "none",
+          border: isPlaying || isStartCursor || isBookmarked ? undefined : "1px solid rgba(0, 0, 0, 0.04)",
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
         }}
