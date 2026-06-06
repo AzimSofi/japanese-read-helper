@@ -11,6 +11,8 @@ interface ReaderSettingsProps {
   onLineHeightChange: (height: number) => void;
   onDisplayModeChange: (mode: 'collapsed' | 'expanded') => void;
   onAiExplanationChange: (enabled: boolean) => void;
+  audiobookEnabled: boolean;
+  onAudiobookChange: (enabled: boolean) => void;
 }
 
 function sliderGradient(value: number, min: number, max: number): string {
@@ -27,6 +29,8 @@ export default function ReaderSettings({
   onLineHeightChange,
   onDisplayModeChange,
   onAiExplanationChange,
+  audiobookEnabled,
+  onAudiobookChange,
 }: ReaderSettingsProps) {
   return (
     <div className="space-y-6">
@@ -99,6 +103,21 @@ export default function ReaderSettings({
           <button
             className={`apple-toggle ${aiExplanationEnabled ? 'on' : ''}`}
             onClick={() => onAiExplanationChange(!aiExplanationEnabled)}
+          >
+            <span className="thumb" />
+          </button>
+        </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-row">
+          <div>
+            <div className="settings-label">Audiobook</div>
+            <div className="settings-sublabel">Read sentences aloud with a player</div>
+          </div>
+          <button
+            className={`apple-toggle ${audiobookEnabled ? 'on' : ''}`}
+            onClick={() => onAudiobookChange(!audiobookEnabled)}
           >
             <span className="thumb" />
           </button>
