@@ -222,6 +222,7 @@ export const COLORS = {
   PRIMARY_DARK: '#0051D5',
   SECONDARY: '#8E8E93',
   SECONDARY_DARK: '#636366',
+  START_CURSOR: '#FF9500',
 } as const;
 
 // CSS変数（インラインスタイルで使用）
