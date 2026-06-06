@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { DARK_COLORS, READER_THEME, TTS_CONFIG } from '@/lib/constants';
 import type { AudioBookContentMode } from '@/lib/types';
 import type { AudioBookStatus } from '@/app/hooks/useAudioBook';
@@ -97,6 +98,19 @@ export default function AudioPlayerBar({
   const progressPercent = total > 0 ? (position / total) * 100 : 0;
   const isPlaying = status === 'playing';
   const isLoading = status === 'loading';
+
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const speedRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!speedOpen) return;
+    const handlePointerDown = (event: MouseEvent) => {
+      if (speedRef.current?.contains(event.target as Node)) return;
+      setSpeedOpen(false);
+    };
+    window.addEventListener('mousedown', handlePointerDown);
+    return () => window.removeEventListener('mousedown', handlePointerDown);
+  }, [speedOpen]);
 
   const ghostButtonStyle: React.CSSProperties = {
     display: 'inline-flex',
@@ -226,29 +240,59 @@ export default function AudioPlayerBar({
           <span style={{ fontSize: 13, color: subtle, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'right' }}>
             {position} / {total}
           </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <input
-              type="range"
-              min={TTS_CONFIG.MIN_SPEED}
-              max={TTS_CONFIG.MAX_SPEED}
-              step={TTS_CONFIG.SPEED_STEP}
-              value={speed}
-              onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
+          <div ref={speedRef} style={{ position: 'relative', display: 'flex' }}>
+            <button
+              onClick={() => setSpeedOpen((open) => !open)}
               aria-label="Playback speed"
-              style={{ width: 100, accentColor: accent, cursor: 'pointer' }}
-            />
-            <span
+              aria-expanded={speedOpen}
               style={{
+                border: 'none',
+                background: speedOpen ? (isDarkMode ? DARK_COLORS.NEUTRAL : '#E5E5EA') : 'none',
+                cursor: 'pointer',
+                color: textColor,
                 fontSize: 13,
                 fontWeight: 600,
-                color: textColor,
                 fontVariantNumeric: 'tabular-nums',
+                padding: '6px 8px',
+                borderRadius: 8,
                 minWidth: 46,
-                textAlign: 'right',
               }}
             >
               {speed.toFixed(2)}x
-            </span>
+            </button>
+            {speedOpen && (
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  right: 0,
+                  marginBottom: 10,
+                  padding: '12px 14px',
+                  borderRadius: 12,
+                  backgroundColor: surface,
+                  border: `1px solid ${isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'}`,
+                  boxShadow: '0 6px 24px rgba(0,0,0,0.18)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 6,
+                }}
+              >
+                <input
+                  type="range"
+                  min={TTS_CONFIG.MIN_SPEED}
+                  max={TTS_CONFIG.MAX_SPEED}
+                  step={TTS_CONFIG.SPEED_STEP}
+                  value={speed}
+                  onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
+                  aria-label="Playback speed"
+                  style={{ width: 140, accentColor: accent, cursor: 'pointer' }}
+                />
+                <span style={{ fontSize: 13, fontWeight: 600, color: textColor, fontVariantNumeric: 'tabular-nums' }}>
+                  {speed.toFixed(2)}x
+                </span>
+              </div>
+            )}
           </div>
           <button
             onClick={onToggleKeyboardMode}
