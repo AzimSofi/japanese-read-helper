@@ -202,7 +202,7 @@ export const TTS_CONFIG = {
   MIN_SPEED: 0.5,
   MAX_SPEED: 2.0,
   DEFAULT_SPEED: 1.0,
-  SPEED_STEP: 0.1,
+  SPEED_STEP: 0.05,
   DEFAULT_VOICE_GENDER: 'FEMALE' as const,
   // Google Cloud TTS日本語音声
   VOICES: {
