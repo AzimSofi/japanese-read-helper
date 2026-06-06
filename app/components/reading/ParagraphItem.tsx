@@ -4,8 +4,9 @@ import React, { useState } from "react";
 import BookmarkUnfilled from "@/app/components/icons/BookmarkUnfilled";
 import BookmarkFilled from "@/app/components/icons/BookmarkFilled";
 import TranslateIcon from "@/app/components/icons/TranslateIcon";
+import StartHereIcon from "@/app/components/icons/StartHereIcon";
 import BookImage from "@/app/components/reading/BookImage";
-import { EXPLANATION_CONFIG } from "@/lib/constants";
+import { COLORS, EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
 
 const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
@@ -23,6 +24,9 @@ interface ParagraphItemProps {
   lineHeight: number;
   imageMap?: Record<string, string>;
   currentPage?: number;
+  audiobookEnabled?: boolean;
+  isStartCursor?: boolean;
+  onStartFromHere?: (unitIndex: number) => void;
 }
 
 const ParagraphItem: React.FC<ParagraphItemProps> = ({
@@ -38,6 +42,9 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   lineHeight,
   imageMap,
   currentPage,
+  audiobookEnabled,
+  isStartCursor,
+  onStartFromHere,
 }) => {
   const [loading, setLoading] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
@@ -293,11 +300,17 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
       <div
         className="p-5 my-3 rounded-xl"
         style={{
-          backgroundColor: isBookmarked
-            ? "rgba(0, 122, 255, 0.03)"
-            : "transparent",
-          borderLeft: isBookmarked ? "4px solid #007AFF" : "none",
-          border: isBookmarked ? undefined : "1px solid rgba(0, 0, 0, 0.04)",
+          backgroundColor: isStartCursor
+            ? "rgba(255, 149, 0, 0.06)"
+            : isBookmarked
+              ? "rgba(0, 122, 255, 0.03)"
+              : "transparent",
+          borderLeft: isStartCursor
+            ? `4px solid ${COLORS.START_CURSOR}`
+            : isBookmarked
+              ? "4px solid #007AFF"
+              : "none",
+          border: isStartCursor || isBookmarked ? undefined : "1px solid rgba(0, 0, 0, 0.04)",
           fontSize: `${fontSize}px`,
           lineHeight: lineHeight,
         }}
@@ -315,6 +328,31 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
           gap: "2px",
         }}
       >
+        {audiobookEnabled && onStartFromHere && globalIndex != null && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onStartFromHere(globalIndex);
+            }}
+            style={buttonBaseStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "rgba(0, 0, 0, 0.04)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "transparent";
+            }}
+            onMouseDown={(e) => {
+              e.currentTarget.style.transform = "scale(0.9)";
+            }}
+            onMouseUp={(e) => {
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+            aria-label="Set audio start here"
+            title="Start audio from here"
+          >
+            <StartHereIcon isActive={isStartCursor} />
+          </button>
+        )}
         <button
           disabled={translating}
           onClick={handleTranslateClick}
