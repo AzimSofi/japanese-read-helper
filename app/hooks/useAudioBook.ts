@@ -70,6 +70,7 @@ export function useAudioBook({
 }: UseAudioBookOptions) {
   const [status, setStatus] = useState<AudioBookStatus>('idle');
   const [index, setIndex] = useState(-1);
+  const [cursor, setCursor] = useState(-1);
   const [speed, setSpeedState] = useState<number>(TTS_CONFIG.DEFAULT_SPEED);
   const [voiceGender, setVoiceGenderState] = useState<TTSVoiceGender>(TTS_CONFIG.DEFAULT_VOICE_GENDER);
 
@@ -77,6 +78,7 @@ export function useAudioBook({
   const playTokenRef = useRef(0);
   const isAutoRef = useRef(false);
   const indexRef = useRef(-1);
+  const cursorRef = useRef(-1);
   const phaseRef = useRef<PlayPart>('main');
   const statusRef = useRef<AudioBookStatus>('idle');
 
@@ -119,6 +121,17 @@ export function useAudioBook({
   const updateIndex = useCallback((next: number) => {
     indexRef.current = next;
     setIndex(next);
+  }, []);
+
+  const setStartCursor = useCallback((unitIndex: number) => {
+    cursorRef.current = unitIndex;
+    setCursor(unitIndex);
+  }, []);
+
+  const clearStartCursor = useCallback(() => {
+    if (cursorRef.current < 0) return;
+    cursorRef.current = -1;
+    setCursor(-1);
   }, []);
 
   const detachAudio = useCallback(() => {
@@ -217,13 +230,15 @@ export function useAudioBook({
     }
     if (token !== playTokenRef.current) return;
     updateStatus('playing');
+    clearStartCursor();
     persistPosition(step.index);
     prefetch(step);
-  }, [advanceAfter, detachAudio, persistPosition, prefetch, updateIndex, updateStatus]);
+  }, [advanceAfter, clearStartCursor, detachAudio, persistPosition, prefetch, updateIndex, updateStatus]);
 
   useEffect(() => { playStepRef.current = playStep; }, [playStep]);
 
   const resolveStartIndex = useCallback(() => {
+    if (cursorRef.current >= 0) return cursorRef.current;
     if (indexRef.current >= 0) return indexRef.current;
     return startIndexRef.current?.() ?? 0;
   }, []);
@@ -246,8 +261,9 @@ export function useAudioBook({
     isAutoRef.current = false;
     phaseRef.current = 'main';
     updateIndex(-1);
+    clearStartCursor();
     updateStatus('idle');
-  }, [detachAudio, updateIndex, updateStatus]);
+  }, [clearStartCursor, detachAudio, updateIndex, updateStatus]);
 
   const togglePlayPause = useCallback(() => {
     if (statusRef.current === 'loading') return;
@@ -308,8 +324,10 @@ export function useAudioBook({
     isAutoRef.current = false;
     phaseRef.current = 'main';
     indexRef.current = -1;
+    cursorRef.current = -1;
     statusRef.current = 'idle';
     setIndex(-1);
+    setCursor(-1);
     setStatus('idle');
   }, [units, detachAudio]);
 
@@ -323,6 +341,7 @@ export function useAudioBook({
   return {
     status,
     index,
+    cursor,
     total: units.length,
     speed,
     togglePlayPause,
@@ -333,6 +352,7 @@ export function useAudioBook({
     previous,
     replay,
     playSub,
+    setStartCursor,
     setSpeed,
   };
 }
