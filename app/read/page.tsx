@@ -319,10 +319,10 @@ function ReaderContent({
     if (!audiobookEnabled || !keyboardMode) return;
 
     const keyActions: Record<string, () => void> = {
-      ArrowDown: togglePlayPause,
+      ArrowUp: togglePlayPause,
       ArrowRight: audioNext,
       ArrowLeft: audioPrev,
-      ArrowUp: audioReplay,
+      ArrowDown: audioReplay,
       '\\': audioPlaySub,
     };
 
