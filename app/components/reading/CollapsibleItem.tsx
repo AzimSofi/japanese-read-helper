@@ -14,6 +14,7 @@ const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
 
 interface CollapsibleItemProps {
   id?: string;
+  globalIndex?: number;
   head: string;
   subItems: string[];
   initialDropdownState?: boolean;
@@ -36,6 +37,7 @@ interface CollapsibleItemProps {
 
 const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
   id,
+  globalIndex,
   head,
   subItems,
   initialDropdownState = false,
@@ -468,7 +470,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
     : "rgba(0, 0, 0, 0.04)";
 
   return (
-    <div className="collapsibleItem" id={id} style={isBookmarked ? { scrollMarginTop: '80px' } : undefined}>
+    <div className="collapsibleItem" id={id} data-global-index={globalIndex} style={{ scrollMarginTop: '80px' }}>
       <div
         className="p-4 my-4 rounded-xl"
         style={{

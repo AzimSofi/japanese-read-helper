@@ -12,6 +12,7 @@ const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
 
 interface ParagraphItemProps {
   id?: string;
+  globalIndex?: number;
   text: string;
   isBookmarked: boolean;
   fileName: string;
@@ -26,6 +27,7 @@ interface ParagraphItemProps {
 
 const ParagraphItem: React.FC<ParagraphItemProps> = ({
   id,
+  globalIndex,
   text,
   isBookmarked,
   fileName,
@@ -287,7 +289,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   };
 
   return (
-    <div className="paragraph-item relative" id={id} style={isBookmarked ? { scrollMarginTop: '80px' } : undefined}>
+    <div className="paragraph-item relative" id={id} data-global-index={globalIndex} style={{ scrollMarginTop: '80px' }}>
       <div
         className="p-5 my-3 rounded-xl"
         style={{
