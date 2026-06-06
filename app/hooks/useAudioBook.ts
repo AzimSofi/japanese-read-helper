@@ -280,23 +280,23 @@ export function useAudioBook({
   }, [pause, resume, resolveStartIndex, playStep]);
 
   const next = useCallback(() => {
-    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
+    const continueAuto = statusRef.current !== 'paused';
     const from = indexRef.current >= 0 ? indexRef.current + 1 : resolveStartIndex();
     const step = stepAtOrAfter(unitsRef.current, from, contentModeRef.current);
-    if (step) playStep(step, keepAuto);
+    if (step) playStep(step, continueAuto);
   }, [resolveStartIndex, playStep]);
 
   const previous = useCallback(() => {
-    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
+    const continueAuto = statusRef.current !== 'paused';
     const from = indexRef.current >= 0 ? indexRef.current - 1 : resolveStartIndex();
     const step = stepAtOrBefore(unitsRef.current, from, contentModeRef.current);
-    if (step) playStep(step, keepAuto);
+    if (step) playStep(step, continueAuto);
   }, [resolveStartIndex, playStep]);
 
   const replay = useCallback(() => {
-    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
+    const continueAuto = statusRef.current !== 'paused';
     const step = stepAtOrAfter(unitsRef.current, resolveStartIndex(), contentModeRef.current);
-    if (step) playStep(step, keepAuto);
+    if (step) playStep(step, continueAuto);
   }, [resolveStartIndex, playStep]);
 
   const playSub = useCallback(() => {
@@ -304,8 +304,8 @@ export function useAudioBook({
     const units2 = unitsRef.current;
     if (targetIndex < 0 || targetIndex >= units2.length) return;
     if (!partText(units2[targetIndex], 'sub')) return;
-    const keepAuto = isAutoRef.current && statusRef.current !== 'paused';
-    playStep({ index: targetIndex, part: 'sub' }, keepAuto);
+    const continueAuto = statusRef.current !== 'paused';
+    playStep({ index: targetIndex, part: 'sub' }, continueAuto);
   }, [resolveStartIndex, playStep]);
 
   const setSpeed = useCallback((value: number) => {
