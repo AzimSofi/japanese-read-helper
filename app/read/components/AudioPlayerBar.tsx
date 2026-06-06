@@ -1,10 +1,8 @@
 'use client';
 
-import { DARK_COLORS, READER_THEME } from '@/lib/constants';
+import { DARK_COLORS, READER_THEME, TTS_CONFIG } from '@/lib/constants';
 import type { AudioBookContentMode } from '@/lib/types';
 import type { AudioBookStatus } from '@/app/hooks/useAudioBook';
-
-const SPEED_PRESETS = [0.75, 1.0, 1.25, 1.5];
 
 const CONTENT_MODES: { value: AudioBookContentMode; label: string }[] = [
   { value: 'main', label: 'Main' },
@@ -71,12 +69,6 @@ function KeyboardGlyph() {
       <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" strokeLinecap="round" />
     </svg>
   );
-}
-
-function nextSpeed(current: number): number {
-  const presetIndex = SPEED_PRESETS.indexOf(current);
-  if (presetIndex === -1) return 1.0;
-  return SPEED_PRESETS[(presetIndex + 1) % SPEED_PRESETS.length];
 }
 
 export default function AudioPlayerBar({
@@ -234,23 +226,30 @@ export default function AudioPlayerBar({
           <span style={{ fontSize: 13, color: subtle, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'right' }}>
             {position} / {total}
           </span>
-          <button
-            onClick={() => onSpeedChange(nextSpeed(speed))}
-            aria-label="Playback speed"
-            style={{
-              border: 'none',
-              background: 'none',
-              cursor: 'pointer',
-              color: textColor,
-              fontSize: 13,
-              fontWeight: 600,
-              padding: '6px 8px',
-              borderRadius: 8,
-              minWidth: 46,
-            }}
-          >
-            {speed.toFixed(2).replace(/0$/, '')}x
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input
+              type="range"
+              min={TTS_CONFIG.MIN_SPEED}
+              max={TTS_CONFIG.MAX_SPEED}
+              step={TTS_CONFIG.SPEED_STEP}
+              value={speed}
+              onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
+              aria-label="Playback speed"
+              style={{ width: 100, accentColor: accent, cursor: 'pointer' }}
+            />
+            <span
+              style={{
+                fontSize: 13,
+                fontWeight: 600,
+                color: textColor,
+                fontVariantNumeric: 'tabular-nums',
+                minWidth: 46,
+                textAlign: 'right',
+              }}
+            >
+              {speed.toFixed(2)}x
+            </span>
+          </div>
           <button
             onClick={onToggleKeyboardMode}
             aria-label="Toggle keyboard control mode"
