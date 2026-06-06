@@ -209,13 +209,8 @@ function ReaderContent({
     return playableUnits.slice(start, end).map(unit => stripFurigana(unit.main));
   }, [playableUnits, currentPage]);
 
-  const bookmarkPage = useMemo(() => {
-    if (!bookmarkText) return null;
-
-    const match = bookmarkText.match(/^page:(\d+)$/);
-    if (match) {
-      return parseInt(match[1], 10);
-    }
+  const bookmarkItemIndex = useMemo(() => {
+    if (!bookmarkText || /^page:\d+$/.test(bookmarkText)) return null;
 
     const normalizedBookmark = stripFurigana(bookmarkText).replace(/[\r\n]/g, '').trim();
     if (!normalizedBookmark) return null;
@@ -224,19 +219,30 @@ function ReaderContent({
       unit => stripFurigana(unit.main).replace(/[\r\n]/g, '').trim() === normalizedBookmark
     );
 
-    if (itemIndex === -1) return null;
-
-    return Math.floor(itemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+    return itemIndex === -1 ? null : itemIndex;
   }, [bookmarkText, playableUnits]);
 
-  const getStartIndex = useCallback(
-    () => (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE,
-    [currentPage]
-  );
+  const bookmarkPage = useMemo(() => {
+    if (!bookmarkText) return null;
+
+    const match = bookmarkText.match(/^page:(\d+)$/);
+    if (match) return parseInt(match[1], 10);
+
+    if (bookmarkItemIndex == null) return null;
+    return Math.floor(bookmarkItemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+  }, [bookmarkText, bookmarkItemIndex]);
+
+  const getStartIndex = useCallback(() => {
+    const pageTop = (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+    if (bookmarkItemIndex == null) return pageTop;
+    const bookmarkPageForIndex = Math.floor(bookmarkItemIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
+    return bookmarkPageForIndex === currentPage ? bookmarkItemIndex : pageTop;
+  }, [currentPage, bookmarkItemIndex]);
 
   const {
     status: audioStatus,
     index: audioIndex,
+    cursor: audioStartCursor,
     total: audioTotal,
     speed: audioSpeed,
     togglePlayPause,
@@ -244,6 +250,7 @@ function ReaderContent({
     previous: audioPrev,
     replay: audioReplay,
     playSub: audioPlaySub,
+    setStartCursor,
     setSpeed: setAudioSpeed,
     stop: stopAudioBook,
   } = useAudioBook({
@@ -581,6 +588,9 @@ function ReaderContent({
           onBookmarkSuccess={refetchBookmark}
           onSentenceClick={handleSentenceClick}
           imageMap={imageMap}
+          audiobookEnabled={audiobookEnabled}
+          startCursorIndex={audioStartCursor}
+          onStartFromHere={setStartCursor}
         />
 
         {totalPages > 1 && (
