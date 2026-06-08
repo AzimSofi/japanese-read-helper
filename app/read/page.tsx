@@ -333,7 +333,7 @@ function ReaderContent({
     if (!unit) return;
     const page = Math.floor(audioIndex / PAGINATION_CONFIG.ITEMS_PER_PAGE) + 1;
     try {
-      const res = await fetch('/api/write-bookmark', {
+      const res = await fetch(API_ROUTES.WRITE_BOOKMARK, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ target: fullFilePath, content: unit.main, page }),
