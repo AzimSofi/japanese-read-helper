@@ -256,8 +256,6 @@ function ReaderContent({
   } = useAudioBook({
     units: playableUnits,
     contentMode,
-    fileName: fileNameParam || undefined,
-    directory: directoryParam || undefined,
     getStartIndex,
   });
 
