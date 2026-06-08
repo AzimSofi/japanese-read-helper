@@ -138,3 +138,27 @@ export function isOrphanedDialogue(line: string): boolean {
   // 日本語の対話マーカーを含む場合は孤立した対話の可能性がある
   return DIALOGUE_MARKERS.some((marker) => line.includes(marker));
 }
+
+/**
+ * AIが整形フォーマット（< 原文 >> 要約）の外で出力する非コンテンツ行かどうかを確認します
+ * （区切り線、編集注記、要約作業そのものを説明する前置き文）
+ * これらは表示対象ではなく、警告ログからも除外する
+ */
+export function isAiMetaLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (trimmed === '') {
+    return false;
+  }
+  // 区切り線（---、*** など）
+  if (/^[-―ー─_*]{3,}$/.test(trimmed)) {
+    return true;
+  }
+  // 全体が括弧で囲まれた編集注記（（※中略：...） など）
+  if (/^[（(].*※.*[)）]$/.test(trimmed)) {
+    return true;
+  }
+  // 要約・平易化の作業を説明するAIの前置き文
+  const describesTask = /要約|平易|まとめ/.test(trimmed);
+  const reportsCompletion = /(しました|します|まとめました|ています)/.test(trimmed);
+  return describesTask && reportsCompletion;
+}
