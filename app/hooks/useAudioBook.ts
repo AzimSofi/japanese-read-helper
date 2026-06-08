@@ -14,11 +14,11 @@ interface PlayStep {
   part: PlayPart;
 }
 
+const MAX_CONSECUTIVE_FAILURES = 3;
+
 interface UseAudioBookOptions {
   units: PlayableUnit[];
   contentMode: AudioBookContentMode;
-  fileName?: string;
-  directory?: string;
   onEnd?: () => void;
   getStartIndex?: () => number;
 }
@@ -63,8 +63,6 @@ function stepAfter(units: PlayableUnit[], step: PlayStep, mode: AudioBookContent
 export function useAudioBook({
   units,
   contentMode,
-  fileName,
-  directory,
   onEnd,
   getStartIndex,
 }: UseAudioBookOptions) {
@@ -88,15 +86,14 @@ export function useAudioBook({
   const voiceRef = useRef(voiceGender);
   const startIndexRef = useRef(getStartIndex);
   const onEndRef = useRef(onEnd);
-  const fileRef = useRef({ fileName, directory });
   const playStepRef = useRef<(step: PlayStep, isAuto: boolean) => void>(() => {});
+  const consecutiveFailuresRef = useRef(0);
 
   useEffect(() => { contentModeRef.current = contentMode; }, [contentMode]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { voiceRef.current = voiceGender; }, [voiceGender]);
   useEffect(() => { startIndexRef.current = getStartIndex; }, [getStartIndex]);
   useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
-  useEffect(() => { fileRef.current = { fileName, directory }; }, [fileName, directory]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -142,13 +139,6 @@ export function useAudioBook({
     audio.pause();
     audio.src = '';
     audioRef.current = null;
-  }, []);
-
-  const persistPosition = useCallback((unitIndex: number) => {
-    const { fileName: storedFile, directory: storedDir } = fileRef.current;
-    if (typeof window === 'undefined' || !storedFile || unitIndex < 0) return;
-    const key = `${STORAGE_KEYS.TTS_LAST_POSITION}_${storedFile}_${storedDir || ''}`;
-    localStorage.setItem(key, JSON.stringify({ itemIndex: unitIndex, timestamp: Date.now() }));
   }, []);
 
   const prefetch = useCallback((step: PlayStep) => {
@@ -198,6 +188,13 @@ export function useAudioBook({
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook TTS fetch failed:', error);
+      // Skip a few bad clips rather than ending the whole session on one transient failure.
+      if (isAutoRef.current && consecutiveFailuresRef.current < MAX_CONSECUTIVE_FAILURES) {
+        consecutiveFailuresRef.current += 1;
+        advanceAfter(token);
+        return;
+      }
+      consecutiveFailuresRef.current = 0;
       isAutoRef.current = false;
       updateStatus('idle');
       return;
@@ -230,10 +227,10 @@ export function useAudioBook({
     }
     if (token !== playTokenRef.current) return;
     updateStatus('playing');
+    consecutiveFailuresRef.current = 0;
     clearStartCursor();
-    persistPosition(step.index);
     prefetch(step);
-  }, [advanceAfter, clearStartCursor, detachAudio, persistPosition, prefetch, updateIndex, updateStatus]);
+  }, [advanceAfter, clearStartCursor, detachAudio, prefetch, updateIndex, updateStatus]);
 
   useEffect(() => { playStepRef.current = playStep; }, [playStep]);
 
