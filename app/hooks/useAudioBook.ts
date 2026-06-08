@@ -146,7 +146,7 @@ export function useAudioBook({
     if (!next) return;
     const unit = unitsRef.current[next.index];
     const text = next.part === 'sub' ? unit.sub : unit.main;
-    fetchTTS({ text: text ?? '', speed: speedRef.current, voiceGender: voiceRef.current }).catch(() => {});
+    fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current }).catch(() => {});
   }, []);
 
   const advanceAfter = useCallback((token: number) => {
@@ -184,7 +184,7 @@ export function useAudioBook({
 
     let audioBase64: string | null = null;
     try {
-      audioBase64 = await fetchTTS({ text: text ?? '', speed: speedRef.current, voiceGender: voiceRef.current });
+      audioBase64 = await fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current });
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook TTS fetch failed:', error);
@@ -207,7 +207,9 @@ export function useAudioBook({
 
     detachAudio();
     const audio = new Audio(`data:audio/mp3;base64,${audioBase64}`);
-    audio.playbackRate = 1;
+    // Speed is applied client-side via playbackRate, so one cached clip serves every speed and changes are instant.
+    audio.preservesPitch = true;
+    audio.playbackRate = speedRef.current;
     audio.onended = () => advanceAfter(token);
     audio.onerror = () => {
       if (token !== playTokenRef.current) return;
@@ -309,6 +311,7 @@ export function useAudioBook({
     const clamped = Math.max(TTS_CONFIG.MIN_SPEED, Math.min(TTS_CONFIG.MAX_SPEED, value));
     speedRef.current = clamped;
     setSpeedState(clamped);
+    if (audioRef.current) audioRef.current.playbackRate = clamped;
     if (typeof window !== 'undefined') {
       localStorage.setItem(STORAGE_KEYS.TTS_SPEED, clamped.toString());
     }
