@@ -145,20 +145,27 @@ export function isOrphanedDialogue(line: string): boolean {
  * これらは表示対象ではなく、警告ログからも除外する
  */
 export function isAiMetaLine(line: string): boolean {
-  const trimmed = line.trim();
-  if (trimmed === '') {
+  // ルビは語単位で分割されるため、アンカー語（「日本語学習者」など）が
+  // タグで途切れないよう、判定前に振り仮名を除いた素の本文に戻す
+  const plain = line
+    .replace(/<rt>.*?<\/rt>/g, '')
+    .replace(/<\/?(?:ruby|rb)>/g, '')
+    .trim();
+  if (plain === '') {
     return false;
   }
   // 区切り線（---、*** など）
-  if (/^[-―ー─_*]{3,}$/.test(trimmed)) {
+  if (/^[-―ー─_*]{3,}$/.test(plain)) {
     return true;
   }
   // 全体が括弧で囲まれた編集注記（（※中略：...） など）
-  if (/^[（(].*※.*[)）]$/.test(trimmed)) {
+  if (/^[（(].*※.*[)）]$/.test(plain)) {
     return true;
   }
-  // 要約・平易化の作業を説明するAIの前置き文
-  const describesTask = /要約|平易|まとめ/.test(trimmed);
-  const reportsCompletion = /(しました|します|まとめました|ています)/.test(trimmed);
-  return describesTask && reportsCompletion;
+  // 要約作業そのものを説明するAIの前置き文。
+  // 「ご提示」「日本語学習者」はプロンプト由来の語で本文には現れないため、
+  // 「要約」を含む一般的な地の文を誤って巻き込まないようアンカーとして併用する
+  const hasPreambleAnchor = /ご提示|日本語学習者/.test(plain);
+  const describesSummaryTask = /要約|平易化/.test(plain);
+  return hasPreambleAnchor && describesSummaryTask;
 }
