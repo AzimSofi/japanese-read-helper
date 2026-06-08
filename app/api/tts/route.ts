@@ -3,28 +3,23 @@ import { TTS_CONFIG } from "@/lib/constants";
 import type { TTSRequest, TTSResponse } from "@/lib/types";
 import { cleanTextForTTS } from "@/lib/utils/ttsTextCleaner";
 
-// Type import only - actual module loaded lazily
-import type { TextToSpeechClient as TTSClientType } from "@google-cloud/text-to-speech";
-
-// Google Cloud TTS クライアント - lazy loaded to save memory
-// The SDK is ~10MB and only loads when TTS is actually used
-let ttsClient: TTSClientType | null = null;
-
-async function getTTSClient(): Promise<TTSClientType> {
-  if (!ttsClient) {
-    // Dynamically import the heavy Google Cloud SDK only when needed
-    const { TextToSpeechClient } = await import("@google-cloud/text-to-speech");
-    ttsClient = new TextToSpeechClient();
-  }
-  return ttsClient;
-}
+const TTS_ENDPOINT = "https://texttospeech.googleapis.com/v1/text:synthesize";
 
 /**
  * Text-to-Speech APIエンドポイント
  * テキストを受け取り、音声データ(base64)を返す
+ * Google Cloud TTS REST APIをAPIキーで直接呼び出す
  */
 export async function POST(request: Request) {
   const startTime = Date.now();
+
+  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { audioContent: '', message: 'GOOGLE_TTS_API_KEY が設定されていません。' },
+      { status: 500 }
+    );
+  }
 
   try {
     const body: TTSRequest = await request.json();
@@ -37,7 +32,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // テキストをTTS用にクリーンアップ
     const cleanedText = cleanTextForTTS(text);
 
     if (!cleanedText) {
@@ -49,35 +43,43 @@ export async function POST(request: Request) {
 
     console.log(`[${new Date().toISOString()}] TTS リクエスト受信 - 文字数: ${cleanedText.length}, 速度: ${speed}, 音声: ${voiceGender}`);
 
-    // 音声名を選択
     const voiceName = voiceGender === 'MALE'
       ? TTS_CONFIG.VOICES.MALE
       : TTS_CONFIG.VOICES.FEMALE;
 
-    const client = await getTTSClient();
-
-    const [response] = await client.synthesizeSpeech({
-      input: { text: cleanedText },
-      voice: {
-        languageCode: TTS_CONFIG.LANGUAGE_CODE,
-        name: voiceName,
-      },
-      audioConfig: {
-        audioEncoding: 'MP3',
-        speakingRate: speed,
-        pitch: 0, // デフォルトピッチ
-      },
+    const response = await fetch(`${TTS_ENDPOINT}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        input: { text: cleanedText },
+        voice: {
+          languageCode: TTS_CONFIG.LANGUAGE_CODE,
+          name: voiceName,
+        },
+        audioConfig: {
+          audioEncoding: 'MP3',
+          speakingRate: speed,
+          pitch: 0,
+        },
+      }),
     });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error('TTS生成中にエラーが発生しました:', response.status, errorBody);
+      return NextResponse.json(
+        { audioContent: '', message: `Google TTS エラー (${response.status})` },
+        { status: 502 }
+      );
+    }
+
+    // REST APIはaudioContentを既にbase64で返すため変換不要
+    const data: { audioContent?: string } = await response.json();
 
     console.log(`[${new Date().toISOString()}] TTS 生成完了。経過時間: ${Date.now() - startTime}ms`);
 
-    // 音声データをbase64に変換
-    const audioContent = response.audioContent
-      ? Buffer.from(response.audioContent).toString('base64')
-      : '';
-
     const result: TTSResponse = {
-      audioContent,
+      audioContent: data.audioContent ?? '',
       message: '音声を生成しました',
     };
 
@@ -86,17 +88,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('TTS生成中にエラーが発生しました:', error);
 
-    // 認証エラーの場合は特別なメッセージ
     const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
-    const isAuthError = errorMessage.includes('Could not load the default credentials');
 
     return NextResponse.json(
-      {
-        audioContent: '',
-        message: isAuthError
-          ? 'Google Cloud認証が設定されていません。GOOGLE_APPLICATION_CREDENTIALS環境変数を設定してください。'
-          : errorMessage,
-      },
+      { audioContent: '', message: errorMessage },
       { status: 500 }
     );
   }
