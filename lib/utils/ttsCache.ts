@@ -50,9 +50,13 @@ async function synthesize({ text, speed, voiceGender }: FetchTTSParams): Promise
  * Concurrent requests for the same key share a single network call.
  */
 export async function fetchTTS(params: FetchTTSParams): Promise<string | null> {
-  if (!cleanTextForTTS(params.text)) return null;
+  const cleanedText = cleanTextForTTS(params.text);
+  if (!cleanedText) return null;
 
-  const key = cacheKey(params);
+  // Key and synthesize on the cleaned text so inputs differing only in furigana/whitespace
+  // hit the same cache entry and the server is not asked to clean it a second time.
+  const cleanedParams = { ...params, text: cleanedText };
+  const key = cacheKey(cleanedParams);
   const cached = audioByKey.get(key);
   if (cached) {
     rememberAudio(key, cached);
@@ -62,7 +66,7 @@ export async function fetchTTS(params: FetchTTSParams): Promise<string | null> {
   const pending = inFlightByKey.get(key);
   if (pending) return pending;
 
-  const request = synthesize(params)
+  const request = synthesize(cleanedParams)
     .then((audioBase64) => {
       inFlightByKey.delete(key);
       rememberAudio(key, audioBase64);
