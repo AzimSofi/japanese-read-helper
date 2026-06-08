@@ -169,6 +169,20 @@ export function useAudioBook({
     playStepRef.current(next, true);
   }, [updateStatus]);
 
+  // A clip failing (fetch error or decode/play error) is per-clip and usually transient,
+  // so skip and keep going while under the limit; only stop once failures pile up.
+  const skipOrEndOnFailure = useCallback((token: number) => {
+    if (token !== playTokenRef.current) return;
+    if (isAutoRef.current && consecutiveFailuresRef.current < MAX_CONSECUTIVE_FAILURES) {
+      consecutiveFailuresRef.current += 1;
+      advanceAfter(token);
+      return;
+    }
+    consecutiveFailuresRef.current = 0;
+    isAutoRef.current = false;
+    updateStatus('idle');
+  }, [advanceAfter, updateStatus]);
+
   const playStep = useCallback(async (step: PlayStep, isAuto: boolean) => {
     const units2 = unitsRef.current;
     if (step.index < 0 || step.index >= units2.length) return;
@@ -188,15 +202,7 @@ export function useAudioBook({
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook TTS fetch failed:', error);
-      // Skip a few bad clips rather than ending the whole session on one transient failure.
-      if (isAutoRef.current && consecutiveFailuresRef.current < MAX_CONSECUTIVE_FAILURES) {
-        consecutiveFailuresRef.current += 1;
-        advanceAfter(token);
-        return;
-      }
-      consecutiveFailuresRef.current = 0;
-      isAutoRef.current = false;
-      updateStatus('idle');
+      skipOrEndOnFailure(token);
       return;
     }
     if (token !== playTokenRef.current) return;
@@ -211,8 +217,8 @@ export function useAudioBook({
     audio.onended = () => advanceAfter(token);
     audio.onerror = () => {
       if (token !== playTokenRef.current) return;
-      isAutoRef.current = false;
-      updateStatus('idle');
+      console.error('Audiobook clip failed to decode/play');
+      skipOrEndOnFailure(token);
     };
     audioRef.current = audio;
 
@@ -230,7 +236,7 @@ export function useAudioBook({
     consecutiveFailuresRef.current = 0;
     clearStartCursor();
     prefetch(step);
-  }, [advanceAfter, clearStartCursor, detachAudio, prefetch, updateIndex, updateStatus]);
+  }, [advanceAfter, clearStartCursor, detachAudio, prefetch, skipOrEndOnFailure, updateIndex, updateStatus]);
 
   useEffect(() => { playStepRef.current = playStep; }, [playStep]);
 
@@ -248,8 +254,17 @@ export function useAudioBook({
 
   const resume = useCallback(() => {
     if (statusRef.current !== 'paused') return;
-    audioRef.current?.play().catch(() => {});
-    updateStatus('playing');
+    const audio = audioRef.current;
+    if (!audio) {
+      updateStatus('idle');
+      return;
+    }
+    audio.play()
+      .then(() => updateStatus('playing'))
+      .catch((error) => {
+        console.error('Audiobook resume failed:', error);
+        updateStatus('idle');
+      });
   }, [updateStatus]);
 
   const stop = useCallback(() => {
