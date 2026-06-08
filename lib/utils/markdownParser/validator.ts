@@ -138,3 +138,34 @@ export function isOrphanedDialogue(line: string): boolean {
   // 日本語の対話マーカーを含む場合は孤立した対話の可能性がある
   return DIALOGUE_MARKERS.some((marker) => line.includes(marker));
 }
+
+/**
+ * AIが整形フォーマット（< 原文 >> 要約）の外で出力する非コンテンツ行かどうかを確認します
+ * （区切り線、編集注記、要約作業そのものを説明する前置き文）
+ * これらは表示対象ではなく、警告ログからも除外する
+ */
+export function isAiMetaLine(line: string): boolean {
+  // ルビは語単位で分割されるため、アンカー語（「日本語学習者」など）が
+  // タグで途切れないよう、判定前に振り仮名を除いた素の本文に戻す
+  const plain = line
+    .replace(/<rt>.*?<\/rt>/g, '')
+    .replace(/<\/?(?:ruby|rb)>/g, '')
+    .trim();
+  if (plain === '') {
+    return false;
+  }
+  // 区切り線（---、*** など）
+  if (/^[-―ー─_*]{3,}$/.test(plain)) {
+    return true;
+  }
+  // 全体が括弧で囲まれた編集注記（（※中略：...） など）
+  if (/^[（(].*※.*[)）]$/.test(plain)) {
+    return true;
+  }
+  // 要約作業そのものを説明するAIの前置き文。
+  // 「ご提示」「日本語学習者」はプロンプト由来の語で本文には現れないため、
+  // 「要約」を含む一般的な地の文を誤って巻き込まないようアンカーとして併用する
+  const hasPreambleAnchor = /ご提示|日本語学習者/.test(plain);
+  const describesSummaryTask = /要約|平易化/.test(plain);
+  return hasPreambleAnchor && describesSummaryTask;
+}

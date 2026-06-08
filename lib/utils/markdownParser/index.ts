@@ -9,6 +9,7 @@ import {
   isEmptyLineBeforeSubItems,
   isStandaloneHeading,
   isOrphanedDialogue,
+  isAiMetaLine,
 } from './validator';
 import {
   removeHeadingPrefix,
@@ -138,7 +139,7 @@ export function parseMarkdown(text: string, isError: boolean = false): ParsedIte
         else if (isOrphanedDialogue(line)) {
           console.warn('Orphaned dialogue detected:', line);
         }
-        else {
+        else if (!isAiMetaLine(line)) {
           console.log('Unexpected line format:', line);
         }
       }
