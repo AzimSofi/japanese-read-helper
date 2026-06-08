@@ -35,6 +35,10 @@ export default $config({
       name: `${ssmPrefix}-GOOGLE_TRANSLATE_API_KEY`,
       withDecryption: true,
     });
+    const googleTtsApiKey = await aws.ssm.getParameter({
+      name: `${ssmPrefix}-GOOGLE_TTS_API_KEY`,
+      withDecryption: true,
+    });
 
     const web = new sst.aws.Nextjs("JapaneseReadHelper", {
       openNextVersion: "3.4.1",
@@ -44,6 +48,7 @@ export default $config({
         DATABASE_URL: databaseUrl.value,
         POSTGRES_URL: databaseUrl.value,
         GOOGLE_TRANSLATE_API_KEY: googleTranslateApiKey.value,
+        GOOGLE_TTS_API_KEY: googleTtsApiKey.value,
       },
       warm: 1,
     });
