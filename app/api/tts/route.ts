@@ -4,6 +4,7 @@ import type { TTSRequest, TTSResponse } from "@/lib/types";
 import { cleanTextForTTS } from "@/lib/utils/ttsTextCleaner";
 
 const TTS_ENDPOINT = "https://texttospeech.googleapis.com/v1/text:synthesize";
+const TTS_TIMEOUT_MS = 15000;
 
 /**
  * Text-to-Speech APIエンドポイント
@@ -46,10 +47,15 @@ export async function POST(request: Request) {
     const voiceName = voiceGender === 'MALE'
       ? TTS_CONFIG.VOICES.MALE
       : TTS_CONFIG.VOICES.FEMALE;
+    const speakingRate = Math.min(TTS_CONFIG.MAX_SPEED, Math.max(TTS_CONFIG.MIN_SPEED, speed));
 
-    const response = await fetch(`${TTS_ENDPOINT}?key=${apiKey}`, {
+    const response = await fetch(TTS_ENDPOINT, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+      },
+      signal: AbortSignal.timeout(TTS_TIMEOUT_MS),
       body: JSON.stringify({
         input: { text: cleanedText },
         voice: {
@@ -58,7 +64,7 @@ export async function POST(request: Request) {
         },
         audioConfig: {
           audioEncoding: 'MP3',
-          speakingRate: speed,
+          speakingRate,
           pitch: 0,
         },
       }),
@@ -87,6 +93,13 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('TTS生成中にエラーが発生しました:', error);
+
+    if (error instanceof Error && error.name === 'TimeoutError') {
+      return NextResponse.json(
+        { audioContent: '', message: 'Google TTS がタイムアウトしました' },
+        { status: 504 }
+      );
+    }
 
     const errorMessage = error instanceof Error ? error.message : '不明なエラーが発生しました';
 
