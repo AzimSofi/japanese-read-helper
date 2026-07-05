@@ -30,7 +30,9 @@ export async function GET(request: Request): Promise<NextResponse<RubyRegistryRe
     }, { status: 400 });
   }
 
-  // Guests may only read the vocabulary index of allowlisted preview books.
+  // Guests may read the vocabulary index of an allowlisted preview book. This is
+  // the whole-book ruby registry (a kanji->reading index), intentionally not
+  // capped to the 5-page text preview -- it is derived metadata, not prose.
   if (!(await isAuthenticated()) && !isPublicDirectory(`${directory}/${bookName}`)) {
     return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
   }

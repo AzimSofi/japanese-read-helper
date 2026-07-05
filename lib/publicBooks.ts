@@ -14,7 +14,7 @@ export interface PublicBook {
 
 export const DEFAULT_PREVIEW_PAGES = 5;
 
-export const PUBLIC_BOOKS: PublicBook[] = [
+export const PUBLIC_BOOKS: readonly PublicBook[] = [
   {
     directory: 'bookv2-furigana/アドラー心理学を職場に取り入れてみた アドラー心理学を実践で学ぶ',
     fileName: 'アドラー心理学を職場に取り入れてみた アドラー心理学を実践で学ぶ-rephrase-furigana',
