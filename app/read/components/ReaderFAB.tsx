@@ -11,6 +11,9 @@ interface ReaderFABProps {
   onCopyPageRange: () => void;
   onToggleDarkMode: () => void;
   onToggleRubyLookup: () => void;
+  onPrioritize: () => void;
+  isPrioritizing?: boolean;
+  hasPriority?: boolean;
   isFuriganaEnabled: boolean;
   showRephrase: boolean;
   isDarkMode: boolean;
@@ -60,6 +63,9 @@ export default function ReaderFAB({
   onCopyPageRange,
   onToggleDarkMode,
   onToggleRubyLookup,
+  onPrioritize,
+  isPrioritizing,
+  hasPriority,
   isFuriganaEnabled,
   showRephrase,
   isDarkMode,
@@ -244,6 +250,22 @@ export default function ReaderFAB({
       action: onCopyPageRange,
     },
     {
+      icon: isPrioritizing ? (
+        <span
+          className="w-[16px] h-[16px] animate-spin"
+          style={{ borderWidth: 2, borderStyle: 'solid', borderColor: 'currentColor', borderTopColor: 'transparent', borderRadius: '50%' }}
+        />
+      ) : (
+        <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+        </svg>
+      ),
+      label: hasPriority ? 'Clear Priority' : isPrioritizing ? 'Analyzing...' : 'Prioritize',
+      action: onPrioritize,
+      active: Boolean(hasPriority),
+      beta: true,
+    },
+    {
       icon: <span className="text-xs font-semibold">R</span>,
       label: showRephrase ? 'Hide Rephrase' : 'Show Rephrase',
       action: onToggleRephrase,
@@ -368,6 +390,14 @@ export default function ReaderFAB({
                       {btn.icon}
                     </span>
                     <span className="text-[13px] font-medium whitespace-nowrap">{btn.label}</span>
+                    {btn.beta && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#FF9500', color: '#FFFFFF', letterSpacing: '0.5px' }}
+                      >
+                        BETA
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

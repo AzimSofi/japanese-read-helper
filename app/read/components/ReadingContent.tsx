@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { parseReaderItems } from "@/lib/utils/buildPlayableUnits";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
+import { PRIORITY_LEVELS } from "@/lib/constants";
 
 const CollapsibleItem = dynamic(
   () => import("@/app/components/reading/CollapsibleItem"),
@@ -37,6 +38,7 @@ interface ReadingContentProps {
   startCursorIndex?: number;
   playingIndex?: number;
   onStartFromHere?: (unitIndex: number) => void;
+  priorityScores?: Record<number, number>;
 }
 
 function detectContentType(text: string): ContentType {
@@ -52,6 +54,47 @@ function detectContentType(text: string): ContentType {
 function normalizeForComparison(text: string): string {
   const stripped = stripFurigana(text);
   return stripped.replace(/[\r\n]/g, "").trim();
+}
+
+function priorityWrapperStyle(score: number): CSSProperties {
+  const level = PRIORITY_LEVELS[score];
+  if (!level) return {};
+  return {
+    position: "relative",
+    borderLeft: `${level.border}px solid ${level.color}`,
+    paddingLeft: 26,
+    opacity: level.opacity,
+    borderRadius: 4,
+    transition: "opacity 200ms ease",
+  };
+}
+
+function PriorityBadge({ score }: { score: number }) {
+  const level = PRIORITY_LEVELS[score];
+  if (!level) return null;
+  return (
+    <span
+      title={`Importance ${score}/5 - ${level.label}`}
+      style={{
+        position: "absolute",
+        left: 4,
+        top: 4,
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        backgroundColor: level.color,
+        color: "#FFFFFF",
+        fontSize: 10,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+      }}
+    >
+      {score}
+    </span>
+  );
 }
 
 export default function ReadingContent({
@@ -74,6 +117,7 @@ export default function ReadingContent({
   startCursorIndex,
   playingIndex,
   onStartFromHere,
+  priorityScores,
 }: ReadingContentProps) {
   const contentType = useMemo(() => detectContentType(content), [content]);
 
@@ -112,8 +156,9 @@ export default function ReadingContent({
             bookmarkText && normalizedHead === normalizedBookmark
           );
           const globalIndex = (currentPage - 1) * itemsPerPage + index;
+          const priorityScore = priorityScores?.[globalIndex];
 
-          return (
+          const itemEl = (
             <CollapsibleItem
               key={`${currentPage}-${index}`}
               {...(isBookmarked ? { id: "bookmark" } : {})}
@@ -136,6 +181,14 @@ export default function ReadingContent({
               onStartFromHere={onStartFromHere}
             />
           );
+
+          if (priorityScore === undefined) return itemEl;
+          return (
+            <div key={`priority-${currentPage}-${index}`} style={priorityWrapperStyle(priorityScore)}>
+              <PriorityBadge score={priorityScore} />
+              {itemEl}
+            </div>
+          );
         })}
       </div>
     );
@@ -151,8 +204,9 @@ export default function ReadingContent({
           bookmarkText && normalizedText === normalizedBookmark
         );
         const globalIndex = (currentPage - 1) * itemsPerPage + index;
+        const priorityScore = priorityScores?.[globalIndex];
 
-        return (
+        const itemEl = (
           <ParagraphItem
             key={`${currentPage}-${index}`}
             {...(isBookmarked ? { id: "bookmark" } : {})}
@@ -172,6 +226,14 @@ export default function ReadingContent({
             isPlaying={playingIndex === globalIndex}
             onStartFromHere={onStartFromHere}
           />
+        );
+
+        if (priorityScore === undefined) return itemEl;
+        return (
+          <div key={`priority-${currentPage}-${index}`} style={priorityWrapperStyle(priorityScore)}>
+            <PriorityBadge score={priorityScore} />
+            {itemEl}
+          </div>
         );
       })}
     </div>
