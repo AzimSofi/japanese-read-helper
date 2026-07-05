@@ -2,10 +2,11 @@ import { STORAGE_KEYS, GUEST_KEY_HEADERS } from '@/lib/constants';
 
 /**
  * Guest bring-your-own API keys. Keys live only in the browser's localStorage
- * and are attached to paid requests via headers. Call sites dispatch
- * GUEST_KEY_REQUIRED_EVENT when the server reports a missing key; the modal host
- * listens for it and, once saved, fires GUEST_KEY_UPDATED_EVENT so the original
- * action can retry.
+ * and are attached to paid requests via headers. When a paid request fails,
+ * call sites use promptGuestKeyOnFailure to open the key modal (GUEST_KEY_REQUIRED_EVENT) --
+ * whether the key was missing or a stored key was rejected. After a key is saved,
+ * GUEST_KEY_UPDATED_EVENT fires; AI explanations re-run automatically, other
+ * actions resume on the next interaction.
  */
 export type GuestKeyKind = 'gemini' | 'tts' | 'translate';
 
@@ -43,4 +44,29 @@ export function guestKeyHeaders(kind: GuestKeyKind): Record<string, string> {
 export function promptGuestKey(kind: GuestKeyKind): void {
   if (typeof window === 'undefined') return;
   window.dispatchEvent(new CustomEvent(GUEST_KEY_REQUIRED_EVENT, { detail: { kind } }));
+}
+
+/**
+ * Handle a failed paid-endpoint response for a guest by opening the key modal:
+ * either the server reported a missing key (401 requiresGuestKey), or a stored
+ * key was rejected (any other failure while a key is set). Signed-in users have
+ * no stored guest key, so this never fires for them. Returns true if it prompted.
+ */
+export async function promptGuestKeyOnFailure(
+  kind: GuestKeyKind,
+  response: Response
+): Promise<boolean> {
+  if (response.status === 401) {
+    const info = await response.json().catch(() => null);
+    if (info?.requiresGuestKey === kind) {
+      promptGuestKey(kind);
+      return true;
+    }
+    return false;
+  }
+  if (getGuestKey(kind)) {
+    promptGuestKey(kind);
+    return true;
+  }
+  return false;
 }

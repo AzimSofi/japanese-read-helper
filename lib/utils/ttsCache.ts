@@ -1,6 +1,7 @@
 import { API_ROUTES, type TTSVoiceGender } from '@/lib/constants';
 import type { TTSRequest, TTSResponse } from '@/lib/types';
 import { cleanTextForTTS } from '@/lib/utils/ttsTextCleaner';
+import { guestKeyHeaders, promptGuestKeyOnFailure } from '@/lib/guestKeys';
 
 interface FetchTTSParams {
   text: string;
@@ -31,10 +32,11 @@ async function synthesize({ text, speed, voiceGender }: FetchTTSParams): Promise
   const body: TTSRequest = { text, speed, voiceGender };
   const response = await fetch(API_ROUTES.TTS, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...guestKeyHeaders('tts') },
     body: JSON.stringify(body),
   });
   if (!response.ok) {
+    await promptGuestKeyOnFailure('tts', response);
     throw new Error(`TTS request failed: ${response.status}`);
   }
   const data: TTSResponse = await response.json();
