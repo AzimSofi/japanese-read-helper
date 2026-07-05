@@ -11,6 +11,7 @@ import {
   STORAGE_KEYS,
   PAGINATION_CONFIG,
   API_ROUTES,
+  type PriorityScore,
 } from '@/lib/constants';
 import ProgressBar from './components/ProgressBar';
 import ReaderFAB from './components/ReaderFAB';
@@ -24,6 +25,7 @@ import { useGuestMode } from '@/app/hooks/useGuestMode';
 import GuestModeBanner from '@/app/components/ui/GuestModeBanner';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { buildPlayableUnits } from '@/lib/utils/buildPlayableUnits';
+import { guestKeyHeaders, promptGuestKeyOnFailure } from '@/lib/guestKeys';
 import { useAudioBook } from '@/app/hooks/useAudioBook';
 import type { AudioBookContentMode } from '@/lib/types';
 
@@ -105,6 +107,10 @@ function ReaderContent({
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [copyRangeOpen, setCopyRangeOpen] = useState(false);
   const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
+
+  const [priorityScores, setPriorityScores] = useState<Record<number, PriorityScore>>({});
+  const [isPrioritizing, setIsPrioritizing] = useState(false);
+  const [prioritizeError, setPrioritizeError] = useState<string | null>(null);
 
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
   const { isGuest } = useGuestMode();
@@ -216,6 +222,56 @@ function ReaderContent({
     const end = start + PAGINATION_CONFIG.ITEMS_PER_PAGE;
     return playableUnits.slice(start, end).map(unit => stripFurigana(unit.main));
   }, [playableUnits, currentPage]);
+
+  // Priority scores are per-page; drop them (and any error) on page/book change.
+  useEffect(() => {
+    setPriorityScores({});
+    setPrioritizeError(null);
+  }, [currentPage, fullFilePath]);
+
+  useEffect(() => {
+    if (!prioritizeError) return;
+    const timer = setTimeout(() => setPrioritizeError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [prioritizeError]);
+
+  const handlePrioritize = useCallback(async () => {
+    if (isPrioritizing || currentPageHeaders.length === 0) return;
+    if (Object.keys(priorityScores).length > 0) {
+      setPriorityScores({});
+      return;
+    }
+
+    setPrioritizeError(null);
+    setIsPrioritizing(true);
+    try {
+      const res = await fetch(API_ROUTES.PRIORITIZE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...guestKeyHeaders('gemini') },
+        body: JSON.stringify({ sentences: currentPageHeaders }),
+      });
+      if (!res.ok) {
+        // Missing/invalid guest key opens the key modal; anything else is a real
+        // failure the reader should see rather than a silent empty result.
+        if (res.status === 401) {
+          await promptGuestKeyOnFailure('gemini', res);
+        } else {
+          setPrioritizeError('Could not analyze this page. Please try again.');
+        }
+        return;
+      }
+      const data = await res.json();
+      const scores = (Array.isArray(data.scores) ? data.scores : []) as PriorityScore[];
+      const start = (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
+      setPriorityScores(
+        Object.fromEntries(scores.map((score, index) => [start + index, score] as const))
+      );
+    } catch {
+      setPrioritizeError('Could not analyze this page. Please try again.');
+    } finally {
+      setIsPrioritizing(false);
+    }
+  }, [currentPageHeaders, currentPage, priorityScores, isPrioritizing]);
 
   const bookmarkItemIndex = useMemo(() => {
     if (!bookmarkText || /^page:\d+$/.test(bookmarkText)) return null;
@@ -585,6 +641,57 @@ function ReaderContent({
         />
       )}
 
+      {isPrioritizing && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: audiobookEnabled ? 150 : 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 60,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '8px 16px',
+            borderRadius: 999,
+            backgroundColor: isDarkMode ? DARK_COLORS.SURFACE : '#FFFFFF',
+            color: isDarkMode ? DARK_COLORS.TEXT : '#1D1D1F',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+            border: isDarkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          <span
+            className="animate-spin"
+            style={{ width: 14, height: 14, borderWidth: 2, borderStyle: 'solid', borderColor: '#FF9500', borderTopColor: 'transparent', borderRadius: '50%' }}
+          />
+          Analyzing importance...
+        </div>
+      )}
+
+      {prioritizeError && !isPrioritizing && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: audiobookEnabled ? 150 : 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 60,
+            padding: '8px 16px',
+            borderRadius: 999,
+            backgroundColor: isDarkMode ? DARK_COLORS.SURFACE : '#FFFFFF',
+            color: '#FF3B30',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+            border: '1px solid rgba(255,59,48,0.3)',
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          {prioritizeError}
+        </div>
+      )}
+
       <ProgressBar progress={progress} />
 
       <ReaderHeader
@@ -625,6 +732,7 @@ function ReaderContent({
           startCursorIndex={audioStartCursor}
           playingIndex={audioStatus === 'idle' ? -1 : audioIndex}
           onStartFromHere={setStartCursor}
+          priorityScores={priorityScores}
         />
 
         {totalPages > 1 && (
@@ -697,6 +805,9 @@ function ReaderContent({
         onCopyPageRange={() => setCopyRangeOpen(true)}
         onToggleDarkMode={handleToggleDarkMode}
         onToggleRubyLookup={() => setRubyLookupOpen(prev => !prev)}
+        onPrioritize={handlePrioritize}
+        isPrioritizing={isPrioritizing}
+        hasPriority={Object.keys(priorityScores).length > 0}
         isFuriganaEnabled={showFurigana}
         showRephrase={showRephrase}
         isDarkMode={isDarkMode}

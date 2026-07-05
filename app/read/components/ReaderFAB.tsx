@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
 
 interface ReaderFABProps {
   onToggleFurigana: () => void;
@@ -11,6 +11,9 @@ interface ReaderFABProps {
   onCopyPageRange: () => void;
   onToggleDarkMode: () => void;
   onToggleRubyLookup: () => void;
+  onPrioritize: () => void;
+  isPrioritizing?: boolean;
+  hasPriority?: boolean;
   isFuriganaEnabled: boolean;
   showRephrase: boolean;
   isDarkMode: boolean;
@@ -18,6 +21,16 @@ interface ReaderFABProps {
   bookmarkPage?: number | null;
   currentPage?: number;
   copyFeedback: boolean;
+}
+
+interface FabMenuButton {
+  icon: ReactNode;
+  label: string;
+  action: () => void;
+  active?: boolean;
+  hidden?: boolean;
+  keepOpen?: boolean;
+  beta?: boolean;
 }
 
 const STORAGE_KEY = 'fab_position';
@@ -60,6 +73,9 @@ export default function ReaderFAB({
   onCopyPageRange,
   onToggleDarkMode,
   onToggleRubyLookup,
+  onPrioritize,
+  isPrioritizing,
+  hasPriority,
   isFuriganaEnabled,
   showRephrase,
   isDarkMode,
@@ -211,7 +227,7 @@ export default function ReaderFAB({
 
   const isOnBookmarkPage = hasBookmark && currentPage === bookmarkPage;
 
-  const fabButtons = [
+  const fabButtons: FabMenuButton[] = [
     {
       icon: (
         <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -242,6 +258,22 @@ export default function ReaderFAB({
       ),
       label: 'Copy Range',
       action: onCopyPageRange,
+    },
+    {
+      icon: isPrioritizing ? (
+        <span
+          className="w-[16px] h-[16px] animate-spin"
+          style={{ borderWidth: 2, borderStyle: 'solid', borderColor: 'currentColor', borderTopColor: 'transparent', borderRadius: '50%' }}
+        />
+      ) : (
+        <svg className="w-[18px] h-[18px]" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z" />
+        </svg>
+      ),
+      label: hasPriority ? 'Clear Priority' : isPrioritizing ? 'Analyzing...' : 'Prioritize',
+      action: onPrioritize,
+      active: Boolean(hasPriority),
+      beta: true,
     },
     {
       icon: <span className="text-xs font-semibold">R</span>,
@@ -368,6 +400,14 @@ export default function ReaderFAB({
                       {btn.icon}
                     </span>
                     <span className="text-[13px] font-medium whitespace-nowrap">{btn.label}</span>
+                    {btn.beta && (
+                      <span
+                        className="text-[9px] font-bold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: '#FF9500', color: '#FFFFFF', letterSpacing: '0.5px' }}
+                      >
+                        BETA
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

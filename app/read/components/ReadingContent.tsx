@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { parseReaderItems } from "@/lib/utils/buildPlayableUnits";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
+import { PRIORITY_LEVELS, type PriorityScore } from "@/lib/constants";
 
 const CollapsibleItem = dynamic(
   () => import("@/app/components/reading/CollapsibleItem"),
@@ -37,6 +38,7 @@ interface ReadingContentProps {
   startCursorIndex?: number;
   playingIndex?: number;
   onStartFromHere?: (unitIndex: number) => void;
+  priorityScores?: Record<number, PriorityScore>;
 }
 
 function detectContentType(text: string): ContentType {
@@ -52,6 +54,45 @@ function detectContentType(text: string): ContentType {
 function normalizeForComparison(text: string): string {
   const stripped = stripFurigana(text);
   return stripped.replace(/[\r\n]/g, "").trim();
+}
+
+function priorityWrapperStyle(score: PriorityScore): CSSProperties {
+  const level = PRIORITY_LEVELS[score];
+  return {
+    position: "relative",
+    borderLeft: `${level.border}px solid ${level.color}`,
+    paddingLeft: 26,
+    opacity: level.opacity,
+    borderRadius: 4,
+    transition: "opacity 200ms ease",
+  };
+}
+
+function PriorityBadge({ score }: { score: PriorityScore }) {
+  const level = PRIORITY_LEVELS[score];
+  return (
+    <span
+      title={`Importance ${score}/5 - ${level.label}`}
+      style={{
+        position: "absolute",
+        left: 4,
+        top: 4,
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        backgroundColor: level.color,
+        color: "#FFFFFF",
+        fontSize: 10,
+        fontWeight: 700,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        lineHeight: 1,
+      }}
+    >
+      {score}
+    </span>
+  );
 }
 
 export default function ReadingContent({
@@ -74,6 +115,7 @@ export default function ReadingContent({
   startCursorIndex,
   playingIndex,
   onStartFromHere,
+  priorityScores,
 }: ReadingContentProps) {
   const contentType = useMemo(() => detectContentType(content), [content]);
 
@@ -112,8 +154,9 @@ export default function ReadingContent({
             bookmarkText && normalizedHead === normalizedBookmark
           );
           const globalIndex = (currentPage - 1) * itemsPerPage + index;
+          const priorityScore = priorityScores?.[globalIndex];
 
-          return (
+          const itemEl = (
             <CollapsibleItem
               key={`${currentPage}-${index}`}
               {...(isBookmarked ? { id: "bookmark" } : {})}
@@ -136,6 +179,18 @@ export default function ReadingContent({
               onStartFromHere={onStartFromHere}
             />
           );
+
+          // Always the same wrapper + key so toggling Prioritize never remounts
+          // the item (which would reset its open/translation state and flash).
+          return (
+            <div
+              key={`${currentPage}-${index}`}
+              style={priorityScore !== undefined ? priorityWrapperStyle(priorityScore) : undefined}
+            >
+              {priorityScore !== undefined && <PriorityBadge score={priorityScore} />}
+              {itemEl}
+            </div>
+          );
         })}
       </div>
     );
@@ -151,8 +206,9 @@ export default function ReadingContent({
           bookmarkText && normalizedText === normalizedBookmark
         );
         const globalIndex = (currentPage - 1) * itemsPerPage + index;
+        const priorityScore = priorityScores?.[globalIndex];
 
-        return (
+        const itemEl = (
           <ParagraphItem
             key={`${currentPage}-${index}`}
             {...(isBookmarked ? { id: "bookmark" } : {})}
@@ -172,6 +228,18 @@ export default function ReadingContent({
             isPlaying={playingIndex === globalIndex}
             onStartFromHere={onStartFromHere}
           />
+        );
+
+        // Always the same wrapper + key so toggling Prioritize never remounts
+        // the item (which would reset its open/translation state and flash).
+        return (
+          <div
+            key={`${currentPage}-${index}`}
+            style={priorityScore !== undefined ? priorityWrapperStyle(priorityScore) : undefined}
+          >
+            {priorityScore !== undefined && <PriorityBadge score={priorityScore} />}
+            {itemEl}
+          </div>
         );
       })}
     </div>
