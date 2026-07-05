@@ -8,6 +8,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { API_ROUTES, STORAGE_KEYS, TTS_CONFIG, type TTSVoiceGender } from '@/lib/constants';
 import type { TTSRequest, TTSResponse } from '@/lib/types';
 import { cleanTextForTTS } from '@/lib/utils/ttsTextCleaner';
+import { guestKeyHeaders, promptGuestKey } from '@/lib/guestKeys';
 
 interface UseTTSOptions {
   onPlayStart?: () => void;
@@ -145,11 +146,19 @@ export function useTTS(options: UseTTSOptions = {}): UseTTSReturn {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...guestKeyHeaders('tts'),
         },
         body: JSON.stringify(requestData),
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const info = await response.json().catch(() => null);
+          if (info?.requiresGuestKey === 'tts') {
+            promptGuestKey('tts');
+            throw new Error('Add your Google TTS API key to play audio in guest mode.');
+          }
+        }
         throw new Error(`TTS生成に失敗しました: ${response.statusText}`);
       }
 

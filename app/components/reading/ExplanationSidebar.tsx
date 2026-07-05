@@ -5,6 +5,7 @@ import { marked } from 'marked';
 import { API_ROUTES, EXPLANATION_CONFIG, EXPLANATION_MODE_CONFIG } from '@/lib/constants';
 import { useExplanationCache } from '@/app/hooks/useExplanationCache';
 import { parseFurigana, segmentsToHTML, stripFurigana } from '@/lib/utils/furiganaParser';
+import { guestKeyHeaders, promptGuestKey, GUEST_KEY_UPDATED_EVENT } from '@/lib/guestKeys';
 import type { ExplanationRequest, ExplanationResponse } from '@/lib/types';
 import type { ExplanationMode } from '@/lib/constants';
 
@@ -60,6 +61,15 @@ export default function ExplanationSidebar({
       document.removeEventListener('keydown', handleEscKey);
     };
   }, [isOpen, onClose]);
+
+  // After a guest saves their API key, retry the explanation automatically.
+  React.useEffect(() => {
+    const handleKeyUpdated = () => {
+      if (isOpen) setForceRegenerate(true);
+    };
+    window.addEventListener(GUEST_KEY_UPDATED_EVENT, handleKeyUpdated);
+    return () => window.removeEventListener(GUEST_KEY_UPDATED_EVENT, handleKeyUpdated);
+  }, [isOpen]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientX);
@@ -126,11 +136,18 @@ export default function ExplanationSidebar({
 
         const response = await fetch(API_ROUTES.EXPLAIN_SENTENCE, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...guestKeyHeaders('gemini') },
           body: JSON.stringify(requestData),
         });
 
         if (!response.ok) {
+          if (response.status === 401) {
+            const info = await response.json().catch(() => null);
+            if (info?.requiresGuestKey === 'gemini') {
+              promptGuestKey('gemini');
+              throw new Error('Guest mode: add your own Gemini API key to use AI explanations.');
+            }
+          }
           throw new Error(`Failed to fetch explanation: ${response.statusText}`);
         }
 
