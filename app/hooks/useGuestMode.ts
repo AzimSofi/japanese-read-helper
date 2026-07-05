@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { API_ROUTES } from '@/lib/constants';
+import { clearGuestKeys } from '@/lib/guestKeys';
 
 interface GuestModeState {
   isGuest: boolean;
@@ -24,9 +25,13 @@ export function useGuestMode(): GuestModeState {
       try {
         const res = await fetch(API_ROUTES.AUTH_SESSION);
         const data = await res.json();
-        // Fail closed: only show guest UI when the server explicitly says so, so
-        // a failed/non-JSON session check never degrades the signed-in owner's chrome.
-        if (active) setIsGuest(data.authenticated === false);
+        // Only show guest UI when the server explicitly reports no session; on a
+        // failed/non-JSON check assume signed-in so the owner's chrome is never
+        // degraded. Clear any stale guest keys once a session is confirmed.
+        if (active) {
+          setIsGuest(data.authenticated === false);
+          if (data.authenticated === true) clearGuestKeys();
+        }
       } catch {
         if (active) setIsGuest(false);
       } finally {

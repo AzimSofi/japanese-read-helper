@@ -46,27 +46,37 @@ export function promptGuestKey(kind: GuestKeyKind): void {
   window.dispatchEvent(new CustomEvent(GUEST_KEY_REQUIRED_EVENT, { detail: { kind } }));
 }
 
+// Clears every stored guest key. Called once a real session is detected so a
+// signed-in owner never carries a stale guest key from an earlier guest session.
+export function clearGuestKeys(): void {
+  if (typeof window === 'undefined') return;
+  (Object.keys(STORAGE_KEY_BY_KIND) as GuestKeyKind[]).forEach((kind) => {
+    localStorage.removeItem(STORAGE_KEY_BY_KIND[kind]);
+  });
+}
+
+async function serverRequestedGuestKey(
+  kind: GuestKeyKind,
+  response: Response
+): Promise<boolean> {
+  if (response.status !== 401) return false;
+  const info = await response.json().catch(() => null);
+  return info?.requiresGuestKey === kind;
+}
+
 /**
- * Handle a failed paid-endpoint response for a guest by opening the key modal:
- * either the server reported a missing key (401 requiresGuestKey), or a stored
- * key was rejected (any other failure while a key is set). Signed-in users have
- * no stored guest key, so this never fires for them. Returns true if it prompted.
+ * Handle a failed paid-endpoint response by opening the key modal when either
+ * the server reported a missing key (401 requiresGuestKey) or a stored key was
+ * rejected (any failure while a key is set). Guest keys are cleared once a
+ * session is detected, so in practice this only affects guests. Returns true if
+ * it prompted.
  */
 export async function promptGuestKeyOnFailure(
   kind: GuestKeyKind,
   response: Response
 ): Promise<boolean> {
-  if (response.status === 401) {
-    const info = await response.json().catch(() => null);
-    if (info?.requiresGuestKey === kind) {
-      promptGuestKey(kind);
-      return true;
-    }
-    return false;
-  }
-  if (getGuestKey(kind)) {
-    promptGuestKey(kind);
-    return true;
-  }
-  return false;
+  const needsKey = await serverRequestedGuestKey(kind, response);
+  if (!needsKey && !getGuestKey(kind)) return false;
+  promptGuestKey(kind);
+  return true;
 }
