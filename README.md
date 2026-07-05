@@ -1,6 +1,6 @@
 # Read Helper
 
-Read Helper is a web-based tool designed to assist Japanese language learners when reading Visual Novels. It integrates with Textractor and a clipboard inserter to provide AI-rephrased versions of in-game text, aiming to improve comprehension.
+Read Helper is a full-stack web app for Japanese language learners. It started as a tool for reading Visual Novels (capturing in-game text via Textractor and AI-rephrasing it for comprehension) and has grown into a complete reading app for books, with furigana, AI assistance, text-to-speech, and vocabulary tracking.
 
 ---
 
@@ -12,20 +12,30 @@ https://github.com/user-attachments/assets/16d81533-e417-4123-b764-a0066d0b6c84
 
 ---
 
-## Functionality
+## Features
 
-Read Helper provides the following core functions:
+### Reading
+*   **Library** — browse processed books in a grid with reading progress, sorting, and covers.
+*   **Reader** — paginated reading with per-word **furigana** (toggle), AI **rephrased** simplifications (expandable inline), adjustable font size / line height, and dark mode.
+*   **Bookmarks** — resume where you left off, per book.
 
-*   **Text Acquisition:** Captures Visual Novel text in real-time via Textractor and a clipboard inserter.
-*   **AI Rephrasing:** Utilizes the Gemini AI model to generate three distinct rephrased versions of the extracted text.
-*   **Comprehension Support:** Offers alternative phrasings to clarify complex Japanese sentences and enhance understanding for learners.
+### AI assistance (Google Gemini)
+*   **Sentence explanations** — tap a sentence for a Japanese explanation, with multiple modes (concise, story, nuance, speaker, structure) and caching.
+*   **Tap-to-translate** — quick English translation of any line (Google Translate).
+*   **Prioritize (beta)** — rates every sentence on the current page 1–5 for importance (via `gemini-3.5-flash`) and color-codes the page so you can skim to what matters.
 
-## Usage Context
+### Audio
+*   **Text-to-speech & audiobook mode** — read pages aloud with adjustable speed and voice, continuous playback, keyboard controls on desktop, and a replay-current-sentence button on mobile (Google Cloud TTS).
 
-This tool is intended for:
+### Study
+*   **Vocabulary tracker** — save words together with their sentence context.
+*   **Ruby lookup** — per-book kanji→reading registry.
 
-*   **Japanese Language Learners:** To aid in understanding and learning Japanese through Visual Novels.
-*   **Visual Novel Readers:** To provide immediate linguistic assistance without interrupting the reading flow.
+### Visual novels
+*   **Real-time capture** — pulls in-game text via Textractor + a clipboard inserter and AI-rephrases it on the fly.
+
+### Access
+*   **Password login** for the full library, plus a **guest preview**: a few books are readable without signing in, capped to the first few pages (copyright-safe). In guest mode, AI explanation / TTS / translation run on the visitor's **own** API keys, stored only in their browser.
 
 ---
 
