@@ -6,6 +6,7 @@ import {
   ignoreSuggestion
 } from '@/lib/services/fileService';
 import { isAuthenticated } from '@/lib/auth/apiSession';
+import { isPublicDirectory } from '@/lib/publicBooks';
 import type { RubyRegistryResponse, RubyEntry } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,11 @@ export async function GET(request: Request): Promise<NextResponse<RubyRegistryRe
       success: false,
       message: 'Invalid path'
     }, { status: 400 });
+  }
+
+  // Guests may only read the vocabulary index of allowlisted preview books.
+  if (!(await isAuthenticated()) && !isPublicDirectory(`${directory}/${bookName}`)) {
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
   }
 
   try {

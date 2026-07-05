@@ -84,6 +84,10 @@ export async function GET(request: Request) {
  * Remove specific text entry from database
  */
 export async function DELETE(request: Request) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const fileName = searchParams.get('fileName');
   const directory = searchParams.get('directory');
