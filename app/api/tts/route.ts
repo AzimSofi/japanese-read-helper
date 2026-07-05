@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { TTS_CONFIG } from "@/lib/constants";
+import { TTS_CONFIG, GUEST_KEY_HEADERS } from "@/lib/constants";
+import { isAuthenticated } from "@/lib/auth/apiSession";
 import type { TTSRequest, TTSResponse } from "@/lib/types";
 import { cleanTextForTTS } from "@/lib/utils/ttsTextCleaner";
 
@@ -14,7 +15,17 @@ const TTS_TIMEOUT_MS = 15000;
 export async function POST(request: Request) {
   const startTime = Date.now();
 
-  const apiKey = process.env.GOOGLE_TTS_API_KEY;
+  const authed = await isAuthenticated();
+  const guestKey = request.headers.get(GUEST_KEY_HEADERS.TTS);
+  if (!authed && !guestKey) {
+    return NextResponse.json(
+      { audioContent: '', message: 'Sign in or add your own Google TTS API key.', requiresGuestKey: 'tts' },
+      { status: 401 }
+    );
+  }
+
+  // Guests use their own key; the owner's key is never used for a guest request.
+  const apiKey = authed ? process.env.GOOGLE_TTS_API_KEY : guestKey;
   if (!apiKey) {
     return NextResponse.json(
       { audioContent: '', message: 'GOOGLE_TTS_API_KEY が設定されていません。' },

@@ -20,6 +20,8 @@ import ReadingContent from './components/ReadingContent';
 import ReaderHeader from './components/ReaderHeader';
 import BottomSheet from '@/app/components/ui/BottomSheet';
 import { useBookMetadata } from '@/app/hooks/useBookMetadata';
+import { useGuestMode } from '@/app/hooks/useGuestMode';
+import GuestModeBanner from '@/app/components/ui/GuestModeBanner';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { buildPlayableUnits } from '@/lib/utils/buildPlayableUnits';
 import { useAudioBook } from '@/app/hooks/useAudioBook';
@@ -42,6 +44,11 @@ const FloatingStickyNotes = dynamic(
 
 const AudioPlayerBar = dynamic(
   () => import('./components/AudioPlayerBar'),
+  { ssr: false }
+);
+
+const GuestApiKeyModal = dynamic(
+  () => import('@/app/components/reading/GuestApiKeyModal'),
   { ssr: false }
 );
 
@@ -100,6 +107,7 @@ function ReaderContent({
   const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
 
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
+  const { isGuest } = useGuestMode();
 
   const fullFilePath = useMemo(() => {
     if (directoryParam && fileNameParam) {
@@ -570,6 +578,13 @@ function ReaderContent({
       className="min-h-screen transition-colors duration-300"
       style={{ backgroundColor: theme.bg, color: theme.text }}
     >
+      {isGuest && (
+        <GuestModeBanner
+          isDarkMode={isDarkMode}
+          message="Preview only. Sign in to read the full book and use your saved bookmarks."
+        />
+      )}
+
       <ProgressBar progress={progress} />
 
       <ReaderHeader
@@ -647,6 +662,27 @@ function ReaderContent({
               }}
             >
               Next
+            </button>
+          </div>
+        )}
+
+        {isGuest && (
+          <div
+            className="mt-10 rounded-2xl p-6 text-center"
+            style={{ backgroundColor: theme.surface, border: '1px solid rgba(0,0,0,0.06)' }}
+          >
+            <p className="text-base font-semibold mb-1" style={{ color: theme.text }}>
+              End of preview
+            </p>
+            <p className="text-sm mb-4" style={{ color: '#8E8E93' }}>
+              You are reading a free sample. Sign in to read the full book.
+            </p>
+            <button
+              onClick={() => router.push('/login')}
+              className="px-5 py-2.5 rounded-xl text-sm font-medium"
+              style={{ backgroundColor: COLORS.PRIMARY, color: '#FFFFFF' }}
+            >
+              Sign in
             </button>
           </div>
         )}
@@ -728,12 +764,15 @@ function ReaderContent({
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}
+          onReplay={audioReplay}
           onContentModeChange={handleContentModeChange}
           onSpeedChange={setAudioSpeed}
           onToggleKeyboardMode={handleToggleKeyboardMode}
           onClose={() => handleAudiobookChange(false)}
         />
       )}
+
+      <GuestApiKeyModal isDarkMode={isDarkMode} />
     </div>
   );
 }

@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { resetTextEntries, upsertTextEntry } from '@/lib/db/queries';
 import { listTextFiles, readTextFile } from '@/lib/services/fileService';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 
 // Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,10 @@ export const dynamic = 'force-dynamic';
  * - If remigrate=true, re-migrates all files from filesystem after reset
  */
 export async function POST(request: Request) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const confirm = searchParams.get('confirm') === 'true';
   const remigrate = searchParams.get('remigrate') === 'true';

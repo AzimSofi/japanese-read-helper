@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { API_ROUTES } from '@/lib/constants';
+import { useGuestMode } from '@/app/hooks/useGuestMode';
 import BookCard from './BookCard';
 
 interface FileListResponse {
@@ -55,6 +56,7 @@ export default function LibraryGrid() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sortMode, setSortMode] = useState<SortMode>('last-read');
+  const { isGuest } = useGuestMode();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -208,6 +210,7 @@ export default function LibraryGrid() {
             totalCharacters={book.totalCharacters}
             directoryTag={formatDirectoryTag(book.directory)}
             bookmarkPage={book.bookmarkPage}
+            isPreview={isGuest}
           />
         ))}
       </div>

@@ -5,6 +5,8 @@ import {
   deleteRubyEntry,
   ignoreSuggestion
 } from '@/lib/services/fileService';
+import { isAuthenticated } from '@/lib/auth/apiSession';
+import { isPublicDirectory } from '@/lib/publicBooks';
 import type { RubyRegistryResponse, RubyEntry } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -26,6 +28,13 @@ export async function GET(request: Request): Promise<NextResponse<RubyRegistryRe
       success: false,
       message: 'Invalid path'
     }, { status: 400 });
+  }
+
+  // Guests may read the vocabulary index of an allowlisted preview book. This is
+  // the whole-book ruby registry (a kanji->reading index), intentionally not
+  // capped to the 5-page text preview -- it is derived metadata, not prose.
+  if (!(await isAuthenticated()) && !isPublicDirectory(`${directory}/${bookName}`)) {
+    return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
   }
 
   try {
@@ -57,6 +66,10 @@ export async function GET(request: Request): Promise<NextResponse<RubyRegistryRe
 }
 
 export async function POST(request: Request): Promise<NextResponse<RubyRegistryResponse>> {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: 'Sign in required' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { directory, bookName, entry } = body as {
@@ -100,6 +113,10 @@ export async function POST(request: Request): Promise<NextResponse<RubyRegistryR
 }
 
 export async function DELETE(request: Request): Promise<NextResponse<RubyRegistryResponse>> {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: 'Sign in required' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const directory = searchParams.get('directory');
   const bookName = searchParams.get('bookName');

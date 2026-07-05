@@ -3,6 +3,8 @@ import { sql } from '@/lib/db/connection';
 import { parseMarkdown } from '@/lib/utils/markdownParser';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { READER_CONFIG, PAGINATION_CONFIG } from '@/lib/constants';
+import { isAuthenticated } from '@/lib/auth/apiSession';
+import { findPublicBook } from '@/lib/publicBooks';
 
 export const dynamic = 'force-dynamic';
 
@@ -76,6 +78,8 @@ function countItems(content: string): number {
 
 export async function GET() {
   try {
+    const authed = await isAuthenticated();
+
     const result = await sql`
       SELECT
         t.file_name,
@@ -88,21 +92,31 @@ export async function GET() {
       LEFT JOIN bookmarks b ON t.file_name = b.file_name AND t.directory = b.directory
     `;
 
-    const rows = normalizeResult<EntryRow>(result);
+    const allRows = normalizeResult<EntryRow>(result);
+    // Guests only see allowlisted books, and never the owner's reading position.
+    const rows = authed
+      ? allRows
+      : allRows.filter((row) => findPublicBook(row.directory, row.file_name));
     const progressData: ProgressResponse = {};
 
-    for (const row of rows) {
-      if (row.content && row.bookmark_text) {
-        row.bookmark_page = calculatePageFromText(row.bookmark_text, row.content);
+    if (authed) {
+      for (const row of rows) {
+        if (row.content && row.bookmark_text) {
+          row.bookmark_page = calculatePageFromText(row.bookmark_text, row.content);
+        }
       }
     }
 
     for (const row of rows) {
       const key = `${row.directory}/${row.file_name}`;
       const itemCount = countItems(row.content || '');
-      const totalPages = Math.ceil(itemCount / PAGINATION_CONFIG.ITEMS_PER_PAGE);
-      const totalCharacters = (row.content || '').length;
-      const bookmarkPage = row.bookmark_page || null;
+      const fullPages = Math.ceil(itemCount / PAGINATION_CONFIG.ITEMS_PER_PAGE);
+      // Guests only see the preview, so their card reflects the capped page count
+      // and does not disclose the full work's length.
+      const previewBook = authed ? null : findPublicBook(row.directory, row.file_name);
+      const totalPages = previewBook ? Math.min(fullPages, previewBook.maxPreviewPages) : fullPages;
+      const totalCharacters = previewBook ? 0 : (row.content || '').length;
+      const bookmarkPage = authed ? row.bookmark_page || null : null;
 
       let progress = 0;
       if (bookmarkPage && totalPages > 0) {
@@ -114,7 +128,7 @@ export async function GET() {
         totalCharacters: totalCharacters,
         bookmarkPage,
         totalPages,
-        bookmarkUpdatedAt: row.bookmark_updated_at || null,
+        bookmarkUpdatedAt: authed ? row.bookmark_updated_at || null : null,
         createdAt: row.created_at || null,
       };
     }

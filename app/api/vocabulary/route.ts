@@ -1,8 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getVocabularyEntries, createVocabularyEntry } from '@/lib/db/vocabularyQueries.sql';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 
 export async function GET(request: Request) {
   try {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json({ success: true, entries: [], count: 0 });
+    }
+
     const { searchParams } = new URL(request.url);
     const word = searchParams.get('word') || undefined;
     const fileName = searchParams.get('fileName') || undefined;
@@ -32,6 +37,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    if (!(await isAuthenticated())) {
+      return NextResponse.json(
+        { success: false, message: 'Sign in required' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { word, reading, sentence, fileName, directory, paragraphText, notes } = body;
 

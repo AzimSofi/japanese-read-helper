@@ -6,7 +6,12 @@
 import { NextResponse } from 'next/server';
 import { getTextEntry } from '@/lib/db/queries';
 import { DEFAULT_FILE_NAME } from '@/lib/constants';
+import { isAuthenticated } from '@/lib/auth/apiSession';
+import { findPublicBookByPath } from '@/lib/publicBooks';
+import { truncateToPreviewPages } from '@/lib/utils/truncatePreview';
 import type { TextResponse } from '@/lib/types';
+
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request): Promise<NextResponse<TextResponse>> {
   try {
@@ -30,6 +35,15 @@ export async function GET(request: Request): Promise<NextResponse<TextResponse>>
     // URL format: /api/read-public-txt?directory=bookv2-furigana/subdir&fileName=file-name
     // OR legacy: /api/read-public-txt?fileName=dir/file-name
     let directory = searchParams.get('directory');
+
+    // Guests may only read allowlisted books, and only a short page preview.
+    const requestedPath = directory ? `${directory}/${fileName}` : fileName;
+    const authed = await isAuthenticated();
+    const publicBook = authed ? null : findPublicBookByPath(requestedPath);
+    if (!authed && !publicBook) {
+      return NextResponse.json({ text: '' }, { status: 403 });
+    }
+
     let file: string;
     let content = '';
 
@@ -67,7 +81,11 @@ export async function GET(request: Request): Promise<NextResponse<TextResponse>>
 
     console.log(`テキストエントリ読み込み (データベース): fileName="${fileName}", directory="${directory}", length=${content.length}`);
 
-    return NextResponse.json({ text: content });
+    const text = publicBook
+      ? truncateToPreviewPages(content, publicBook.maxPreviewPages)
+      : content;
+
+    return NextResponse.json({ text });
   } catch (error) {
     console.error('テキストファイルの読み込み中にエラーが発生しました:', error);
     console.error('エラー詳細:', error instanceof Error ? error.message : String(error));
