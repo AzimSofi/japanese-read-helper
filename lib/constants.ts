@@ -98,10 +98,19 @@ export const GUEST_KEY_HEADERS = {
   TRANSLATE: 'x-guest-translate-key',
 } as const;
 
-// "Prioritize" beta: how each per-sentence importance score (1-5) is rendered.
-// High scores stay fully visible with a warm accent; low scores fade so the
-// reader can skim to what matters.
-export const PRIORITY_LEVELS: Record<number, { color: string; opacity: number; border: number; label: string }> = {
+// "Prioritize" beta: presentation metadata for each importance score (1 = least
+// important, 5 = most). `color`/`border` accent the unit, `opacity` dims it, and
+// `label` names the level; how the reader applies them lives in ReadingContent.
+export type PriorityScore = 1 | 2 | 3 | 4 | 5;
+
+export interface PriorityLevel {
+  color: string;
+  opacity: number;
+  border: number;
+  label: string;
+}
+
+export const PRIORITY_LEVELS: Record<PriorityScore, PriorityLevel> = {
   5: { color: '#FF3B30', opacity: 1, border: 4, label: 'Critical' },
   4: { color: '#FF9500', opacity: 1, border: 3, label: 'High' },
   3: { color: '#FFCC00', opacity: 0.9, border: 3, label: 'Moderate' },

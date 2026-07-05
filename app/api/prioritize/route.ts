@@ -1,11 +1,14 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
-import { AI_MODELS, GUEST_KEY_HEADERS } from "@/lib/constants";
+import { AI_MODELS, GUEST_KEY_HEADERS, PAGINATION_CONFIG, type PriorityScore } from "@/lib/constants";
 import { isAuthenticated } from "@/lib/auth/apiSession";
 
 export const dynamic = "force-dynamic";
 
-const MAX_SENTENCES = 60;
+// A reader page holds at most one screen of units, so this also bounds how many
+// sentences we ever score. Derived from the reader's paging so the two stay in
+// step -- raising items-per-page can never silently drop sentences here.
+const MAX_SENTENCES = PAGINATION_CONFIG.ITEMS_PER_PAGE;
 
 const RATING_INSTRUCTION = `Act as an expert reading comprehension assistant. Below are numbered sentences from one page of a book. Rate the importance of EACH sentence on a scale of 1 to 5.
 
@@ -17,13 +20,10 @@ const RATING_INSTRUCTION = `Act as an expert reading comprehension assistant. Be
 
 Respond with ONLY a JSON object of the form {"scores":[n1,n2,...]} where the array holds exactly one integer (1-5) per numbered sentence, in the same order. Output no sentences, no rationale, no other text.`;
 
-function normalizeScores(raw: unknown, count: number): number[] {
-  const list = Array.isArray(raw) ? raw : [];
-  return Array.from({ length: count }, (_, i) => {
-    const value = Math.round(Number(list[i]));
-    if (!Number.isFinite(value)) return 3;
-    return Math.min(5, Math.max(1, value));
-  });
+function clampScore(value: unknown): PriorityScore {
+  const rounded = Math.round(Number(value));
+  if (!Number.isFinite(rounded)) return 3;
+  return Math.min(5, Math.max(1, rounded)) as PriorityScore;
 }
 
 export async function POST(request: Request) {
@@ -54,9 +54,18 @@ export async function POST(request: Request) {
     });
 
     const parsed = JSON.parse(response.text || "{}");
-    const scores = normalizeScores(Array.isArray(parsed) ? parsed : parsed.scores, trimmed.length);
+    const rawScores = Array.isArray(parsed) ? parsed : parsed?.scores;
 
-    return NextResponse.json({ scores });
+    // A blocked/empty candidate or count mismatch must fail loudly rather than be
+    // coerced into uniform defaults the reader would show as real judgment.
+    if (!Array.isArray(rawScores) || rawScores.length !== trimmed.length) {
+      return NextResponse.json(
+        { scores: [], message: "The model did not return a score for every sentence." },
+        { status: 502 }
+      );
+    }
+
+    return NextResponse.json({ scores: rawScores.map(clampScore) });
   } catch (error) {
     console.error("Prioritize error:", error);
     return NextResponse.json(
