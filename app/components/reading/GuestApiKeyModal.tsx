@@ -1,13 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { COLORS } from '@/lib/constants';
+import { COLORS, DARK_COLORS } from '@/lib/constants';
 import {
   type GuestKeyKind,
   getGuestKey,
   setGuestKey,
   GUEST_KEY_REQUIRED_EVENT,
 } from '@/lib/guestKeys';
+
+interface GuestApiKeyModalProps {
+  isDarkMode?: boolean;
+}
 
 const COPY: Record<GuestKeyKind, { title: string; help: string; link: string; linkLabel: string }> = {
   gemini: {
@@ -30,7 +34,7 @@ const COPY: Record<GuestKeyKind, { title: string; help: string; link: string; li
   },
 };
 
-export default function GuestApiKeyModal() {
+export default function GuestApiKeyModal({ isDarkMode = false }: GuestApiKeyModalProps) {
   const [kind, setKind] = useState<GuestKeyKind | null>(null);
   const [value, setValue] = useState('');
 
@@ -48,6 +52,28 @@ export default function GuestApiKeyModal() {
 
   const copy = COPY[kind];
 
+  const theme = isDarkMode
+    ? {
+        card: DARK_COLORS.SURFACE,
+        title: DARK_COLORS.TEXT,
+        help: '#A0A0A5',
+        inputBg: DARK_COLORS.NEUTRAL,
+        inputBorder: 'rgba(255,255,255,0.14)',
+        cancelBg: DARK_COLORS.NEUTRAL,
+        cancelText: DARK_COLORS.TEXT,
+        primary: DARK_COLORS.PRIMARY,
+      }
+    : {
+        card: '#FFFFFF',
+        title: '#1D1D1F',
+        help: '#636366',
+        inputBg: '#F2F2F7',
+        inputBorder: 'rgba(0,0,0,0.12)',
+        cancelBg: '#F2F2F7',
+        cancelText: '#1D1D1F',
+        primary: COLORS.PRIMARY,
+      };
+
   const handleSave = () => {
     const trimmed = value.trim();
     if (!trimmed) return;
@@ -63,13 +89,13 @@ export default function GuestApiKeyModal() {
     >
       <div
         className="w-full max-w-md rounded-2xl p-6"
-        style={{ backgroundColor: '#FFFFFF', boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
+        style={{ backgroundColor: theme.card, boxShadow: '0 8px 32px rgba(0,0,0,0.18)' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 className="text-lg font-semibold mb-2" style={{ color: '#1D1D1F' }}>
+        <h2 className="text-lg font-semibold mb-2" style={{ color: theme.title }}>
           {copy.title}
         </h2>
-        <p className="text-sm mb-4 leading-relaxed" style={{ color: '#636366' }}>
+        <p className="text-sm mb-4 leading-relaxed" style={{ color: theme.help }}>
           {copy.help}
         </p>
 
@@ -83,7 +109,7 @@ export default function GuestApiKeyModal() {
           placeholder="Paste your API key"
           autoFocus
           className="w-full rounded-xl px-3 py-2.5 text-sm mb-3"
-          style={{ border: '1px solid rgba(0,0,0,0.12)', backgroundColor: '#F2F2F7' }}
+          style={{ border: `1px solid ${theme.inputBorder}`, backgroundColor: theme.inputBg, color: theme.title }}
         />
 
         <a
@@ -91,7 +117,7 @@ export default function GuestApiKeyModal() {
           target="_blank"
           rel="noreferrer"
           className="text-sm font-medium interactive-link"
-          style={{ color: COLORS.PRIMARY }}
+          style={{ color: theme.primary }}
         >
           {copy.linkLabel}
         </a>
@@ -100,7 +126,7 @@ export default function GuestApiKeyModal() {
           <button
             onClick={() => setKind(null)}
             className="px-4 py-2 rounded-xl text-sm font-medium"
-            style={{ backgroundColor: '#F2F2F7', color: '#1D1D1F' }}
+            style={{ backgroundColor: theme.cancelBg, color: theme.cancelText }}
           >
             Cancel
           </button>
@@ -108,7 +134,7 @@ export default function GuestApiKeyModal() {
             onClick={handleSave}
             disabled={!value.trim()}
             className="px-4 py-2 rounded-xl text-sm font-medium disabled:opacity-40"
-            style={{ backgroundColor: COLORS.PRIMARY, color: '#FFFFFF' }}
+            style={{ backgroundColor: theme.primary, color: '#FFFFFF' }}
           >
             Save key
           </button>

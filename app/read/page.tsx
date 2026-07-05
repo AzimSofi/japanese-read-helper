@@ -579,7 +579,10 @@ function ReaderContent({
       style={{ backgroundColor: theme.bg, color: theme.text }}
     >
       {isGuest && (
-        <GuestModeBanner message="Preview only. Sign in to read the full book and use your saved bookmarks." />
+        <GuestModeBanner
+          isDarkMode={isDarkMode}
+          message="Preview only. Sign in to read the full book and use your saved bookmarks."
+        />
       )}
 
       <ProgressBar progress={progress} />
@@ -768,7 +771,7 @@ function ReaderContent({
         />
       )}
 
-      {isGuest && <GuestApiKeyModal />}
+      <GuestApiKeyModal isDarkMode={isDarkMode} />
     </div>
   );
 }
