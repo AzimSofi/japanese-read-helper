@@ -7,10 +7,15 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getBooks, createBook } from '@/lib/db/bookQueries.sql';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { searchParams } = new URL(request.url);
     const fileName = searchParams.get('fileName') || undefined;
@@ -31,6 +36,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const {
