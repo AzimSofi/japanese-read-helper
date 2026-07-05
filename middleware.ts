@@ -28,8 +28,12 @@ function isGuestAllowed(request: NextRequest): boolean {
     return findPublicBook(directory, fileName) !== null;
   }
 
-  // Static assets are requested under the book's path (which may be percent-encoded).
+  // Guests may fetch only an allowlisted book's metadata JSON (used to resolve
+  // inline illustrations; the path may be percent-encoded). Restricting to .json
+  // keeps the full-text .txt sibling from riding along and bypassing the preview
+  // cap; images are already excluded from the matcher, so they still render.
   const decodedPath = decodePath(path);
+  if (!decodedPath.endsWith('.json')) return false;
   return PUBLIC_BOOKS.some((book) => decodedPath.startsWith(`/${book.directory}/`));
 }
 
