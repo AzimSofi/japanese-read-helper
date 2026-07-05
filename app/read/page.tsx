@@ -764,6 +764,7 @@ function ReaderContent({
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}
+          onReplay={audioReplay}
           onContentModeChange={handleContentModeChange}
           onSpeedChange={setAudioSpeed}
           onToggleKeyboardMode={handleToggleKeyboardMode}

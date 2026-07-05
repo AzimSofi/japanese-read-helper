@@ -22,6 +22,7 @@ interface AudioPlayerBarProps {
   onTogglePlay: () => void;
   onPrev: () => void;
   onNext: () => void;
+  onReplay: () => void;
   onContentModeChange: (mode: AudioBookContentMode) => void;
   onSpeedChange: (speed: number) => void;
   onToggleKeyboardMode: () => void;
@@ -63,6 +64,14 @@ function NextGlyph() {
   );
 }
 
+function ReplayGlyph() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z" />
+    </svg>
+  );
+}
+
 function KeyboardGlyph() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
@@ -83,6 +92,7 @@ export default function AudioPlayerBar({
   onTogglePlay,
   onPrev,
   onNext,
+  onReplay,
   onContentModeChange,
   onSpeedChange,
   onToggleKeyboardMode,
@@ -201,6 +211,9 @@ export default function AudioPlayerBar({
           </button>
           <button style={ghostButtonStyle} onClick={onNext} aria-label="Next sentence">
             <NextGlyph />
+          </button>
+          <button style={ghostButtonStyle} onClick={onReplay} aria-label="Replay current sentence" title="Replay current sentence">
+            <ReplayGlyph />
           </button>
         </div>
 
