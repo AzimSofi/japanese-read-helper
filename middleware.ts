@@ -1,27 +1,41 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
+import { findPublicBook } from '@/lib/publicBooks';
+
+// Pages a signed-out guest may reach: the public library and the reader, the
+// latter only for an allowlisted book (checked against the query params).
+function isGuestAllowed(request: NextRequest): boolean {
+  const path = request.nextUrl.pathname;
+
+  if (path === '/' || path === '/library') {
+    return true;
+  }
+
+  if (path === '/read') {
+    const directory = request.nextUrl.searchParams.get('directory');
+    const fileName = request.nextUrl.searchParams.get('fileName');
+    return findPublicBook(directory, fileName) !== null;
+  }
+
+  return false;
+}
 
 export async function middleware(request: NextRequest) {
-  // Public routes (no auth needed)
-  const publicPaths = ['/login'];
-  const isPublicPath = publicPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isPublicPath) {
+  if (request.nextUrl.pathname.startsWith('/login')) {
     return NextResponse.next();
   }
 
-  // Check session cookie
   const sessionCookie = request.cookies.get('session');
-
-  if (!sessionCookie || !(await verifySession(sessionCookie.value))) {
-    // Redirect to login if not authenticated
-    return NextResponse.redirect(new URL('/login', request.url));
+  if (sessionCookie && (await verifySession(sessionCookie.value))) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  if (isGuestAllowed(request)) {
+    return NextResponse.next();
+  }
+
+  return NextResponse.redirect(new URL('/login', request.url));
 }
 
 // Protect all routes except public ones
