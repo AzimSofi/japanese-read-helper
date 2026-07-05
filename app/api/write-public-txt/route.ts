@@ -6,9 +6,14 @@
 import { NextResponse } from 'next/server';
 import { upsertTextEntry } from '@/lib/db/queries';
 import { DEFAULT_TEXT_FILES } from '@/lib/constants';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 import type { TextRequest, WriteResponse } from '@/lib/types';
 
 export async function POST(request: Request): Promise<NextResponse<WriteResponse>> {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ message: 'Sign in required' }, { status: 401 });
+  }
+
   try {
     const { text }: TextRequest = await request.json();
 

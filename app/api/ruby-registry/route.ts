@@ -5,6 +5,7 @@ import {
   deleteRubyEntry,
   ignoreSuggestion
 } from '@/lib/services/fileService';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 import type { RubyRegistryResponse, RubyEntry } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -57,6 +58,10 @@ export async function GET(request: Request): Promise<NextResponse<RubyRegistryRe
 }
 
 export async function POST(request: Request): Promise<NextResponse<RubyRegistryResponse>> {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: 'Sign in required' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const { directory, bookName, entry } = body as {
@@ -100,6 +105,10 @@ export async function POST(request: Request): Promise<NextResponse<RubyRegistryR
 }
 
 export async function DELETE(request: Request): Promise<NextResponse<RubyRegistryResponse>> {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ success: false, message: 'Sign in required' }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const directory = searchParams.get('directory');
   const bookName = searchParams.get('bookName');

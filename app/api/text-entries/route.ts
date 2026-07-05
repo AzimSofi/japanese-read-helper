@@ -11,6 +11,9 @@ import {
   upsertTextEntry
 } from '@/lib/db/queries';
 import { readTextFile } from '@/lib/services/fileService';
+import { isAuthenticated } from '@/lib/auth/apiSession';
+import { findPublicBook } from '@/lib/publicBooks';
+import { truncateToPreviewPages } from '@/lib/utils/truncatePreview';
 
 // Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
@@ -25,6 +28,8 @@ export async function GET(request: Request) {
   const directory = searchParams.get('directory');
 
   try {
+    const authed = await isAuthenticated();
+
     // If fileName and directory are provided, get specific entry
     if (fileName && directory) {
       // Validation (prevent directory traversal attacks)
@@ -35,14 +40,27 @@ export async function GET(request: Request) {
         );
       }
 
+      // Guests may only read allowlisted books, capped to the preview length.
+      const publicBook = authed ? null : findPublicBook(directory, fileName);
+      if (!authed && !publicBook) {
+        return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
+      }
+
       const content = await getTextEntry(fileName, directory);
+      const data = publicBook
+        ? truncateToPreviewPages(content, publicBook.maxPreviewPages)
+        : content;
       return NextResponse.json({
         success: true,
-        data: { fileName, directory, content }
+        data: { fileName, directory, content: data }
       });
     }
 
-    // Otherwise, return all entries
+    // Listing every entry is owner-only.
+    if (!authed) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 403 });
+    }
+
     const allEntries = await getAllTextEntries();
     return NextResponse.json({
       success: true,
