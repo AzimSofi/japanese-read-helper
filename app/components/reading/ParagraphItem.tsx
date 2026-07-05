@@ -8,6 +8,7 @@ import StartHereIcon from "@/app/components/icons/StartHereIcon";
 import BookImage from "@/app/components/reading/BookImage";
 import { COLORS, EXPLANATION_CONFIG } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
+import { guestKeyHeaders, promptGuestKey } from "@/lib/guestKeys";
 
 const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
 
@@ -94,11 +95,19 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...guestKeyHeaders("translate"),
         },
         body: JSON.stringify({ text }),
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const info = await response.json().catch(() => null);
+          if (info?.requiresGuestKey === "translate") {
+            promptGuestKey("translate");
+            return;
+          }
+        }
         throw new Error("Translation failed");
       }
 

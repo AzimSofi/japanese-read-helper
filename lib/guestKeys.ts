@@ -7,7 +7,7 @@ import { STORAGE_KEYS, GUEST_KEY_HEADERS } from '@/lib/constants';
  * listens for it and, once saved, fires GUEST_KEY_UPDATED_EVENT so the original
  * action can retry.
  */
-export type GuestKeyKind = 'gemini' | 'tts';
+export type GuestKeyKind = 'gemini' | 'tts' | 'translate';
 
 export const GUEST_KEY_REQUIRED_EVENT = 'guestKeyRequired';
 export const GUEST_KEY_UPDATED_EVENT = 'guestKeyUpdated';
@@ -15,11 +15,13 @@ export const GUEST_KEY_UPDATED_EVENT = 'guestKeyUpdated';
 const STORAGE_KEY_BY_KIND: Record<GuestKeyKind, string> = {
   gemini: STORAGE_KEYS.GUEST_GEMINI_KEY,
   tts: STORAGE_KEYS.GUEST_TTS_KEY,
+  translate: STORAGE_KEYS.GUEST_TRANSLATE_KEY,
 };
 
 const HEADER_BY_KIND: Record<GuestKeyKind, string> = {
   gemini: GUEST_KEY_HEADERS.GEMINI,
   tts: GUEST_KEY_HEADERS.TTS,
+  translate: GUEST_KEY_HEADERS.TRANSLATE,
 };
 
 export function getGuestKey(kind: GuestKeyKind): string | null {

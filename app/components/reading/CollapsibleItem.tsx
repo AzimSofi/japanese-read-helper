@@ -10,6 +10,7 @@ import TTSButton from "@/app/components/reading/TTSButton";
 import { useSearchParams } from "next/navigation";
 import { COLORS, EXPLANATION_CONFIG, DARK_COLORS } from "@/lib/constants";
 import { parseFurigana, segmentsToHTML } from "@/lib/utils/furiganaParser";
+import { guestKeyHeaders, promptGuestKey } from "@/lib/guestKeys";
 
 const IMAGE_PATTERN = /\[IMAGE:([^\]]+)\]/;
 
@@ -224,11 +225,19 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...guestKeyHeaders("translate"),
         },
         body: JSON.stringify({ text: head }),
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const info = await response.json().catch(() => null);
+          if (info?.requiresGuestKey === "translate") {
+            promptGuestKey("translate");
+            return;
+          }
+        }
         throw new Error("Translation failed");
       }
 

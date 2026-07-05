@@ -93,6 +93,7 @@ export const API_ROUTES = {
 export const GUEST_KEY_HEADERS = {
   GEMINI: 'x-guest-gemini-key',
   TTS: 'x-guest-tts-key',
+  TRANSLATE: 'x-guest-translate-key',
 } as const;
 
 // ページルート
@@ -205,6 +206,7 @@ export const STORAGE_KEYS = {
   // Guest mode (bring-your-own API keys, stored only in the browser)
   GUEST_GEMINI_KEY: 'guest_gemini_api_key',
   GUEST_TTS_KEY: 'guest_google_tts_api_key',
+  GUEST_TRANSLATE_KEY: 'guest_google_translate_key',
 } as const;
 
 // TTS（Text-to-Speech）設定

@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { GUEST_KEY_HEADERS } from '@/lib/constants';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 
 export async function POST(request: NextRequest) {
   try {
@@ -8,7 +10,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Text is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GOOGLE_TRANSLATE_API_KEY;
+    const authed = await isAuthenticated();
+    const guestKey = request.headers.get(GUEST_KEY_HEADERS.TRANSLATE);
+    if (!authed && !guestKey) {
+      return NextResponse.json(
+        { error: 'Sign in or add your own Google Translate API key.', requiresGuestKey: 'translate' },
+        { status: 401 }
+      );
+    }
+
+    // Guests use their own key; the owner's key is never used for a guest request.
+    const apiKey = authed ? process.env.GOOGLE_TRANSLATE_API_KEY : guestKey;
     if (!apiKey) {
       console.error('GOOGLE_TRANSLATE_API_KEY not configured');
       return NextResponse.json({ error: 'Translation service not configured' }, { status: 500 });

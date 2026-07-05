@@ -22,6 +22,12 @@ const COPY: Record<GuestKeyKind, { title: string; help: string; link: string; li
     link: 'https://console.cloud.google.com/apis/credentials',
     linkLabel: 'Get a Google Cloud TTS API key',
   },
+  translate: {
+    title: 'Translation uses your own key',
+    help: 'In guest mode, translation runs on your personal Google Cloud Translation API key. It is stored only in this browser and sent solely to make your request.',
+    link: 'https://console.cloud.google.com/apis/credentials',
+    linkLabel: 'Get a Google Cloud Translation API key',
+  },
 };
 
 export default function GuestApiKeyModal() {
