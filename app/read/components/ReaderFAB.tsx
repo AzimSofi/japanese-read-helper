@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, type ReactNode } from 'react';
 
 interface ReaderFABProps {
   onToggleFurigana: () => void;
@@ -21,6 +21,16 @@ interface ReaderFABProps {
   bookmarkPage?: number | null;
   currentPage?: number;
   copyFeedback: boolean;
+}
+
+interface FabMenuButton {
+  icon: ReactNode;
+  label: string;
+  action: () => void;
+  active?: boolean;
+  hidden?: boolean;
+  keepOpen?: boolean;
+  beta?: boolean;
 }
 
 const STORAGE_KEY = 'fab_position';
@@ -217,7 +227,7 @@ export default function ReaderFAB({
 
   const isOnBookmarkPage = hasBookmark && currentPage === bookmarkPage;
 
-  const fabButtons = [
+  const fabButtons: FabMenuButton[] = [
     {
       icon: (
         <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
