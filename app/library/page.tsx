@@ -2,18 +2,25 @@
 
 import { useState } from 'react';
 import { COLORS } from '@/lib/constants';
+import { useGuestMode } from '@/app/hooks/useGuestMode';
+import GuestModeBanner from '@/app/components/ui/GuestModeBanner';
 import LibraryGrid from './components/LibraryGrid';
 import DbSyncModal from './components/DbSyncModal';
 import Link from 'next/link';
 
 export default function LibraryPage() {
   const [showSync, setShowSync] = useState(false);
+  const { isGuest } = useGuestMode();
 
   return (
     <div
       className="min-h-screen"
       style={{ backgroundColor: '#F2F2F7' }}
     >
+      {isGuest && (
+        <GuestModeBanner message="A few books are available as a free preview. Sign in for the full library." />
+      )}
+
       <div className="max-w-6xl mx-auto px-5 pt-12 pb-8">
         <div className="flex items-start justify-between mb-8">
           <h1
@@ -23,7 +30,7 @@ export default function LibraryPage() {
             Library
           </h1>
 
-          <nav className="flex items-center gap-1 pt-1">
+          <nav className={`items-center gap-1 pt-1 ${isGuest ? 'hidden' : 'flex'}`}>
             <button
               onClick={() => setShowSync(true)}
               className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5"

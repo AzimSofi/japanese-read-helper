@@ -9,6 +9,7 @@ interface BookCardProps {
   totalCharacters?: number;
   directoryTag: string;
   bookmarkPage?: number | null;
+  isPreview?: boolean;
 }
 
 export default function BookCard({
@@ -18,6 +19,7 @@ export default function BookCard({
   totalCharacters,
   directoryTag,
   bookmarkPage,
+  isPreview,
 }: BookCardProps) {
   const displayName = fileName
     .replace(/-rephrase-furigana$/, '')
@@ -39,7 +41,7 @@ export default function BookCard({
         }}
       >
         <div className="aspect-[3/4] flex flex-col">
-          <div className="px-3 pt-3">
+          <div className="px-3 pt-3 flex items-center justify-between gap-2">
             <span
               className="inline-block px-2 py-0.5 rounded-md text-xs font-medium"
               style={{
@@ -49,6 +51,14 @@ export default function BookCard({
             >
               {directoryTag}
             </span>
+            {isPreview && (
+              <span
+                className="inline-block px-2 py-0.5 rounded-md text-xs font-semibold"
+                style={{ backgroundColor: '#FFE1A8', color: '#7A5A1E' }}
+              >
+                Preview
+              </span>
+            )}
           </div>
 
           <div className="flex-1 flex items-center justify-center px-4">
