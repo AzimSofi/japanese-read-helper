@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { getAIClient } from "@/lib/ai";
+import { isAuthenticated } from "@/lib/auth/apiSession";
 
 // 5MB limit to prevent OOM on 512MB Lightsail instance
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
 export async function POST(request: Request) {
   const startTime = Date.now();
+
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ response: "", message: "Sign in required" }, { status: 401 });
+  }
 
   const ai = getAIClient();
   let response;

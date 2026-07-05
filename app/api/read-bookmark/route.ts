@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { getBookmark } from '@/lib/db/queries';
 import { DEFAULT_FILE_NAME } from '@/lib/constants';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 import type { BookmarkResponse } from '@/lib/types';
 
 // Mark as dynamic to prevent static generation during build
@@ -20,6 +21,11 @@ export async function GET(request: Request): Promise<NextResponse<BookmarkRespon
   if (!fileName || fileName.includes('..')) {
     console.error(`無効なファイル名: "${fileName}"`);
     return NextResponse.json({ text: '' }, { status: 400 });
+  }
+
+  // Guests have no personal bookmarks; do not expose the owner's saved position.
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ text: '' });
   }
 
   try {

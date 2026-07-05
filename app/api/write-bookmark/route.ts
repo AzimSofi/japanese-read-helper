@@ -5,12 +5,17 @@
 
 import { NextResponse } from 'next/server';
 import { upsertBookmark } from '@/lib/db/queries';
+import { isAuthenticated } from '@/lib/auth/apiSession';
 import type { BookmarkRequest, WriteResponse } from '@/lib/types';
 
 // Mark as dynamic to prevent static generation during build
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request): Promise<NextResponse<WriteResponse>> {
+  if (!(await isAuthenticated())) {
+    return NextResponse.json({ message: 'Sign in required' }, { status: 401 });
+  }
+
   if (request.headers.get('content-type') !== 'application/json') {
     return NextResponse.json(
       { message: '無効なContent-Typeです' },
