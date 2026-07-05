@@ -27,6 +27,7 @@ export const AI_MODELS = {
   GEMINI_FLASH: 'gemini-2.0-flash-exp',
   GEMINI_2_5_FLASH: 'gemini-2.5-flash',
   GEMINI_2_5_FLASH_LITE: 'gemini-2.5-flash-lite',
+  GEMINI_3_5_FLASH: 'gemini-3.5-flash',
   GEMINI_PRO: 'gemini-1.5-pro-latest',
 } as const;
 
@@ -70,6 +71,7 @@ export const API_ROUTES = {
   WRITE_BOOKMARK: '/api/write-bookmark',
   LIST_TEXT_FILES: '/api/list-text-files',
   EXPLAIN_SENTENCE: '/api/explain-sentence',
+  PRIORITIZE: '/api/prioritize',
   VOCABULARY: '/api/vocabulary',
   AUTH_LOGIN: '/api/auth?action=login',
   AUTH_LOGOUT: '/api/auth?action=logout',
@@ -95,6 +97,17 @@ export const GUEST_KEY_HEADERS = {
   TTS: 'x-guest-tts-key',
   TRANSLATE: 'x-guest-translate-key',
 } as const;
+
+// "Prioritize" beta: how each per-sentence importance score (1-5) is rendered.
+// High scores stay fully visible with a warm accent; low scores fade so the
+// reader can skim to what matters.
+export const PRIORITY_LEVELS: Record<number, { color: string; opacity: number; border: number; label: string }> = {
+  5: { color: '#FF3B30', opacity: 1, border: 4, label: 'Critical' },
+  4: { color: '#FF9500', opacity: 1, border: 3, label: 'High' },
+  3: { color: '#FFCC00', opacity: 0.9, border: 3, label: 'Moderate' },
+  2: { color: '#AEAEB2', opacity: 0.6, border: 2, label: 'Low' },
+  1: { color: '#C7C7CC', opacity: 0.45, border: 2, label: 'Filler' },
+};
 
 // ページルート
 export const PAGE_ROUTES = {
