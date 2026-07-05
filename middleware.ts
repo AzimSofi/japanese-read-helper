@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
-import { findPublicBook } from '@/lib/publicBooks';
+import { findPublicBook, PUBLIC_BOOKS } from '@/lib/publicBooks';
 
-// Pages a signed-out guest may reach: the public library and the reader, the
-// latter only for an allowlisted book (checked against the query params).
+// What a signed-out guest may reach: the home redirect ('/') and public library,
+// the reader ('/read') for an allowlisted book (checked against the query params),
+// and an allowlisted book's own static assets (e.g. the metadata JSON that the
+// reader fetches to resolve inline illustrations).
+function decodePath(pathname: string): string {
+  try {
+    return decodeURIComponent(pathname);
+  } catch {
+    return pathname;
+  }
+}
+
 function isGuestAllowed(request: NextRequest): boolean {
   const path = request.nextUrl.pathname;
 
@@ -18,7 +28,9 @@ function isGuestAllowed(request: NextRequest): boolean {
     return findPublicBook(directory, fileName) !== null;
   }
 
-  return false;
+  // Static assets are requested under the book's path (which may be percent-encoded).
+  const decodedPath = decodePath(path);
+  return PUBLIC_BOOKS.some((book) => decodedPath.startsWith(`/${book.directory}/`));
 }
 
 export async function middleware(request: NextRequest) {
