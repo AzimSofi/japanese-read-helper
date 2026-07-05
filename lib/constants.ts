@@ -88,6 +88,13 @@ export const API_ROUTES = {
   DB_SYNC: '/api/db-sync',
 } as const;
 
+// Guest mode passes the reader's own API key to paid endpoints via these headers.
+// The key is stored only in the browser and never falls back to the owner's key.
+export const GUEST_KEY_HEADERS = {
+  GEMINI: 'x-guest-gemini-key',
+  TTS: 'x-guest-tts-key',
+} as const;
+
 // ページルート
 export const PAGE_ROUTES = {
   HOME: '/',
@@ -195,6 +202,9 @@ export const STORAGE_KEYS = {
   // オーディオブック設定
   AUDIOBOOK_ENABLED: 'audiobook_enabled',
   AUDIOBOOK_CONTENT_MODE: 'audiobook_content_mode',
+  // Guest mode (bring-your-own API keys, stored only in the browser)
+  GUEST_GEMINI_KEY: 'guest_gemini_api_key',
+  GUEST_TTS_KEY: 'guest_google_tts_api_key',
 } as const;
 
 // TTS（Text-to-Speech）設定

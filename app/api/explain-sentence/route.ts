@@ -7,7 +7,8 @@ import {
   ai_instructions_speaker,
   ai_instructions_narrative,
 } from "@/lib/ai";
-import { AI_MODELS, EXPLANATION_MODES } from "@/lib/constants";
+import { AI_MODELS, EXPLANATION_MODES, GUEST_KEY_HEADERS } from "@/lib/constants";
+import { isAuthenticated } from "@/lib/auth/apiSession";
 import type { ExplanationRequest, ExplanationResponse } from "@/lib/types";
 
 /**
@@ -18,6 +19,15 @@ export async function POST(request: Request) {
   const startTime = Date.now();
 
   try {
+    const authed = await isAuthenticated();
+    const guestKey = request.headers.get(GUEST_KEY_HEADERS.GEMINI);
+    if (!authed && !guestKey) {
+      return NextResponse.json(
+        { explanation: '', message: 'Sign in or add your own Gemini API key.', requiresGuestKey: 'gemini' },
+        { status: 401 }
+      );
+    }
+
     const body: ExplanationRequest = await request.json();
     const { sentence, context, fileName, contextSize, mode } = body;
 
@@ -54,8 +64,8 @@ ${sentence}`
 
 ${sentence}`;
 
-    // Gemini APIを呼び出し (singleton client)
-    const ai = getAIClient();
+    // Gemini APIを呼び出し (guests use their own key, never the owner's)
+    const ai = getAIClient(authed ? undefined : guestKey || undefined);
 
     const aiCallStartTime = Date.now();
     const response = await ai.models.generateContent({
