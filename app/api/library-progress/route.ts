@@ -110,8 +110,12 @@ export async function GET() {
     for (const row of rows) {
       const key = `${row.directory}/${row.file_name}`;
       const itemCount = countItems(row.content || '');
-      const totalPages = Math.ceil(itemCount / PAGINATION_CONFIG.ITEMS_PER_PAGE);
-      const totalCharacters = (row.content || '').length;
+      const fullPages = Math.ceil(itemCount / PAGINATION_CONFIG.ITEMS_PER_PAGE);
+      // Guests only see the preview, so their card reflects the capped page count
+      // and does not disclose the full work's length.
+      const previewBook = authed ? null : findPublicBook(row.directory, row.file_name);
+      const totalPages = previewBook ? Math.min(fullPages, previewBook.maxPreviewPages) : fullPages;
+      const totalCharacters = previewBook ? 0 : (row.content || '').length;
       const bookmarkPage = authed ? row.bookmark_page || null : null;
 
       let progress = 0;

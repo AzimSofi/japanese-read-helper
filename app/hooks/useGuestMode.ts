@@ -14,7 +14,7 @@ interface GuestModeState {
  * resolves, isGuest stays false so guest-only UI never flashes for real users.
  */
 export function useGuestMode(): GuestModeState {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isGuest, setIsGuest] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -24,9 +24,11 @@ export function useGuestMode(): GuestModeState {
       try {
         const res = await fetch(API_ROUTES.AUTH_SESSION);
         const data = await res.json();
-        if (active) setIsAuthenticated(Boolean(data.authenticated));
+        // Fail closed: only show guest UI when the server explicitly says so, so
+        // a failed/non-JSON session check never degrades the signed-in owner's chrome.
+        if (active) setIsGuest(data.authenticated === false);
       } catch {
-        if (active) setIsAuthenticated(false);
+        if (active) setIsGuest(false);
       } finally {
         if (active) setIsLoading(false);
       }
@@ -39,8 +41,8 @@ export function useGuestMode(): GuestModeState {
   }, []);
 
   return {
-    isGuest: !isLoading && !isAuthenticated,
-    isAuthenticated,
+    isGuest,
+    isAuthenticated: !isLoading && !isGuest,
     isLoading,
   };
 }
