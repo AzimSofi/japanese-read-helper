@@ -11,6 +11,7 @@ import {
   STORAGE_KEYS,
   PAGINATION_CONFIG,
   API_ROUTES,
+  type PriorityScore,
 } from '@/lib/constants';
 import ProgressBar from './components/ProgressBar';
 import ReaderFAB from './components/ReaderFAB';
@@ -107,8 +108,9 @@ function ReaderContent({
   const [copyRangeOpen, setCopyRangeOpen] = useState(false);
   const [copyRangeFeedback, setCopyRangeFeedback] = useState(false);
 
-  const [priorityScores, setPriorityScores] = useState<Record<number, number>>({});
+  const [priorityScores, setPriorityScores] = useState<Record<number, PriorityScore>>({});
   const [isPrioritizing, setIsPrioritizing] = useState(false);
+  const [prioritizeError, setPrioritizeError] = useState<string | null>(null);
 
   const { imageMap } = useBookMetadata(fileNameParam, directoryParam);
   const { isGuest } = useGuestMode();
@@ -221,10 +223,17 @@ function ReaderContent({
     return playableUnits.slice(start, end).map(unit => stripFurigana(unit.main));
   }, [playableUnits, currentPage]);
 
-  // Priority scores are per-page; drop them when the page or book changes.
+  // Priority scores are per-page; drop them (and any error) on page/book change.
   useEffect(() => {
     setPriorityScores({});
+    setPrioritizeError(null);
   }, [currentPage, fullFilePath]);
+
+  useEffect(() => {
+    if (!prioritizeError) return;
+    const timer = setTimeout(() => setPrioritizeError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [prioritizeError]);
 
   const handlePrioritize = useCallback(async () => {
     if (isPrioritizing || currentPageHeaders.length === 0) return;
@@ -233,6 +242,7 @@ function ReaderContent({
       return;
     }
 
+    setPrioritizeError(null);
     setIsPrioritizing(true);
     try {
       const res = await fetch(API_ROUTES.PRIORITIZE, {
@@ -241,19 +251,23 @@ function ReaderContent({
         body: JSON.stringify({ sentences: currentPageHeaders }),
       });
       if (!res.ok) {
-        await promptGuestKeyOnFailure('gemini', res);
-        throw new Error('Prioritize request failed');
+        // Missing/invalid guest key opens the key modal; anything else is a real
+        // failure the reader should see rather than a silent empty result.
+        if (res.status === 401) {
+          await promptGuestKeyOnFailure('gemini', res);
+        } else {
+          setPrioritizeError('Could not analyze this page. Please try again.');
+        }
+        return;
       }
       const data = await res.json();
-      const scores: number[] = Array.isArray(data.scores) ? data.scores : [];
+      const scores = (Array.isArray(data.scores) ? data.scores : []) as PriorityScore[];
       const start = (currentPage - 1) * PAGINATION_CONFIG.ITEMS_PER_PAGE;
-      const scored: Record<number, number> = {};
-      scores.forEach((score, index) => {
-        scored[start + index] = score;
-      });
-      setPriorityScores(scored);
-    } catch (err) {
-      console.error('Prioritize failed:', err);
+      setPriorityScores(
+        Object.fromEntries(scores.map((score, index) => [start + index, score] as const))
+      );
+    } catch {
+      setPrioritizeError('Could not analyze this page. Please try again.');
     } finally {
       setIsPrioritizing(false);
     }
@@ -653,6 +667,28 @@ function ReaderContent({
             style={{ width: 14, height: 14, borderWidth: 2, borderStyle: 'solid', borderColor: '#FF9500', borderTopColor: 'transparent', borderRadius: '50%' }}
           />
           Analyzing importance...
+        </div>
+      )}
+
+      {prioritizeError && !isPrioritizing && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: audiobookEnabled ? 150 : 24,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 60,
+            padding: '8px 16px',
+            borderRadius: 999,
+            backgroundColor: isDarkMode ? DARK_COLORS.SURFACE : '#FFFFFF',
+            color: '#FF3B30',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.18)',
+            border: '1px solid rgba(255,59,48,0.3)',
+            fontSize: 13,
+            fontWeight: 500,
+          }}
+        >
+          {prioritizeError}
         </div>
       )}
 

@@ -4,7 +4,7 @@ import { useMemo, type CSSProperties } from "react";
 import dynamic from "next/dynamic";
 import { parseReaderItems } from "@/lib/utils/buildPlayableUnits";
 import { stripFurigana } from "@/lib/utils/furiganaParser";
-import { PRIORITY_LEVELS } from "@/lib/constants";
+import { PRIORITY_LEVELS, type PriorityScore } from "@/lib/constants";
 
 const CollapsibleItem = dynamic(
   () => import("@/app/components/reading/CollapsibleItem"),
@@ -38,7 +38,7 @@ interface ReadingContentProps {
   startCursorIndex?: number;
   playingIndex?: number;
   onStartFromHere?: (unitIndex: number) => void;
-  priorityScores?: Record<number, number>;
+  priorityScores?: Record<number, PriorityScore>;
 }
 
 function detectContentType(text: string): ContentType {
@@ -56,9 +56,8 @@ function normalizeForComparison(text: string): string {
   return stripped.replace(/[\r\n]/g, "").trim();
 }
 
-function priorityWrapperStyle(score: number): CSSProperties {
+function priorityWrapperStyle(score: PriorityScore): CSSProperties {
   const level = PRIORITY_LEVELS[score];
-  if (!level) return {};
   return {
     position: "relative",
     borderLeft: `${level.border}px solid ${level.color}`,
@@ -69,9 +68,8 @@ function priorityWrapperStyle(score: number): CSSProperties {
   };
 }
 
-function PriorityBadge({ score }: { score: number }) {
+function PriorityBadge({ score }: { score: PriorityScore }) {
   const level = PRIORITY_LEVELS[score];
-  if (!level) return null;
   return (
     <span
       title={`Importance ${score}/5 - ${level.label}`}
@@ -182,10 +180,14 @@ export default function ReadingContent({
             />
           );
 
-          if (priorityScore === undefined) return itemEl;
+          // Always the same wrapper + key so toggling Prioritize never remounts
+          // the item (which would reset its open/translation state and flash).
           return (
-            <div key={`priority-${currentPage}-${index}`} style={priorityWrapperStyle(priorityScore)}>
-              <PriorityBadge score={priorityScore} />
+            <div
+              key={`${currentPage}-${index}`}
+              style={priorityScore !== undefined ? priorityWrapperStyle(priorityScore) : undefined}
+            >
+              {priorityScore !== undefined && <PriorityBadge score={priorityScore} />}
               {itemEl}
             </div>
           );
@@ -228,10 +230,14 @@ export default function ReadingContent({
           />
         );
 
-        if (priorityScore === undefined) return itemEl;
+        // Always the same wrapper + key so toggling Prioritize never remounts
+        // the item (which would reset its open/translation state and flash).
         return (
-          <div key={`priority-${currentPage}-${index}`} style={priorityWrapperStyle(priorityScore)}>
-            <PriorityBadge score={priorityScore} />
+          <div
+            key={`${currentPage}-${index}`}
+            style={priorityScore !== undefined ? priorityWrapperStyle(priorityScore) : undefined}
+          >
+            {priorityScore !== undefined && <PriorityBadge score={priorityScore} />}
             {itemEl}
           </div>
         );
