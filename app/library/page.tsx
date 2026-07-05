@@ -33,7 +33,7 @@ export default function LibraryPage() {
           <nav className={`items-center gap-1 pt-1 ${isGuest ? 'hidden' : 'flex'}`}>
             <button
               onClick={() => setShowSync(true)}
-              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5"
+              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5 cursor-pointer"
               style={{ color: COLORS.PRIMARY }}
               title="Database sync"
             >
@@ -43,7 +43,7 @@ export default function LibraryPage() {
             </button>
             <Link
               href="/text-input-ai"
-              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5"
+              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5 cursor-pointer"
               style={{ color: COLORS.PRIMARY }}
               title="Add new text"
             >
@@ -53,7 +53,7 @@ export default function LibraryPage() {
             </Link>
             <Link
               href="/visual-novel"
-              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5"
+              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5 cursor-pointer"
               style={{ color: COLORS.PRIMARY }}
               title="Visual Novel mode"
             >
@@ -66,7 +66,7 @@ export default function LibraryPage() {
                 await fetch(API_ROUTES.AUTH_LOGOUT, { method: 'POST' });
                 window.location.href = '/login';
               }}
-              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5"
+              className="p-2.5 rounded-xl transition-colors duration-200 hover:bg-black/5 cursor-pointer"
               style={{ color: COLORS.SECONDARY }}
               title="Sign out"
             >
