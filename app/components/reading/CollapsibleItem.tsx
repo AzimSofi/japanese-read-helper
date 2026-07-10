@@ -501,7 +501,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
         }}
         id="collapsible-item"
       >
-        <div className="flex items-start gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-start gap-2">
           <div className="flex-1 min-w-0">
             <div
               className="head-text font-bold text-lg whitespace-pre-wrap"
@@ -517,7 +517,7 @@ const CollapsibleItem: React.FC<CollapsibleItemProps> = ({
               {renderHeadWithImages()}
             </div>
           </div>
-          <div className="flex items-center gap-0.5 flex-shrink-0 pt-0.5">
+          <div className="flex items-center gap-0.5 flex-shrink-0 pt-0.5 self-end sm:self-auto">
             {audiobookEnabled && onStartFromHere && globalIndex != null && (
               <button
                 onClick={(e) => {
