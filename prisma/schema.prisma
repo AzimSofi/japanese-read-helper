@@ -104,6 +104,7 @@ model TextEntry {
   directory String   // Subdirectory (e.g., 'bookv2-furigana', 'public')
   content   String   @db.Text // The actual Japanese text content
   createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@unique([fileName, directory])
   @@index([fileName, directory])

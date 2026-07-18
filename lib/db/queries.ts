@@ -113,12 +113,12 @@ export async function upsertTextEntry(
 ): Promise<void> {
   try {
     await sql`
-      INSERT INTO text_entries (file_name, directory, content, created_at)
-      VALUES (${fileName}, ${directory}, ${content}, CURRENT_TIMESTAMP)
+      INSERT INTO text_entries (file_name, directory, content, created_at, updated_at)
+      VALUES (${fileName}, ${directory}, ${content}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       ON CONFLICT (file_name, directory)
       DO UPDATE SET
         content = ${content},
-        created_at = CURRENT_TIMESTAMP
+        updated_at = CURRENT_TIMESTAMP
     `;
   } catch (error) {
     console.error('Error upserting text entry:', error);
