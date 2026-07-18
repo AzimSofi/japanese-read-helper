@@ -151,7 +151,7 @@ export default function TopNavigation() {
   const toggleDropdownState = () => {
     const params = new URLSearchParams(searchParams.toString());
     params.set('dropdownAlwaysOpen', (!dropdownAlwaysOpen).toString());
-    router.push(`/?${params.toString()}`);
+    router.push(`${pathname}?${params.toString()}`);
   };
 
   const closeMobileMenu = () => {
