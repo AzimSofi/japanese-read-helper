@@ -122,23 +122,35 @@ async function getCount(client: Client, table: string): Promise<number | null> {
 
 function identityQuery(table: TableConfig): string {
   const bare = stripQuotes(table.name);
-  if (table.identity.kind === 'composite') {
-    const [a, b] = table.identity.cols;
-    return `SELECT ${a} || '${table.identity.sep}' || ${b} as key FROM "${bare}"`;
-  }
-  return `SELECT ${table.identity.col}::text as key FROM "${bare}"`;
+  const keyExpr = table.identity.kind === 'composite'
+    ? `${table.identity.cols[0]} || '${table.identity.sep}' || ${table.identity.cols[1]}`
+    : `${table.identity.col}::text`;
+  // Only last-write-wins tables can propagate content edits, so only they need a
+  // comparable timestamp; insert-only tables report NULL and are never "newer".
+  const tsExpr = table.strategy.kind === 'last-write-wins'
+    ? `extract(epoch from ${table.strategy.timestampCol})`
+    : 'NULL';
+  return `SELECT ${keyExpr} as key, ${tsExpr} as updated_at FROM "${bare}"`;
 }
 
-async function getIdentities(client: Client, table: TableConfig): Promise<Set<string>> {
+async function getIdentitySnapshots(
+  client: Client,
+  table: TableConfig
+): Promise<Map<string, number | null>> {
   try {
     const result = await client.query(identityQuery(table));
-    return new Set(result.rows.map((r: { key: string }) => r.key));
+    return new Map(
+      result.rows.map((r: { key: string; updated_at: string | null }): [string, number | null] => [
+        r.key,
+        r.updated_at === null ? null : Number(r.updated_at),
+      ])
+    );
   } catch (err) {
     console.error(
-      `[sync-core] getIdentities(${stripQuotes(table.name)}) failed:`,
+      `[sync-core] getIdentitySnapshots(${stripQuotes(table.name)}) failed:`,
       err instanceof Error ? err.message : err
     );
-    return new Set();
+    return new Map();
   }
 }
 
@@ -148,23 +160,46 @@ export interface DiffResult {
   prodCount: number | null;
   onlyLocal: string[];
   onlyProd: string[];
+  localNewer: number;
+  prodNewer: number;
+}
+
+// Rows present on both sides whose last-write-wins timestamp differs. Identity
+// diffs alone miss these, so an edited-in-place row (e.g. a moved bookmark)
+// would otherwise look "in sync" and never get pushed.
+function countNewer(
+  localRows: Map<string, number | null>,
+  prodRows: Map<string, number | null>
+): { localNewer: number; prodNewer: number } {
+  let localNewer = 0;
+  let prodNewer = 0;
+  for (const [key, localTs] of localRows) {
+    const prodTs = prodRows.get(key);
+    if (prodTs === undefined || localTs === null || prodTs === null) continue;
+    if (localTs > prodTs) localNewer++;
+    else if (prodTs > localTs) prodNewer++;
+  }
+  return { localNewer, prodNewer };
 }
 
 export async function computeDiffs(prod: Client, local: Client): Promise<DiffResult[]> {
   const diffs: DiffResult[] = [];
   for (const table of TABLES) {
-    const [localCount, prodCount, localIds, prodIds] = await Promise.all([
+    const [localCount, prodCount, localRows, prodRows] = await Promise.all([
       getCount(local, table.name),
       getCount(prod, table.name),
-      getIdentities(local, table),
-      getIdentities(prod, table),
+      getIdentitySnapshots(local, table),
+      getIdentitySnapshots(prod, table),
     ]);
+    const { localNewer, prodNewer } = countNewer(localRows, prodRows);
     diffs.push({
       table: stripQuotes(table.name),
       localCount,
       prodCount,
-      onlyLocal: Array.from(localIds).filter(id => !prodIds.has(id)),
-      onlyProd: Array.from(prodIds).filter(id => !localIds.has(id)),
+      onlyLocal: Array.from(localRows.keys()).filter(id => !prodRows.has(id)),
+      onlyProd: Array.from(prodRows.keys()).filter(id => !localRows.has(id)),
+      localNewer,
+      prodNewer,
     });
   }
   return diffs;
@@ -338,23 +373,6 @@ export async function push(prod: Client, local: Client): Promise<SyncResult[]> {
   const results: SyncResult[] = [];
   for (const table of TABLES) {
     results.push(await syncDirection(local, prod, table, 'local -> prod'));
-  }
-  return results;
-}
-
-export async function pushMissing(
-  prod: Client,
-  local: Client,
-  diffs: DiffResult[]
-): Promise<SyncResult[]> {
-  const tablesWithLocalOnly = new Set(
-    diffs.filter(d => d.onlyLocal.length > 0).map(d => d.table)
-  );
-  const results: SyncResult[] = [];
-  for (const table of TABLES) {
-    if (tablesWithLocalOnly.has(stripQuotes(table.name))) {
-      results.push(await syncDirection(local, prod, table, 'local -> prod'));
-    }
   }
   return results;
 }
