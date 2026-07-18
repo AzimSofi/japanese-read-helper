@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySession } from '@/lib/auth/session';
 import {
-  TABLES,
   computeDiffs,
-  syncDirection,
-  pushMissing,
+  pull,
+  push,
+  fullSync,
   withClients,
-  type SyncResult,
 } from '@/lib/db/sync-core';
 
 export const dynamic = 'force-dynamic';
@@ -79,21 +78,10 @@ export async function POST(request: NextRequest) {
     const results = await withClients(
       process.env.PROD_DATABASE_URL!,
       process.env.DATABASE_URL!,
-      async (prod, local) => {
-        const syncResults: SyncResult[] = [];
-
-        if (direction === 'pull' || direction === 'full') {
-          for (const table of TABLES) {
-            syncResults.push(await syncDirection(prod, local, table, 'prod -> local'));
-          }
-        }
-
-        if (direction === 'push' || direction === 'full') {
-          const diffs = await computeDiffs(prod, local);
-          syncResults.push(...await pushMissing(prod, local, diffs));
-        }
-
-        return syncResults;
+      (prod, local) => {
+        if (direction === 'pull') return pull(prod, local);
+        if (direction === 'push') return push(prod, local);
+        return fullSync(prod, local);
       }
     );
 
