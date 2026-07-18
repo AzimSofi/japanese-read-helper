@@ -11,10 +11,10 @@ import pg from 'pg';
 import readline from 'readline';
 import dotenv from 'dotenv';
 import {
-  TABLES,
   computeDiffs,
-  syncDirection,
-  pushMissing,
+  pull,
+  push,
+  fullSync,
   type DiffResult,
   type SyncResult,
 } from '../../lib/db/sync-core';
@@ -60,21 +60,23 @@ function printDashboard(diffs: DiffResult[]) {
   for (const d of diffs) {
     const localStr = renderCount(d.localCount);
     const prodStr = renderCount(d.prodCount);
+    const toPush = d.onlyLocal.length + d.localNewer;
+    const toPull = d.onlyProd.length + d.prodNewer;
     let status = 'in sync';
 
-    if (d.onlyLocal.length > 0 && d.onlyProd.length > 0) {
-      status = `+${d.onlyLocal.length} local only, +${d.onlyProd.length} prod only`;
-    } else if (d.onlyLocal.length > 0) {
-      status = `+${d.onlyLocal.length} local only`;
-    } else if (d.onlyProd.length > 0) {
-      status = `+${d.onlyProd.length} prod only`;
-    } else if (d.localCount === null || d.prodCount === null) {
+    if (d.localCount === null || d.prodCount === null) {
       status = 'count unavailable';
+    } else if (toPush > 0 && toPull > 0) {
+      status = `${toPush} to push, ${toPull} to pull`;
+    } else if (toPush > 0) {
+      status = `${toPush} to push`;
+    } else if (toPull > 0) {
+      status = `${toPull} to pull`;
     } else if (d.localCount !== d.prodCount) {
       status = 'counts differ (same keys)';
     }
 
-    const ok = d.onlyLocal.length === 0 && d.onlyProd.length === 0
+    const ok = toPush === 0 && toPull === 0
       && d.localCount !== null && d.prodCount !== null
       && d.localCount === d.prodCount;
     const marker = ok ? ' ' : '*';
@@ -85,23 +87,22 @@ function printDashboard(diffs: DiffResult[]) {
 
 async function pullFromProd(prod: pg.Client, local: pg.Client) {
   console.log('\nPulling prod -> local...');
-  for (const table of TABLES) {
-    const result = await syncDirection(prod, local, table, 'prod -> local');
-    logSyncResult(result);
-  }
+  const results = await pull(prod, local);
+  for (const r of results) logSyncResult(r);
   console.log('Done.\n');
 }
 
 async function pushToProd(prod: pg.Client, local: pg.Client, diffs: DiffResult[]) {
-  const missing = diffs.filter(d => d.onlyLocal.length > 0);
-  if (missing.length === 0) {
-    console.log('\nNothing to push - prod has everything.\n');
+  const pending = diffs.filter(d => d.onlyLocal.length + d.localNewer > 0);
+  if (pending.length === 0) {
+    console.log('\nNothing to push - prod is up to date.\n');
     return;
   }
 
   console.log('\nWill push to prod:');
-  for (const d of missing) {
-    console.log(`  ${d.table}: ${d.onlyLocal.length} missing entries`);
+  for (const d of pending) {
+    const newerSuffix = d.localNewer > 0 ? `, ${d.localNewer} newer` : '';
+    console.log(`  ${d.table}: ${d.onlyLocal.length} new${newerSuffix}`);
     for (const id of d.onlyLocal.slice(0, 5)) {
       console.log(`    - ${id}`);
     }
@@ -117,7 +118,7 @@ async function pushToProd(prod: pg.Client, local: pg.Client, diffs: DiffResult[]
   }
 
   console.log('\nPushing local -> prod...');
-  const results = await pushMissing(prod, local, diffs);
+  const results = await push(prod, local);
   for (const r of results) logSyncResult(r);
   console.log('Done.\n');
 }
@@ -125,7 +126,7 @@ async function pushToProd(prod: pg.Client, local: pg.Client, diffs: DiffResult[]
 async function showDiff(diffs: DiffResult[]) {
   console.log('\n=== Detailed Diff ===\n');
   for (const d of diffs) {
-    if (d.onlyLocal.length === 0 && d.onlyProd.length === 0) continue;
+    if (d.onlyLocal.length === 0 && d.onlyProd.length === 0 && d.localNewer === 0 && d.prodNewer === 0) continue;
 
     console.log(`${d.table}:`);
     if (d.onlyLocal.length > 0) {
@@ -136,26 +137,28 @@ async function showDiff(diffs: DiffResult[]) {
       console.log('  Prod only:');
       for (const id of d.onlyProd) console.log(`    + ${id}`);
     }
+    if (d.localNewer > 0) console.log(`  ${d.localNewer} row(s) newer on local`);
+    if (d.prodNewer > 0) console.log(`  ${d.prodNewer} row(s) newer on prod`);
     console.log();
   }
 
-  if (diffs.every(d => d.onlyLocal.length === 0 && d.onlyProd.length === 0)) {
+  if (diffs.every(d => d.onlyLocal.length === 0 && d.onlyProd.length === 0 && d.localNewer === 0 && d.prodNewer === 0)) {
     console.log('Everything is in sync.\n');
   }
 }
 
 async function fullSyncInteractive(prod: pg.Client, local: pg.Client, diffs: DiffResult[]) {
-  const hasMissingInProd = diffs.some(d => d.onlyLocal.length > 0);
-  const hasMissingInLocal = diffs.some(d => d.onlyProd.length > 0);
+  const hasToPull = diffs.some(d => d.onlyProd.length + d.prodNewer > 0);
+  const hasToPush = diffs.some(d => d.onlyLocal.length + d.localNewer > 0);
 
-  if (!hasMissingInProd && !hasMissingInLocal) {
+  if (!hasToPull && !hasToPush) {
     console.log('\nAlready in sync.\n');
     return;
   }
 
   console.log('\nFull sync will:');
-  if (hasMissingInLocal) console.log('  - Pull missing entries from prod -> local');
-  if (hasMissingInProd) console.log('  - Push missing entries from local -> prod');
+  if (hasToPull) console.log('  - Pull newer/missing entries from prod -> local');
+  if (hasToPush) console.log('  - Push newer/missing entries from local -> prod');
 
   const confirm = await ask('\nProceed? (y/n): ');
   if (confirm.toLowerCase() !== 'y') {
@@ -163,20 +166,8 @@ async function fullSyncInteractive(prod: pg.Client, local: pg.Client, diffs: Dif
     return;
   }
 
-  if (hasMissingInLocal) {
-    console.log('\nPulling prod -> local...');
-    for (const table of TABLES) {
-      const result = await syncDirection(prod, local, table, 'prod -> local');
-      logSyncResult(result);
-    }
-  }
-
-  if (hasMissingInProd) {
-    console.log('\nPushing local -> prod...');
-    const results = await pushMissing(prod, local, diffs);
-    for (const r of results) logSyncResult(r);
-  }
-
+  const results = await fullSync(prod, local);
+  for (const r of results) logSyncResult(r);
   console.log('Done.\n');
 }
 
