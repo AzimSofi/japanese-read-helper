@@ -9,6 +9,8 @@ interface DiffResult {
   prodCount: number | null;
   onlyLocal: string[];
   onlyProd: string[];
+  localNewer: number;
+  prodNewer: number;
 }
 
 interface SyncResult {
@@ -71,9 +73,9 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
     }
   }, [fetchStatus]);
 
-  const hasLocalOnly = diffs?.some(d => d.onlyLocal.length > 0) ?? false;
-  const hasProdOnly = diffs?.some(d => d.onlyProd.length > 0) ?? false;
-  const allInSync = diffs !== null && !hasLocalOnly && !hasProdOnly &&
+  const hasLocalToPush = diffs?.some(d => d.onlyLocal.length > 0 || d.localNewer > 0) ?? false;
+  const hasProdToPull = diffs?.some(d => d.onlyProd.length > 0 || d.prodNewer > 0) ?? false;
+  const allInSync = diffs !== null && !hasLocalToPush && !hasProdToPull &&
     diffs.every(d => d.localCount !== null && d.prodCount !== null && d.localCount === d.prodCount);
 
   return (
@@ -146,22 +148,24 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                   <tbody>
                     {diffs.map((d) => {
                       const countsKnown = d.localCount !== null && d.prodCount !== null;
-                      const inSync = d.onlyLocal.length === 0 && d.onlyProd.length === 0
+                      const toPush = d.onlyLocal.length + d.localNewer;
+                      const toPull = d.onlyProd.length + d.prodNewer;
+                      const inSync = toPush === 0 && toPull === 0
                         && countsKnown && d.localCount === d.prodCount;
                       let status = 'In sync';
                       let statusColor = '#34C759';
-                      if (d.onlyLocal.length > 0 && d.onlyProd.length > 0) {
-                        status = `+${d.onlyLocal.length} local, +${d.onlyProd.length} prod`;
-                        statusColor = '#FF9500';
-                      } else if (d.onlyLocal.length > 0) {
-                        status = `+${d.onlyLocal.length} local only`;
-                        statusColor = '#007AFF';
-                      } else if (d.onlyProd.length > 0) {
-                        status = `+${d.onlyProd.length} prod only`;
-                        statusColor = '#AF52DE';
-                      } else if (!countsKnown) {
+                      if (!countsKnown) {
                         status = 'Count unavailable';
                         statusColor = '#FF9500';
+                      } else if (toPush > 0 && toPull > 0) {
+                        status = `${toPush} to push, ${toPull} to pull`;
+                        statusColor = '#FF9500';
+                      } else if (toPush > 0) {
+                        status = `${toPush} to push`;
+                        statusColor = '#007AFF';
+                      } else if (toPull > 0) {
+                        status = `${toPull} to pull`;
+                        statusColor = '#AF52DE';
                       } else if (d.localCount !== d.prodCount) {
                         status = 'Counts differ';
                         statusColor = '#FF9500';
@@ -217,22 +221,22 @@ export default function DbSyncModal({ onClose }: { onClose: () => void }) {
                 </button>
                 <button
                   onClick={() => runSync('pull')}
-                  disabled={syncing || (!hasProdOnly && allInSync)}
+                  disabled={syncing || !hasProdToPull}
                   className="px-4 py-2 rounded-xl text-sm font-medium text-white"
                   style={{
                     backgroundColor: '#AF52DE',
-                    opacity: syncing || (!hasProdOnly && allInSync) ? 0.4 : 1,
+                    opacity: syncing || !hasProdToPull ? 0.4 : 1,
                   }}
                 >
                   {syncing ? 'Syncing...' : 'Pull (Prod -> Local)'}
                 </button>
                 <button
                   onClick={() => runSync('push')}
-                  disabled={syncing || !hasLocalOnly}
+                  disabled={syncing || !hasLocalToPush}
                   className="px-4 py-2 rounded-xl text-sm font-medium text-white"
                   style={{
                     backgroundColor: '#007AFF',
-                    opacity: syncing || !hasLocalOnly ? 0.4 : 1,
+                    opacity: syncing || !hasLocalToPush ? 0.4 : 1,
                   }}
                 >
                   {syncing ? 'Syncing...' : 'Push (Local -> Prod)'}
