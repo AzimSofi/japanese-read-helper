@@ -86,7 +86,7 @@ export const TABLES: TableConfig[] = [
     conflictKey: { kind: 'composite', cols: FILE_DIR_PAIR },
     orderBy: 'created_at',
     identity: { kind: 'composite', cols: FILE_DIR_PAIR, sep: '|' },
-    strategy: { kind: 'insert-only' },
+    strategy: { kind: 'last-write-wins', timestampCol: 'updated_at' },
   },
 ];
 

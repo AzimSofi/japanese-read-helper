@@ -5,6 +5,7 @@ import { CREATE_TABLES_SQL } from '@/lib/db/schema';
 const MIGRATIONS_SQL = `
   ALTER TABLE text_entries ADD COLUMN IF NOT EXISTS total_pages INT DEFAULT 0;
   ALTER TABLE text_entries ADD COLUMN IF NOT EXISTS total_characters INT DEFAULT 0;
+  ALTER TABLE text_entries ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 `;
 
 export async function GET() {
