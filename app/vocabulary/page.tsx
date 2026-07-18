@@ -81,7 +81,7 @@ export default function VocabularyPage() {
       fileName: entry.fileName,
       highlight: entry.word,
     });
-    router.push(`/?${params.toString()}`);
+    router.push(`/read?${params.toString()}`);
   };
 
   const formatDate = (dateString: string | Date) => {
