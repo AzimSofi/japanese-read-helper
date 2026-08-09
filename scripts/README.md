@@ -100,6 +100,12 @@ Notes:
   that has grown; shorter text is accepted as a prefix because that is how the
   guest preview arrives. A same-length edit and a deleted paragraph both slip
   through, so rebuild the manifest whenever you re-process a book
+- Do not publish a manifest for a book that is in the guest preview allowlist.
+  `middleware.ts` denies `.narration.json` to signed-out visitors, but that only
+  covers requests the server function sees: under SST, `public/` is uploaded to S3
+  and CloudFront answers those paths directly, so middleware never runs. Today
+  `public/bookv2-furigana/*` is gitignored and CI deploys from a plain checkout,
+  so nothing lands there — the middleware rule is defence in depth, not the gate
 - Requires `ffmpeg` and `ffprobe` on PATH, and the container must have chapter marks
 - Audio is not served from `public/`. Host it separately and pass its URL: the
   recording is far too large for the Lambda bundle. Re-encode to mono and add

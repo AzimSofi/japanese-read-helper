@@ -189,10 +189,10 @@ export function useAudioBook({
     setStatus(next);
   }, []);
 
-  const releaseNarrationAudio = useCallback(() => {
+  /** Drops the cached recording. Returns whether it was the element being played. */
+  const discardNarrationAudio = useCallback(() => {
     const audio = narrationAudioRef.current;
-    if (!audio) return;
-    const wasPlayingThrough = audioRef.current === audio;
+    if (!audio) return false;
     audio.ontimeupdate = null;
     audio.onended = null;
     audio.onerror = null;
@@ -200,14 +200,18 @@ export function useAudioBook({
     audio.src = '';
     narrationAudioRef.current = null;
     narrationUrlRef.current = null;
-    if (!wasPlayingThrough) return;
+    return audioRef.current === audio;
+  }, []);
+
+  const releaseNarrationAudio = useCallback(() => {
+    if (!discardNarrationAudio()) return;
     // Dropping the recording mid-sentence has to cancel the play in flight too,
     // or the player keeps reporting itself as playing with nothing to play.
     audioRef.current = null;
     playTokenRef.current++;
     isAutoRef.current = false;
     updateStatus('idle');
-  }, [updateStatus]);
+  }, [discardNarrationAudio, updateStatus]);
 
   useEffect(() => {
     if (narration?.audioUrl === narrationUrlRef.current) return;
@@ -310,10 +314,11 @@ export function useAudioBook({
   const playNarration = useCallback(async (step: PlayStep, cue: NarrationCue, token: number) => {
     const stopOnFailure = (error: unknown) => {
       console.error('Narration playback failed:', error);
-      // A superseded step must not touch playback state, but its element still
-      // has to go: leaving an errored one cached poisons the next attempt.
+      // A superseded step must not touch playback state -- the step that replaced
+      // it may already be mid-flight -- but its element still has to go, since
+      // leaving an errored one cached poisons the next attempt.
       if (token !== playTokenRef.current) {
-        if (narrationAudioRef.current?.error) releaseNarrationAudio();
+        if (narrationAudioRef.current?.error) discardNarrationAudio();
         return;
       }
       isAutoRef.current = false;
@@ -387,7 +392,7 @@ export function useAudioBook({
     consecutiveFailuresRef.current = 0;
     clearStartCursor();
     prefetch(step);
-  }, [acquireNarrationAudio, advanceAfter, clearStartCursor, detachAudio, prefetch, releaseNarrationAudio, updateStatus]);
+  }, [acquireNarrationAudio, advanceAfter, clearStartCursor, detachAudio, discardNarrationAudio, prefetch, releaseNarrationAudio, updateStatus]);
 
   const playStep = useCallback(async (step: PlayStep, isAuto: boolean) => {
     const units2 = unitsRef.current;

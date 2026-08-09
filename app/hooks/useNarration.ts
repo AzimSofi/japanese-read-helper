@@ -97,6 +97,10 @@ export function useNarration(
           fail('Audiobook recording could not be loaded', `Narration manifest request failed (${response.status})`);
           return;
         }
+        // A guest is redirected to the login page, and a CDN can answer a missing
+        // object with an HTML error body -- both arrive as a perfectly ok
+        // response. Neither is a fault worth showing, so treat them as absent.
+        if (!response.headers.get('content-type')?.includes('json')) return;
 
         const parsed = parseManifest(await response.json(), url);
         if (controller.signal.aborted) return;
