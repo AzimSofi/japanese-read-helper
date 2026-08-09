@@ -34,6 +34,10 @@ function isGuestAllowed(request: NextRequest): boolean {
   // cap; images are already excluded from the matcher, so they still render.
   const decodedPath = decodePath(path);
   if (!decodedPath.endsWith('.json')) return false;
+  // The narration manifest is a .json sibling, but it carries the URL of the
+  // complete recording plus cue times for the whole book, so letting it ride this
+  // allowance would hand guests the audio the preview cap exists to withhold.
+  if (decodedPath.endsWith('.narration.json')) return false;
   return PUBLIC_BOOKS.some((book) => decodedPath.startsWith(`/${book.directory}/`));
 }
 

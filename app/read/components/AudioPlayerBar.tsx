@@ -20,7 +20,7 @@ interface AudioPlayerBarProps {
   isDarkMode: boolean;
   keyboardMode: boolean;
   hasNarration: boolean;
-  narrationError: string | null;
+  playbackError: string | null;
   onTogglePlay: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -92,7 +92,7 @@ export default function AudioPlayerBar({
   isDarkMode,
   keyboardMode,
   hasNarration,
-  narrationError,
+  playbackError,
   onTogglePlay,
   onPrev,
   onNext,
@@ -253,7 +253,7 @@ export default function AudioPlayerBar({
           })}
         </div>
 
-        {narrationError ? (
+        {playbackError ? (
           <span
             role="status"
             style={{
@@ -265,7 +265,7 @@ export default function AudioPlayerBar({
               backgroundColor: '#FF3B30',
             }}
           >
-            {narrationError}
+            {playbackError}
           </span>
         ) : hasNarration && contentMode !== 'sub' && (
           <span

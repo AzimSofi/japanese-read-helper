@@ -27,8 +27,9 @@ export interface NarrationCue {
 // 朗読音源のマニフェスト。cues の添字は PlayableUnit.globalIndex と一致し、
 // 音源が対応していないユニットは null（TTSにフォールバックする）
 //
-// unitCount は生成時の本文のユニット数。本文を再生成して段落が1つでも増減すると
-// 以降の添字が全部ずれるため、読み込み時に照合して古いマニフェストを弾く。
+// unitCount は生成時の本文のユニット数。読み込み側は「本文がこれより長い」場合だけ
+// 弾く（段落が増えた ＝ 以降の添字が全部ずれる）。短い場合は先頭からの一部とみなして
+// 受け入れる（ゲストプレビューがこの形）。同じ長さの編集と段落削除は検出できない。
 export interface NarrationManifest {
   audioUrl: string;
   unitCount: number;

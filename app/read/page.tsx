@@ -182,6 +182,8 @@ function ReaderContent({
       return;
     }
 
+    const controller = new AbortController();
+
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
@@ -192,27 +194,33 @@ function ReaderContent({
 
       try {
         const [contentRes, bookmarkRes] = await Promise.all([
-          fetch(`${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fullFilePath)}`),
-          fetch(`${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fullFilePath)}`),
+          fetch(`${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fullFilePath)}`, { signal: controller.signal }),
+          fetch(`${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fullFilePath)}`, { signal: controller.signal }),
         ]);
 
         if (!contentRes.ok) throw new Error('Failed to load content');
 
         const contentData = await contentRes.json();
+        if (controller.signal.aborted) return;
         setContent(contentData.text || '');
 
         if (bookmarkRes.ok) {
           const bookmarkData = await bookmarkRes.json();
+          if (controller.signal.aborted) return;
           setBookmarkText(bookmarkData.text || '');
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
 
     fetchData();
+    // A late response from the book we just left would otherwise overwrite the
+    // new book's text, and narration would then be keyed on the wrong unit count.
+    return () => controller.abort();
   }, [fullFilePath, router]);
 
   const playableUnits = useMemo(() => buildPlayableUnits(content), [content]);
@@ -321,7 +329,7 @@ function ReaderContent({
     total: audioTotal,
     speed: audioSpeed,
     hasNarration,
-    narrationError,
+    playbackError,
     togglePlayPause,
     next: audioNext,
     previous: audioPrev,
@@ -887,7 +895,7 @@ function ReaderContent({
           isDarkMode={isDarkMode}
           keyboardMode={keyboardMode}
           hasNarration={hasNarration}
-          narrationError={narrationError ?? narrationLoadError}
+          playbackError={playbackError ?? narrationLoadError}
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}

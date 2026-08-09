@@ -137,13 +137,16 @@ def match_chapter_starts(chapters: list[Chapter], lines: list[str]) -> tuple[lis
                 score = SequenceMatcher(None, target, joined).ratio() if target and joined else 0.0
                 if score > best_score:
                     best_score, best_index = score, cursor + offset
-        starts.append(best_index)
-        # A weak match must not move the search window for the chapters after it.
-        if best_score >= MIN_TITLE_SCORE:
+        # Anchoring to an untrusted index can place a chapter behind its
+        # predecessor, which makes build_cues emit some lines twice and drop
+        # others. Falling back to the cursor keeps starts non-decreasing.
+        trusted = best_score >= MIN_TITLE_SCORE
+        starts.append(best_index if trusted else cursor)
+        if trusted:
             cursor = max(cursor, best_index + 1)
         # Chapter 0 starts at line 0 no matter what its title says, so a weak
         # match there costs nothing.
-        if chapter_index == 0 or best_score >= MIN_TITLE_SCORE:
+        if trusted or chapter_index == 0:
             continue
         weak.append(chapter_index)
         print(
@@ -425,6 +428,15 @@ def main() -> int:
     print(f"chapters={len(chapters)} lines={len(lines)} silences={len(silences)}")
 
     cues, interpolated, weak_titles = build_cues(lines, chapters, silences, band_max=args.band_max)
+    # build-narration.ts pairs cues to lines by position, so anything other than
+    # one cue per line means chapter bounds overlapped and the mapping is garbage.
+    if len(cues) != len(lines):
+        print(
+            f"produced {len(cues)} cues for {len(lines)} lines; chapter bounds are not monotonic",
+            file=sys.stderr,
+        )
+        return 1
+
     report(cues, probe_duration(args.audio))
 
     # Interpolated cues cover their chapter evenly, so they look healthy in the

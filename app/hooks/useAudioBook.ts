@@ -16,6 +16,7 @@ interface PlayStep {
 
 const MAX_CONSECUTIVE_FAILURES = 3;
 const NARRATION_LOAD_TIMEOUT_MS = 20000;
+const TTS_FETCH_TIMEOUT_MS = 30000;
 
 interface UseAudioBookOptions {
   units: PlayableUnit[];
@@ -26,13 +27,12 @@ interface UseAudioBookOptions {
 }
 
 /**
- * Seeks once the recording knows its duration, clamped so a cue that runs past
- * the decoded end (chapter marks routinely do) still lands inside the media.
- * Rejects rather than waiting forever when the media never becomes seekable.
+ * Rejects when `work` outlives `timeoutMs`. The losing side keeps running, so a
+ * caller that owns media or a request has to stop it on rejection itself.
  */
-function withTimeout<T>(work: Promise<T>, message: string): Promise<T> {
+function withTimeout<T>(work: Promise<T>, message: string, timeoutMs: number): Promise<T> {
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(message)), NARRATION_LOAD_TIMEOUT_MS);
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
     work.then(
       (value) => { clearTimeout(timer); resolve(value); },
       (error) => { clearTimeout(timer); reject(error); }
@@ -40,6 +40,11 @@ function withTimeout<T>(work: Promise<T>, message: string): Promise<T> {
   });
 }
 
+/**
+ * Seeks once the recording knows its duration, clamped so a cue that runs past
+ * the decoded end (chapter marks routinely do) still lands inside the media.
+ * Rejects rather than waiting forever when the media never becomes seekable.
+ */
 function seekTo(audio: HTMLAudioElement, time: number): Promise<void> {
   const applySeek = () => {
     audio.currentTime = isFinite(audio.duration) ? Math.min(time, audio.duration) : time;
@@ -63,6 +68,7 @@ function seekTo(audio: HTMLAudioElement, time: number): Promise<void> {
     });
     const onFailed = () => settle(() => reject(new Error('Narration audio failed to load')));
     const timer = setTimeout(onFailed, NARRATION_LOAD_TIMEOUT_MS);
+
 
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('error', onFailed);
@@ -116,7 +122,7 @@ export function useAudioBook({
   const [status, setStatus] = useState<AudioBookStatus>('idle');
   const [index, setIndex] = useState(-1);
   const [cursor, setCursor] = useState(-1);
-  const [narrationError, setNarrationError] = useState<string | null>(null);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
   const [narrationDisabled, setNarrationDisabled] = useState(false);
   const [speed, setSpeedState] = useState<number>(TTS_CONFIG.DEFAULT_SPEED);
   const [voiceGender, setVoiceGenderState] = useState<TTSVoiceGender>(TTS_CONFIG.DEFAULT_VOICE_GENDER);
@@ -239,7 +245,9 @@ export function useAudioBook({
 
   const acquireNarrationAudio = useCallback((audioUrl: string) => {
     const existing = narrationAudioRef.current;
-    if (existing && narrationUrlRef.current === audioUrl) return existing;
+    // An element that already failed keeps its error and never re-fires load
+    // events, so reusing it would make every retry wait out the load timeout.
+    if (existing && narrationUrlRef.current === audioUrl && !existing.error) return existing;
     releaseNarrationAudio();
     const audio = new Audio(audioUrl);
     audio.preload = 'auto';
@@ -301,8 +309,13 @@ export function useAudioBook({
   // it stops playback instead of skipping ahead like the TTS path does.
   const playNarration = useCallback(async (step: PlayStep, cue: NarrationCue, token: number) => {
     const stopOnFailure = (error: unknown) => {
-      if (token !== playTokenRef.current) return;
       console.error('Narration playback failed:', error);
+      // A superseded step must not touch playback state, but its element still
+      // has to go: leaving an errored one cached poisons the next attempt.
+      if (token !== playTokenRef.current) {
+        if (narrationAudioRef.current?.error) releaseNarrationAudio();
+        return;
+      }
       isAutoRef.current = false;
       // Retrying a broken recording forever would leave the book unplayable even
       // though speech synthesis could read it, so give up on the recording and
@@ -313,7 +326,7 @@ export function useAudioBook({
         narrationDisabledRef.current = true;
         setNarrationDisabled(true);
       }
-      setNarrationError(givingUp
+      setPlaybackError(givingUp
         ? 'Audiobook recording unavailable, reading with speech synthesis'
         : 'Audiobook recording could not be played');
       // A failed element keeps its error state and will not re-fire load events,
@@ -362,14 +375,14 @@ export function useAudioBook({
       }
       // Seeking into an unbuffered range can leave play() pending indefinitely on
       // a hung range request, which would pin the player on its loading spinner.
-      await withTimeout(audio.play(), 'Narration audio did not start playing');
+      await withTimeout(audio.play(), 'Narration audio did not start playing', NARRATION_LOAD_TIMEOUT_MS);
     } catch (error) {
       stopOnFailure(error);
       return;
     }
     if (token !== playTokenRef.current) return;
     narrationFailuresRef.current = 0;
-    setNarrationError(null);
+    setPlaybackError(null);
     updateStatus('playing');
     consecutiveFailuresRef.current = 0;
     clearStartCursor();
@@ -397,10 +410,17 @@ export function useAudioBook({
 
     let audioBase64: string | null = null;
     try {
-      audioBase64 = await fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current });
+      // Without a deadline a hung /api/tts leaves status on 'loading', where
+      // togglePlayPause refuses to act and the player looks frozen.
+      audioBase64 = await withTimeout(
+        fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current }),
+        'Speech synthesis did not respond',
+        TTS_FETCH_TIMEOUT_MS
+      );
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook TTS fetch failed:', error);
+      setPlaybackError('Speech synthesis failed');
       skipOrEndOnFailure(token);
       return;
     }
@@ -419,6 +439,7 @@ export function useAudioBook({
     audio.onerror = () => {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook clip failed to decode/play');
+      setPlaybackError('Speech synthesis clip could not be played');
       skipOrEndOnFailure(token);
     };
     audioRef.current = audio;
@@ -428,11 +449,13 @@ export function useAudioBook({
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook playback failed:', error);
+      setPlaybackError('Playback could not start');
       isAutoRef.current = false;
       updateStatus('idle');
       return;
     }
     if (token !== playTokenRef.current) return;
+    setPlaybackError(null);
     updateStatus('playing');
     consecutiveFailuresRef.current = 0;
     clearStartCursor();
@@ -475,7 +498,7 @@ export function useAudioBook({
     phaseRef.current = 'main';
     updateIndex(-1);
     clearStartCursor();
-    setNarrationError(null);
+    setPlaybackError(null);
     updateStatus('idle');
   }, [clearStartCursor, detachAudio, updateIndex, updateStatus]);
 
@@ -543,7 +566,7 @@ export function useAudioBook({
     statusRef.current = 'idle';
     setIndex(-1);
     setCursor(-1);
-    setNarrationError(null);
+    setPlaybackError(null);
     setStatus('idle');
   }, [units, detachAudio]);
 
@@ -562,7 +585,7 @@ export function useAudioBook({
     total: units.length,
     speed,
     hasNarration,
-    narrationError,
+    playbackError,
     togglePlayPause,
     pause,
     resume,

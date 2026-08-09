@@ -96,8 +96,10 @@ Notes:
 - `--text` must be the same revision that was synced to the `text_entries` table.
   The reader builds its units from Postgres, not from `public/*.txt`, and cues are
   positional — if the two have drifted by a paragraph, every later line plays the
-  wrong audio. The builder stores a `unitCount` so the reader can reject a stale
-  manifest, but it cannot detect a same-length edit
+  wrong audio. The builder stores a `unitCount`, but the reader only rejects text
+  that has grown; shorter text is accepted as a prefix because that is how the
+  guest preview arrives. A same-length edit and a deleted paragraph both slip
+  through, so rebuild the manifest whenever you re-process a book
 - Requires `ffmpeg` and `ffprobe` on PATH, and the container must have chapter marks
 - Audio is not served from `public/`. Host it separately and pass its URL: the
   recording is far too large for the Lambda bundle. Re-encode to mono and add
