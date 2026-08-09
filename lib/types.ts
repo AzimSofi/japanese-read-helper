@@ -18,6 +18,19 @@ export interface PlayableUnit {
 // オーディオブックで読み上げる対象
 export type AudioBookContentMode = 'main' | 'sub' | 'both';
 
+// 朗読音源の再生区間（秒）
+export interface NarrationCue {
+  start: number;
+  end: number;
+}
+
+// 朗読音源のマニフェスト。cues の添字は PlayableUnit.globalIndex と一致し、
+// 音源が対応していないユニットは null（TTSにフォールバックする）
+export interface NarrationManifest {
+  audioUrl: string;
+  cues: (NarrationCue | null)[];
+}
+
 // 辞書の単語構造（漢字[読み・意味]）
 export interface DictionaryWord {
   kanji: string;
