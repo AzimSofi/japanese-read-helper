@@ -313,6 +313,7 @@ function ReaderContent({
     total: audioTotal,
     speed: audioSpeed,
     hasNarration,
+    narrationError,
     togglePlayPause,
     next: audioNext,
     previous: audioPrev,
@@ -878,6 +879,7 @@ function ReaderContent({
           isDarkMode={isDarkMode}
           keyboardMode={keyboardMode}
           hasNarration={hasNarration}
+          narrationError={narrationError}
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}
