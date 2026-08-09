@@ -19,6 +19,7 @@ interface AudioPlayerBarProps {
   speed: number;
   isDarkMode: boolean;
   keyboardMode: boolean;
+  hasNarration: boolean;
   onTogglePlay: () => void;
   onPrev: () => void;
   onNext: () => void;
@@ -89,6 +90,7 @@ export default function AudioPlayerBar({
   speed,
   isDarkMode,
   keyboardMode,
+  hasNarration,
   onTogglePlay,
   onPrev,
   onNext,
@@ -248,6 +250,22 @@ export default function AudioPlayerBar({
             );
           })}
         </div>
+
+        {hasNarration && contentMode !== 'sub' && (
+          <span
+            title="Playing the audiobook recording. Rephrased text still uses text-to-speech."
+            style={{
+              fontSize: 12,
+              fontWeight: 600,
+              padding: '4px 9px',
+              borderRadius: 7,
+              color: accent,
+              backgroundColor: isDarkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+            }}
+          >
+            Narration
+          </span>
+        )}
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
           <span style={{ fontSize: 13, color: subtle, fontVariantNumeric: 'tabular-nums', minWidth: 64, textAlign: 'right' }}>

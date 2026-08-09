@@ -27,6 +27,7 @@ import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { buildPlayableUnits } from '@/lib/utils/buildPlayableUnits';
 import { guestKeyHeaders, promptGuestKeyOnFailure } from '@/lib/guestKeys';
 import { useAudioBook } from '@/app/hooks/useAudioBook';
+import { useNarration } from '@/app/hooks/useNarration';
 import type { AudioBookContentMode } from '@/lib/types';
 
 const ExplanationSidebar = dynamic(
@@ -303,12 +304,15 @@ function ReaderContent({
     return bookmarkPageForIndex === currentPage ? bookmarkItemIndex : pageTop;
   }, [currentPage, bookmarkItemIndex]);
 
+  const narration = useNarration(fileNameParam, directoryParam);
+
   const {
     status: audioStatus,
     index: audioIndex,
     cursor: audioStartCursor,
     total: audioTotal,
     speed: audioSpeed,
+    hasNarration,
     togglePlayPause,
     next: audioNext,
     previous: audioPrev,
@@ -320,6 +324,7 @@ function ReaderContent({
   } = useAudioBook({
     units: playableUnits,
     contentMode,
+    narration,
     getStartIndex,
   });
 
@@ -872,6 +877,7 @@ function ReaderContent({
           speed={audioSpeed}
           isDarkMode={isDarkMode}
           keyboardMode={keyboardMode}
+          hasNarration={hasNarration}
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}
