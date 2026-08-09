@@ -56,7 +56,7 @@ function similarity(left: string, right: string): number {
   return (2 * shared) / totalGrams;
 }
 
-/** Same barricade the reader applies, so a truncated timings file fails loudly. */
+/** Validates the aligner's output up front, so a truncated file fails loudly. */
 function parseTimings(raw: string, path: string): TimingCue[] {
   const parsed: unknown = JSON.parse(raw);
   if (!Array.isArray(parsed) || parsed.length === 0) {
@@ -158,7 +158,14 @@ function main(): void {
   console.log(`cues:     ${cues.length}`);
   console.log(`covered:  ${covered} (${(coverage * 100).toFixed(1)}%)`);
 
-  const minCoverage = parseFloat(readArg('min-coverage') ?? `${DEFAULT_MIN_COVERAGE}`);
+  const minCoverageArg = readArg('min-coverage');
+  const minCoverage = minCoverageArg === null ? DEFAULT_MIN_COVERAGE : Number(minCoverageArg);
+  // NaN would make every comparison false and silently disable the gate this flag
+  // exists to tune, so a typo has to fail rather than wave the manifest through.
+  if (!isFinite(minCoverage) || minCoverage < 0 || minCoverage > 1) {
+    console.error(`--min-coverage must be a number between 0 and 1, got "${minCoverageArg}".`);
+    process.exit(1);
+  }
   if (coverage < minCoverage) {
     console.error(
       `Coverage ${(coverage * 100).toFixed(1)}% is below ${(minCoverage * 100).toFixed(1)}%. ` +

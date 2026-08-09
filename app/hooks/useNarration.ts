@@ -31,6 +31,12 @@ function parseManifest(value: unknown, url: string): NarrationManifest | null {
     console.error(`Narration manifest has no cues array: ${url}`);
     return null;
   }
+  // cues is what gets indexed by unit, so a short array would quietly drop the
+  // tail of the book even though unitCount looked right.
+  if (cues.length !== unitCount) {
+    console.error(`Narration manifest has ${cues.length} cues for ${unitCount} units: ${url}`);
+    return null;
+  }
 
   const parsed = cues.map(parseCue);
   const dropped = parsed.filter((cue, index) => !cue && cues[index] !== null).length;
@@ -60,10 +66,11 @@ export function useNarration(
   const [manifest, setManifest] = useState<NarrationManifest | null>(null);
 
   useEffect(() => {
-    if (!fileName || !directory || unitCount <= 0) {
-      setManifest(null);
-      return;
-    }
+    // Drop the previous book's manifest before anything else. Cues are positional,
+    // so serving book A's cues against book B's units for even one render is the
+    // exact mismatch unitCount exists to prevent.
+    setManifest(null);
+    if (!fileName || !directory || unitCount <= 0) return;
 
     const controller = new AbortController();
     const url = bookAssetPath(directory, fileName, '.narration.json');
@@ -71,13 +78,13 @@ export function useNarration(
     const loadManifest = async () => {
       try {
         const response = await fetch(url, { signal: controller.signal });
+        if (controller.signal.aborted) return;
         if (!response.ok) {
           // 404 just means this book has no recording; anything else is a fault
           // worth seeing, since both downgrade silently to TTS.
           if (response.status !== 404) {
             console.error(`Narration manifest request failed (${response.status}): ${url}`);
           }
-          setManifest(null);
           return;
         }
 
@@ -87,14 +94,12 @@ export function useNarration(
           console.error(
             `Narration manifest is stale: built for ${parsed.unitCount} units, book now has ${unitCount}. Rebuild it with scripts/audio/build-narration.ts.`
           );
-          setManifest(null);
           return;
         }
         setManifest(parsed);
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error(`Failed to load narration manifest: ${url}`, error);
-        setManifest(null);
       }
     };
 

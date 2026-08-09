@@ -279,17 +279,25 @@ export function useAudioBook({
   // A narration failure is a whole-recording problem rather than a bad clip, so
   // it stops playback instead of skipping ahead like the TTS path does.
   const playNarration = useCallback(async (step: PlayStep, cue: NarrationCue, token: number) => {
-    const manifest = narrationRef.current;
-    if (!manifest) return;
-
     const stopOnFailure = (error: unknown) => {
       if (token !== playTokenRef.current) return;
       console.error('Narration playback failed:', error);
       isAutoRef.current = false;
       setNarrationError('Audiobook recording could not be played');
+      // A failed element keeps its error state and will not re-fire load events,
+      // so leaving it cached would make every retry wait out the load timeout.
+      releaseNarrationAudio();
       updateStatus('idle');
     };
 
+    const manifest = narrationRef.current;
+    if (!manifest) {
+      stopOnFailure(new Error('Narration manifest disappeared mid-step'));
+      return;
+    }
+
+    // detachAudio must run first: it clears audioRef so the release inside
+    // acquireNarrationAudio cannot mistake this play for one it should cancel.
     detachAudio();
     const audio = acquireNarrationAudio(manifest.audioUrl);
     audio.playbackRate = speedRef.current;
@@ -313,6 +321,13 @@ export function useAudioBook({
     try {
       await seekTo(audio, cue.start);
       if (token !== playTokenRef.current) return;
+      // A cue starting past the end means the hosted recording is shorter than the
+      // one it was aligned against. Playing anyway restarts the media from zero,
+      // which ends, advances, and loops the whole book forever.
+      if (isFinite(audio.duration) && cue.start >= audio.duration) {
+        stopOnFailure(new Error(`Cue starts at ${cue.start}s, past the ${audio.duration}s recording`));
+        return;
+      }
       await audio.play();
     } catch (error) {
       stopOnFailure(error);
@@ -324,7 +339,7 @@ export function useAudioBook({
     consecutiveFailuresRef.current = 0;
     clearStartCursor();
     prefetch(step);
-  }, [acquireNarrationAudio, advanceAfter, clearStartCursor, detachAudio, prefetch, updateStatus]);
+  }, [acquireNarrationAudio, advanceAfter, clearStartCursor, detachAudio, prefetch, releaseNarrationAudio, updateStatus]);
 
   const playStep = useCallback(async (step: PlayStep, isAuto: boolean) => {
     const units2 = unitsRef.current;
@@ -425,6 +440,7 @@ export function useAudioBook({
     phaseRef.current = 'main';
     updateIndex(-1);
     clearStartCursor();
+    setNarrationError(null);
     updateStatus('idle');
   }, [clearStartCursor, detachAudio, updateIndex, updateStatus]);
 
@@ -492,6 +508,7 @@ export function useAudioBook({
     statusRef.current = 'idle';
     setIndex(-1);
     setCursor(-1);
+    setNarrationError(null);
     setStatus('idle');
   }, [units, detachAudio]);
 

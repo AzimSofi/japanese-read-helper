@@ -58,16 +58,18 @@ class Cue:
     text: str
 
 
-def run(command: list[str]) -> str:
+def run(command: list[str]) -> subprocess.CompletedProcess[str]:
     result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"command failed: {' '.join(command[:2])}\n{result.stderr[-2000:]}")
-    return result.stdout + result.stderr
+    return result
 
 
 def probe_chapters(audio: Path) -> list[Chapter]:
-    raw = run(["ffprobe", "-v", "error", "-print_format", "json", "-show_chapters", str(audio)])
-    payload = json.loads(raw[raw.index("{"):])
+    # stdout only: ffprobe can emit warnings while still exiting 0, and mixing them
+    # into the payload turns valid output into a JSON decode error.
+    raw = run(["ffprobe", "-v", "error", "-print_format", "json", "-show_chapters", str(audio)]).stdout
+    payload = json.loads(raw)
     return [
         Chapter(float(c["start_time"]), float(c["end_time"]), c.get("tags", {}).get("title", ""))
         for c in payload["chapters"]
@@ -78,17 +80,22 @@ def probe_duration(audio: Path) -> float:
     raw = run([
         "ffprobe", "-v", "error", "-show_entries", "format=duration",
         "-of", "default=nw=1:nk=1", str(audio),
-    ])
-    return float(raw.strip().splitlines()[0])
+    ]).stdout.strip()
+    try:
+        return float(raw.splitlines()[0])
+    except (IndexError, ValueError):
+        return 0.0
 
 
 def detect_silences(audio: Path, noise_db: int, min_silence: float) -> list[Silence]:
-    raw = run([
+    # silencedetect reports on stderr, so this one genuinely needs both streams.
+    result = run([
         "ffmpeg", "-hide_banner", "-nostats", "-i", str(audio), "-map", "0:a:0",
         "-af", f"silencedetect=noise={noise_db}dB:d={min_silence}", "-f", "null", "-",
     ])
-    starts = [float(m) for m in re.findall(r"silence_start: ([0-9.]+)", raw)]
-    ends = [float(m) for m in re.findall(r"silence_end: ([0-9.]+)", raw)]
+    raw = result.stdout + result.stderr
+    starts = [float(m) for m in re.findall(r"silence_start: (-?[0-9.]+)", raw)]
+    ends = [float(m) for m in re.findall(r"silence_end: (-?[0-9.]+)", raw)]
     return [Silence(s, e) for s, e in zip(starts, ends)]
 
 
@@ -122,17 +129,22 @@ def match_chapter_starts(chapters: list[Chapter], lines: list[str]) -> tuple[lis
         for offset in range(len(window)):
             for span in TITLE_MATCH_SPANS:
                 joined = normalize("".join(window[offset:offset + span]))
-                score = SequenceMatcher(None, target, joined).ratio()
+                # Two empty strings score a perfect 1.0, so an untitled chapter
+                # would otherwise anchor to the first punctuation-only line.
+                score = SequenceMatcher(None, target, joined).ratio() if target and joined else 0.0
                 if score > best_score:
                     best_score, best_index = score, cursor + offset
-        if best_score < MIN_TITLE_SCORE:
-            weak.append(chapter_index)
-            print(
-                f"  chapter {chapter_index} title matched weakly ({best_score:.2f}): {chapter.title[:48]}",
-                file=sys.stderr,
-            )
         starts.append(best_index)
         cursor = max(cursor, best_index + 1)
+        # Chapter 0 starts at line 0 no matter what its title says, so a weak
+        # match there costs nothing.
+        if chapter_index == 0 or best_score >= MIN_TITLE_SCORE:
+            continue
+        weak.append(chapter_index)
+        print(
+            f"  chapter {chapter_index} title matched weakly ({best_score:.2f}): {chapter.title[:48]}",
+            file=sys.stderr,
+        )
     starts[0] = 0
     return starts, weak
 
@@ -196,6 +208,8 @@ def align_segment(
     lines: list[str],
     silences: list[Silence],
     span: tuple[float, float],
+    *,
+    band_max: float = BAND_MAX_SEC,
 ) -> tuple[list[tuple[float, float]], bool]:
     """Returns cue spans plus whether they came from proportional interpolation
     rather than real silence boundaries. Interpolated spans look plausible and
@@ -219,7 +233,7 @@ def align_segment(
     for duration in predicted[:-1]:
         clock += duration
         cumulative.append(clock)
-    band = min(BAND_MAX_SEC, max(BAND_MIN_SEC, available * BAND_SPAN_RATIO))
+    band = min(band_max, max(BAND_MIN_SEC, available * BAND_SPAN_RATIO))
 
     allowed = [
         [j for j, s in enumerate(inner) if abs(s.start - target) <= band]
@@ -289,6 +303,8 @@ def build_cues(
     lines: list[str],
     chapters: list[Chapter],
     silences: list[Silence],
+    *,
+    band_max: float = BAND_MAX_SEC,
 ) -> tuple[list[Cue], list[int], list[int]]:
     """Cues for every line, plus the chapters that fell back to interpolation and
     the chapters whose title match was too weak to anchor confidently."""
@@ -301,7 +317,7 @@ def build_cues(
         if not segment:
             continue
         span = trim_span((chapter.start, chapter.end), silences)
-        spans, was_interpolated = align_segment(segment, silences, span)
+        spans, was_interpolated = align_segment(segment, silences, span, band_max=band_max)
         if was_interpolated:
             interpolated.append(chapter_index)
         for (start, end), text in zip(spans, segment):
@@ -363,6 +379,18 @@ def main() -> int:
         default=0,
         help="how many chapters may fall back to proportional timings before the run fails",
     )
+    parser.add_argument(
+        "--max-weak-titles",
+        type=int,
+        default=0,
+        help="how many chapter titles may match the transcript poorly before the run fails",
+    )
+    parser.add_argument(
+        "--band-max",
+        type=float,
+        default=BAND_MAX_SEC,
+        help="widest search window around a predicted boundary; raise it for long chapters",
+    )
     args = parser.parse_args()
 
     out_dir = args.out_dir or args.audio.parent
@@ -391,21 +419,21 @@ def main() -> int:
         return 1
     print(f"chapters={len(chapters)} lines={len(lines)} silences={len(silences)}")
 
-    cues, interpolated, weak_titles = build_cues(lines, chapters, silences)
+    cues, interpolated, weak_titles = build_cues(lines, chapters, silences, band_max=args.band_max)
     report(cues, probe_duration(args.audio))
-    if weak_titles:
-        print(f"weak title matches: {len(weak_titles)} chapters (listed above)", file=sys.stderr)
-    if interpolated:
-        print(
-            f"interpolated chapters: {len(interpolated)} -> {interpolated[:10]}",
-            file=sys.stderr,
-        )
+
     # Interpolated cues cover their chapter evenly, so they look healthy in the
-    # report while landing mid-speech. Refuse to leave them on disk unnoticed.
-    if len(interpolated) > args.max_interpolated_chapters or weak_titles:
+    # report while landing mid-speech. Refuse to leave either kind on disk unseen.
+    failures = []
+    if len(interpolated) > args.max_interpolated_chapters:
+        print(f"interpolated chapters: {len(interpolated)} -> {interpolated[:10]}", file=sys.stderr)
+        failures.append(f"--max-interpolated-chapters (currently {args.max_interpolated_chapters})")
+    if len(weak_titles) > args.max_weak_titles:
+        print(f"weak title matches: {len(weak_titles)} -> {weak_titles[:10]}", file=sys.stderr)
+        failures.append(f"--max-weak-titles (currently {args.max_weak_titles})")
+    if failures:
         print(
-            "alignment is not trustworthy; nothing written. Raise "
-            "--max-interpolated-chapters to accept it anyway.",
+            f"alignment is not trustworthy; nothing written. Raise {' or '.join(failures)} to accept it anyway.",
             file=sys.stderr,
         )
         return 1

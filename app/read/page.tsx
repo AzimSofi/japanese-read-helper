@@ -185,6 +185,9 @@ function ReaderContent({
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
+      // Keeping the previous book's text would leave every derived value - unit
+      // count, page count, narration lookup - describing the book we just left.
+      setContent('');
 
       try {
         const [contentRes, bookmarkRes] = await Promise.all([
