@@ -30,6 +30,16 @@ interface UseAudioBookOptions {
  * the decoded end (chapter marks routinely do) still lands inside the media.
  * Rejects rather than waiting forever when the media never becomes seekable.
  */
+function withTimeout<T>(work: Promise<T>, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), NARRATION_LOAD_TIMEOUT_MS);
+    work.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
 function seekTo(audio: HTMLAudioElement, time: number): Promise<void> {
   const applySeek = () => {
     audio.currentTime = isFinite(audio.duration) ? Math.min(time, audio.duration) : time;
@@ -107,6 +117,7 @@ export function useAudioBook({
   const [index, setIndex] = useState(-1);
   const [cursor, setCursor] = useState(-1);
   const [narrationError, setNarrationError] = useState<string | null>(null);
+  const [narrationDisabled, setNarrationDisabled] = useState(false);
   const [speed, setSpeedState] = useState<number>(TTS_CONFIG.DEFAULT_SPEED);
   const [voiceGender, setVoiceGenderState] = useState<TTSVoiceGender>(TTS_CONFIG.DEFAULT_VOICE_GENDER);
 
@@ -120,6 +131,8 @@ export function useAudioBook({
 
   const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
   const narrationUrlRef = useRef<string | null>(null);
+  const narrationFailuresRef = useRef(0);
+  const narrationDisabledRef = useRef(false);
 
   const unitsRef = useRef(units);
   const narrationRef = useRef(narration);
@@ -131,11 +144,19 @@ export function useAudioBook({
   const playStepRef = useRef<(step: PlayStep, isAuto: boolean) => void>(() => {});
   const consecutiveFailuresRef = useRef(0);
 
-  // A manifest whose cues are all null covers nothing, so playback stays on TTS
-  // and the player must not claim otherwise.
-  const hasNarration = useMemo(() => Boolean(narration?.cues.some(Boolean)), [narration]);
+  // A manifest whose cues are all null covers nothing, and one we gave up on is
+  // no longer being played, so the player must not claim narration in either case.
+  const hasNarration = useMemo(
+    () => !narrationDisabled && Boolean(narration?.cues.some(Boolean)),
+    [narration, narrationDisabled]
+  );
 
-  useEffect(() => { narrationRef.current = narration; }, [narration]);
+  useEffect(() => {
+    narrationRef.current = narration;
+    narrationFailuresRef.current = 0;
+    narrationDisabledRef.current = false;
+    setNarrationDisabled(false);
+  }, [narration]);
   useEffect(() => { contentModeRef.current = contentMode; }, [contentMode]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { voiceRef.current = voiceGender; }, [voiceGender]);
@@ -229,7 +250,7 @@ export function useAudioBook({
   }, [releaseNarrationAudio]);
 
   const cueForStep = useCallback((step: PlayStep): NarrationCue | null => {
-    if (step.part !== 'main') return null;
+    if (step.part !== 'main' || narrationDisabledRef.current) return null;
     return narrationRef.current?.cues[step.index] ?? null;
   }, []);
 
@@ -283,7 +304,18 @@ export function useAudioBook({
       if (token !== playTokenRef.current) return;
       console.error('Narration playback failed:', error);
       isAutoRef.current = false;
-      setNarrationError('Audiobook recording could not be played');
+      // Retrying a broken recording forever would leave the book unplayable even
+      // though speech synthesis could read it, so give up on the recording and
+      // let the next play fall through to TTS.
+      narrationFailuresRef.current += 1;
+      const givingUp = narrationFailuresRef.current >= MAX_CONSECUTIVE_FAILURES;
+      if (givingUp) {
+        narrationDisabledRef.current = true;
+        setNarrationDisabled(true);
+      }
+      setNarrationError(givingUp
+        ? 'Audiobook recording unavailable, reading with speech synthesis'
+        : 'Audiobook recording could not be played');
       // A failed element keeps its error state and will not re-fire load events,
       // so leaving it cached would make every retry wait out the load timeout.
       releaseNarrationAudio();
@@ -328,12 +360,15 @@ export function useAudioBook({
         stopOnFailure(new Error(`Cue starts at ${cue.start}s, past the ${audio.duration}s recording`));
         return;
       }
-      await audio.play();
+      // Seeking into an unbuffered range can leave play() pending indefinitely on
+      // a hung range request, which would pin the player on its loading spinner.
+      await withTimeout(audio.play(), 'Narration audio did not start playing');
     } catch (error) {
       stopOnFailure(error);
       return;
     }
     if (token !== playTokenRef.current) return;
+    narrationFailuresRef.current = 0;
     setNarrationError(null);
     updateStatus('playing');
     consecutiveFailuresRef.current = 0;

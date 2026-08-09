@@ -75,7 +75,7 @@ npx tsx scripts/audio/build-narration.ts \
   --timings "book.timings.json" \
   --text "public/bookv2-furigana/<book>/<book>-rephrase-furigana.txt" \
   --audio-url "https://<cdn>/<book>.m4a" \
-  --out "public/bookv2-furigana/<book>/<book>.narration.json"
+  --out "public/bookv2-furigana/<book>/<book>-rephrase-furigana.narration.json"
 ```
 
 The aligner uses no ASR. Container chapter marks are exact anchors, ffmpeg
@@ -88,9 +88,11 @@ that land mid-speech.
 
 Notes:
 
-- The `--out` path must sit **inside** the book folder and be named after the book,
-  next to `<book>.json`. That is where the reader looks; one level up is a silent
-  404 that leaves playback on TTS with no error anywhere
+- The `--out` path must sit **inside** the book folder and be named after the
+  **text file** it was built from, not the book. Each text variant splits into
+  different units, so each needs its own manifest; the plain variant would be
+  `<book>/<book>.narration.json`. Anywhere else is a silent 404 that leaves
+  playback on TTS with no error anywhere
 - `--text` must be the same revision that was synced to the `text_entries` table.
   The reader builds its units from Postgres, not from `public/*.txt`, and cues are
   positional — if the two have drifted by a paragraph, every later line plays the

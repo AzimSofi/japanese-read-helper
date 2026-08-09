@@ -188,6 +188,7 @@ function ReaderContent({
       // Keeping the previous book's text would leave every derived value - unit
       // count, page count, narration lookup - describing the book we just left.
       setContent('');
+      setBookmarkText('');
 
       try {
         const [contentRes, bookmarkRes] = await Promise.all([
@@ -307,7 +308,11 @@ function ReaderContent({
     return bookmarkPageForIndex === currentPage ? bookmarkItemIndex : pageTop;
   }, [currentPage, bookmarkItemIndex]);
 
-  const narration = useNarration(fileNameParam, directoryParam, totalItems);
+  const { manifest: narration, error: narrationLoadError } = useNarration(
+    fileNameParam,
+    directoryParam,
+    totalItems
+  );
 
   const {
     status: audioStatus,
@@ -882,7 +887,7 @@ function ReaderContent({
           isDarkMode={isDarkMode}
           keyboardMode={keyboardMode}
           hasNarration={hasNarration}
-          narrationError={narrationError}
+          narrationError={narrationError ?? narrationLoadError}
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}

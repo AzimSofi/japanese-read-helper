@@ -1,8 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { bookAssetPath } from '@/lib/utils/bookAssetPath';
+import { bookVariantAssetPath } from '@/lib/utils/bookAssetPath';
 import type { NarrationCue, NarrationManifest } from '@/lib/types';
+
+export interface NarrationLoad {
+  manifest: NarrationManifest | null;
+  error: string | null;
+}
+
+const ABSENT: NarrationLoad = { manifest: null, error: null };
 
 function parseCue(value: unknown): NarrationCue | null {
   if (!value || typeof value !== 'object') return null;
@@ -34,7 +41,7 @@ function parseManifest(value: unknown, url: string): NarrationManifest | null {
   // cues is what gets indexed by unit, so a short array would quietly drop the
   // tail of the book even though unitCount looked right.
   if (cues.length !== unitCount) {
-    console.error(`Narration manifest has ${cues.length} cues for ${unitCount} units: ${url}`);
+    console.error(`Narration manifest declares ${unitCount} units but has ${cues.length} cues: ${url}`);
     return null;
   }
 
@@ -51,55 +58,64 @@ function parseManifest(value: unknown, url: string): NarrationManifest | null {
 }
 
 /**
- * Loads the narration manifest that pairs a book with its audiobook recording.
+ * Loads the narration recording paired with the text variant being read.
  *
- * Returns null whenever the book has no usable recording, which keeps playback on
- * TTS. `unitCount` must match the reader's own unit count or the manifest is
- * rejected: cues are positional, so a re-processed book would otherwise play the
- * wrong audio for every line after the first inserted or removed paragraph.
+ * Cues are positional, so the manifest is only usable when the book still starts
+ * with the units it was built from. A shorter book is accepted because it is a
+ * prefix -- that is how the guest preview arrives -- but a longer one means the
+ * text was re-processed and every cue after the change would play the wrong line.
  */
 export function useNarration(
   fileName: string | null,
   directory: string | null,
   unitCount: number
-): NarrationManifest | null {
-  const [manifest, setManifest] = useState<NarrationManifest | null>(null);
+): NarrationLoad {
+  const [load, setLoad] = useState<NarrationLoad>(ABSENT);
 
   useEffect(() => {
     // Drop the previous book's manifest before anything else. Cues are positional,
     // so serving book A's cues against book B's units for even one render is the
     // exact mismatch unitCount exists to prevent.
-    setManifest(null);
+    setLoad(ABSENT);
     if (!fileName || !directory || unitCount <= 0) return;
 
     const controller = new AbortController();
-    const url = bookAssetPath(directory, fileName, '.narration.json');
+    const url = bookVariantAssetPath(directory, fileName, '.narration.json');
+
+    const fail = (message: string, detail: string) => {
+      console.error(`${detail}: ${url}`);
+      setLoad({ manifest: null, error: message });
+    };
 
     const loadManifest = async () => {
       try {
         const response = await fetch(url, { signal: controller.signal });
         if (controller.signal.aborted) return;
         if (!response.ok) {
-          // 404 just means this book has no recording; anything else is a fault
-          // worth seeing, since both downgrade silently to TTS.
-          if (response.status !== 404) {
-            console.error(`Narration manifest request failed (${response.status}): ${url}`);
-          }
+          // 404 just means this variant has no recording, which is the normal case.
+          if (response.status === 404) return;
+          fail('Audiobook recording could not be loaded', `Narration manifest request failed (${response.status})`);
           return;
         }
 
         const parsed = parseManifest(await response.json(), url);
         if (controller.signal.aborted) return;
-        if (parsed && parsed.unitCount !== unitCount) {
-          console.error(
-            `Narration manifest is stale: built for ${parsed.unitCount} units, book now has ${unitCount}. Rebuild it with scripts/audio/build-narration.ts.`
+        if (!parsed) {
+          fail('Audiobook recording is unusable', 'Narration manifest failed validation');
+          return;
+        }
+        if (parsed.unitCount < unitCount) {
+          fail(
+            'Audiobook recording is out of date',
+            `Narration manifest is stale: built for ${parsed.unitCount} units, this text now has ${unitCount}. Rebuild it with scripts/audio/build-narration.ts`
           );
           return;
         }
-        setManifest(parsed);
+        setLoad({ manifest: parsed, error: null });
       } catch (error) {
         if (controller.signal.aborted) return;
         console.error(`Failed to load narration manifest: ${url}`, error);
+        setLoad({ manifest: null, error: 'Audiobook recording could not be loaded' });
       }
     };
 
@@ -107,5 +123,5 @@ export function useNarration(
     return () => controller.abort();
   }, [fileName, directory, unitCount]);
 
-  return manifest;
+  return load;
 }

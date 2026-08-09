@@ -80,7 +80,14 @@ function parseTimings(raw: string, path: string): TimingCue[] {
 function readArg(name: string): string | null {
   const index = process.argv.indexOf(`--${name}`);
   if (index === -1 || index + 1 >= process.argv.length) return null;
-  return process.argv[index + 1];
+  const value = process.argv[index + 1];
+  // Swallowing the next flag as a value turns a missing argument into a plausible
+  // wrong one, e.g. --audio-url --out x yielding an audioUrl of "--out".
+  if (value.startsWith('--')) {
+    console.error(`--${name} needs a value, found "${value}".`);
+    process.exit(1);
+  }
+  return value;
 }
 
 function matchCues(unitTexts: string[], cues: TimingCue[]): (NarrationCue | null)[] {

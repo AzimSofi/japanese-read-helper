@@ -59,7 +59,10 @@ class Cue:
 
 
 def run(command: list[str]) -> subprocess.CompletedProcess[str]:
-    result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    except FileNotFoundError as missing:
+        raise RuntimeError(f"{command[0]} is not on PATH; install ffmpeg") from missing
     if result.returncode != 0:
         raise RuntimeError(f"command failed: {' '.join(command[:2])}\n{result.stderr[-2000:]}")
     return result
@@ -72,7 +75,7 @@ def probe_chapters(audio: Path) -> list[Chapter]:
     payload = json.loads(raw)
     return [
         Chapter(float(c["start_time"]), float(c["end_time"]), c.get("tags", {}).get("title", ""))
-        for c in payload["chapters"]
+        for c in payload.get("chapters", [])
     ]
 
 
@@ -135,7 +138,9 @@ def match_chapter_starts(chapters: list[Chapter], lines: list[str]) -> tuple[lis
                 if score > best_score:
                     best_score, best_index = score, cursor + offset
         starts.append(best_index)
-        cursor = max(cursor, best_index + 1)
+        # A weak match must not move the search window for the chapters after it.
+        if best_score >= MIN_TITLE_SCORE:
+            cursor = max(cursor, best_index + 1)
         # Chapter 0 starts at line 0 no matter what its title says, so a weak
         # match there costs nothing.
         if chapter_index == 0 or best_score >= MIN_TITLE_SCORE:
