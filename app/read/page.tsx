@@ -304,7 +304,7 @@ function ReaderContent({
     return bookmarkPageForIndex === currentPage ? bookmarkItemIndex : pageTop;
   }, [currentPage, bookmarkItemIndex]);
 
-  const narration = useNarration(fileNameParam, directoryParam);
+  const narration = useNarration(fileNameParam, directoryParam, totalItems);
 
   const {
     status: audioStatus,

@@ -3,8 +3,10 @@ const REPHRASE_SUFFIX_PATTERN = /-rephrase(-furigana)?$/;
 /**
  * Public URL of a book sidecar asset (metadata, narration, ...).
  *
- * Rephrase files live next to their book folder, so their sidecars are siblings
- * of the folder; original files live inside it. Both resolve to the same book.
+ * Both branches resolve to `/<...>/<book>/<book><extension>`; they differ only in
+ * where the book folder comes from. For a rephrase file the directory already
+ * points at it, so the sidecar sits beside the text file. For an original file
+ * the directory is the parent and the book name doubles as the subfolder.
  */
 export function bookAssetPath(directory: string, fileName: string, extension: string): string {
   const isRephraseFile = REPHRASE_SUFFIX_PATTERN.test(fileName);

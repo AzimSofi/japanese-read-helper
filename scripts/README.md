@@ -75,16 +75,27 @@ npx tsx scripts/audio/build-narration.ts \
   --timings "book.timings.json" \
   --text "public/bookv2-furigana/<book>/<book>-rephrase-furigana.txt" \
   --audio-url "https://<cdn>/<book>.m4a" \
-  --out "public/bookv2-furigana/<book>.narration.json"
+  --out "public/bookv2-furigana/<book>/<book>.narration.json"
 ```
 
 The aligner uses no ASR. Container chapter marks are exact anchors, ffmpeg
 `silencedetect` supplies candidate boundaries, and MeCab mora counts predict
 relative duration within a chapter; a DP then picks the boundaries chapter by
 chapter. It prints a mora/s spread — a tight p05..p95 means a good alignment.
+It refuses to write anything when a chapter falls back to proportional timings
+or a chapter title matches too weakly, since both produce plausible-looking cues
+that land mid-speech.
 
 Notes:
 
+- The `--out` path must sit **inside** the book folder and be named after the book,
+  next to `<book>.json`. That is where the reader looks; one level up is a silent
+  404 that leaves playback on TTS with no error anywhere
+- `--text` must be the same revision that was synced to the `text_entries` table.
+  The reader builds its units from Postgres, not from `public/*.txt`, and cues are
+  positional — if the two have drifted by a paragraph, every later line plays the
+  wrong audio. The builder stores a `unitCount` so the reader can reject a stale
+  manifest, but it cannot detect a same-length edit
 - Requires `ffmpeg` and `ffprobe` on PATH, and the container must have chapter marks
 - Audio is not served from `public/`. Host it separately and pass its URL: the
   recording is far too large for the Lambda bundle. Re-encode to mono and add
