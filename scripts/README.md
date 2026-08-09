@@ -61,6 +61,37 @@ python scripts/epub-to-text-furigana.py path/to/book.epub
 
 For detailed documentation on the EPUB to Text converter, see [README-epub-converter.md](./README-epub-converter.md).
 
+## Audiobook Narration (`audio/`)
+
+Lets the reader's play button use a real narration instead of Google TTS. Needs the
+recording plus a transcript of it — not the ebook text, it must match what is spoken.
+
+```bash
+# 1. Align transcript to audio -> .srt (for eyeballing) + .timings.json
+python scripts/audio/align-transcript.py "book.m4b" "book.txt"
+
+# 2. Map those cues onto reader units -> the manifest the reader fetches
+npx tsx scripts/audio/build-narration.ts \
+  --timings "book.timings.json" \
+  --text "public/bookv2-furigana/<book>/<book>-rephrase-furigana.txt" \
+  --audio-url "https://<cdn>/<book>.m4a" \
+  --out "public/bookv2-furigana/<book>.narration.json"
+```
+
+The aligner uses no ASR. Container chapter marks are exact anchors, ffmpeg
+`silencedetect` supplies candidate boundaries, and MeCab mora counts predict
+relative duration within a chapter; a DP then picks the boundaries chapter by
+chapter. It prints a mora/s spread — a tight p05..p95 means a good alignment.
+
+Notes:
+
+- Requires `ffmpeg` and `ffprobe` on PATH, and the container must have chapter marks
+- Audio is not served from `public/`. Host it separately and pass its URL: the
+  recording is far too large for the Lambda bundle. Re-encode to mono and add
+  `-movflags +faststart` so the browser can seek with range requests
+- Manifest cue indices are `PlayableUnit.globalIndex`; `null` falls back to TTS
+- Rephrased text has no recording, so `sub` playback stays on TTS
+
 ## Virtual Environment Notes
 
 **Important:** The `venv/` directory should NOT be committed to git. It's already in `.gitignore`.
