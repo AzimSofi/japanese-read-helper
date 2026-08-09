@@ -18,6 +18,24 @@ export interface PlayableUnit {
 // オーディオブックで読み上げる対象
 export type AudioBookContentMode = 'main' | 'sub' | 'both';
 
+// 朗読音源の再生区間（秒）
+export interface NarrationCue {
+  start: number;
+  end: number;
+}
+
+// 朗読音源のマニフェスト。cues の添字は PlayableUnit.globalIndex と一致し、
+// 音源が対応していないユニットは null（TTSにフォールバックする）
+//
+// unitCount は生成時の本文のユニット数。読み込み側は「本文がこれより長い」場合だけ
+// 弾く（段落が増えた ＝ 以降の添字が全部ずれる）。短い場合は先頭からの一部とみなして
+// 受け入れる（ゲストプレビューがこの形）。同じ長さの編集と段落削除は検出できない。
+export interface NarrationManifest {
+  audioUrl: string;
+  unitCount: number;
+  cues: (NarrationCue | null)[];
+}
+
 // 辞書の単語構造（漢字[読み・意味]）
 export interface DictionaryWord {
   kanji: string;

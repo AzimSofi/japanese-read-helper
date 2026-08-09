@@ -27,6 +27,7 @@ import { stripFurigana } from '@/lib/utils/furiganaParser';
 import { buildPlayableUnits } from '@/lib/utils/buildPlayableUnits';
 import { guestKeyHeaders, promptGuestKeyOnFailure } from '@/lib/guestKeys';
 import { useAudioBook } from '@/app/hooks/useAudioBook';
+import { useNarration } from '@/app/hooks/useNarration';
 import type { AudioBookContentMode } from '@/lib/types';
 
 const ExplanationSidebar = dynamic(
@@ -181,33 +182,45 @@ function ReaderContent({
       return;
     }
 
+    const controller = new AbortController();
+
     const fetchData = async () => {
       setIsLoading(true);
       setError(null);
+      // Keeping the previous book's text would leave every derived value - unit
+      // count, page count, narration lookup - describing the book we just left.
+      setContent('');
+      setBookmarkText('');
 
       try {
         const [contentRes, bookmarkRes] = await Promise.all([
-          fetch(`${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fullFilePath)}`),
-          fetch(`${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fullFilePath)}`),
+          fetch(`${API_ROUTES.READ_TEXT}?fileName=${encodeURIComponent(fullFilePath)}`, { signal: controller.signal }),
+          fetch(`${API_ROUTES.READ_BOOKMARK}?fileName=${encodeURIComponent(fullFilePath)}`, { signal: controller.signal }),
         ]);
 
         if (!contentRes.ok) throw new Error('Failed to load content');
 
         const contentData = await contentRes.json();
+        if (controller.signal.aborted) return;
         setContent(contentData.text || '');
 
         if (bookmarkRes.ok) {
           const bookmarkData = await bookmarkRes.json();
+          if (controller.signal.aborted) return;
           setBookmarkText(bookmarkData.text || '');
         }
       } catch (err) {
+        if (controller.signal.aborted) return;
         setError(err instanceof Error ? err.message : 'Unknown error');
       } finally {
-        setIsLoading(false);
+        if (!controller.signal.aborted) setIsLoading(false);
       }
     };
 
     fetchData();
+    // A late response from the book we just left would otherwise overwrite the
+    // new book's text, and narration would then be keyed on the wrong unit count.
+    return () => controller.abort();
   }, [fullFilePath, router]);
 
   const playableUnits = useMemo(() => buildPlayableUnits(content), [content]);
@@ -303,12 +316,20 @@ function ReaderContent({
     return bookmarkPageForIndex === currentPage ? bookmarkItemIndex : pageTop;
   }, [currentPage, bookmarkItemIndex]);
 
+  const { manifest: narration, error: narrationLoadError } = useNarration(
+    fileNameParam,
+    directoryParam,
+    totalItems
+  );
+
   const {
     status: audioStatus,
     index: audioIndex,
     cursor: audioStartCursor,
     total: audioTotal,
     speed: audioSpeed,
+    hasNarration,
+    playbackError,
     togglePlayPause,
     next: audioNext,
     previous: audioPrev,
@@ -320,6 +341,7 @@ function ReaderContent({
   } = useAudioBook({
     units: playableUnits,
     contentMode,
+    narration,
     getStartIndex,
   });
 
@@ -872,6 +894,8 @@ function ReaderContent({
           speed={audioSpeed}
           isDarkMode={isDarkMode}
           keyboardMode={keyboardMode}
+          hasNarration={hasNarration}
+          playbackError={playbackError ?? narrationLoadError}
           onTogglePlay={togglePlayPause}
           onPrev={audioPrev}
           onNext={audioNext}

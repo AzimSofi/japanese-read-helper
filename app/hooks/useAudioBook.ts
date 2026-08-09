@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { STORAGE_KEYS, TTS_CONFIG, type TTSVoiceGender } from '@/lib/constants';
-import type { AudioBookContentMode, PlayableUnit } from '@/lib/types';
+import type { AudioBookContentMode, NarrationCue, NarrationManifest, PlayableUnit } from '@/lib/types';
 import { cleanTextForTTS } from '@/lib/utils/ttsTextCleaner';
 import { fetchTTS } from '@/lib/utils/ttsCache';
 
@@ -15,12 +15,64 @@ interface PlayStep {
 }
 
 const MAX_CONSECUTIVE_FAILURES = 3;
+const NARRATION_LOAD_TIMEOUT_MS = 20000;
+const TTS_FETCH_TIMEOUT_MS = 30000;
 
 interface UseAudioBookOptions {
   units: PlayableUnit[];
   contentMode: AudioBookContentMode;
+  narration?: NarrationManifest | null;
   onEnd?: () => void;
   getStartIndex?: () => number;
+}
+
+/**
+ * Rejects when `work` outlives `timeoutMs`. The losing side keeps running, so a
+ * caller that owns media or a request has to stop it on rejection itself.
+ */
+function withTimeout<T>(work: Promise<T>, message: string, timeoutMs: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs);
+    work.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (error) => { clearTimeout(timer); reject(error); }
+    );
+  });
+}
+
+/**
+ * Seeks once the recording knows its duration, clamped so a cue that runs past
+ * the decoded end (chapter marks routinely do) still lands inside the media.
+ * Rejects rather than waiting forever when the media never becomes seekable.
+ */
+function seekTo(audio: HTMLAudioElement, time: number): Promise<void> {
+  const applySeek = () => {
+    audio.currentTime = isFinite(audio.duration) ? Math.min(time, audio.duration) : time;
+  };
+
+  if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) {
+    applySeek();
+    return Promise.resolve();
+  }
+
+  return new Promise((resolve, reject) => {
+    const settle = (finish: () => void) => {
+      clearTimeout(timer);
+      audio.removeEventListener('loadedmetadata', onLoaded);
+      audio.removeEventListener('error', onFailed);
+      finish();
+    };
+    const onLoaded = () => settle(() => {
+      applySeek();
+      resolve();
+    });
+    const onFailed = () => settle(() => reject(new Error('Narration audio failed to load')));
+    const timer = setTimeout(onFailed, NARRATION_LOAD_TIMEOUT_MS);
+
+
+    audio.addEventListener('loadedmetadata', onLoaded);
+    audio.addEventListener('error', onFailed);
+  });
 }
 
 function partText(unit: PlayableUnit, part: PlayPart): string {
@@ -63,12 +115,15 @@ function stepAfter(units: PlayableUnit[], step: PlayStep, mode: AudioBookContent
 export function useAudioBook({
   units,
   contentMode,
+  narration,
   onEnd,
   getStartIndex,
 }: UseAudioBookOptions) {
   const [status, setStatus] = useState<AudioBookStatus>('idle');
   const [index, setIndex] = useState(-1);
   const [cursor, setCursor] = useState(-1);
+  const [playbackError, setPlaybackError] = useState<string | null>(null);
+  const [narrationDisabled, setNarrationDisabled] = useState(false);
   const [speed, setSpeedState] = useState<number>(TTS_CONFIG.DEFAULT_SPEED);
   const [voiceGender, setVoiceGenderState] = useState<TTSVoiceGender>(TTS_CONFIG.DEFAULT_VOICE_GENDER);
 
@@ -80,7 +135,13 @@ export function useAudioBook({
   const phaseRef = useRef<PlayPart>('main');
   const statusRef = useRef<AudioBookStatus>('idle');
 
+  const narrationAudioRef = useRef<HTMLAudioElement | null>(null);
+  const narrationUrlRef = useRef<string | null>(null);
+  const narrationFailuresRef = useRef(0);
+  const narrationDisabledRef = useRef(false);
+
   const unitsRef = useRef(units);
+  const narrationRef = useRef(narration);
   const contentModeRef = useRef(contentMode);
   const speedRef = useRef(speed);
   const voiceRef = useRef(voiceGender);
@@ -89,6 +150,19 @@ export function useAudioBook({
   const playStepRef = useRef<(step: PlayStep, isAuto: boolean) => void>(() => {});
   const consecutiveFailuresRef = useRef(0);
 
+  // A manifest whose cues are all null covers nothing, and one we gave up on is
+  // no longer being played, so the player must not claim narration in either case.
+  const hasNarration = useMemo(
+    () => !narrationDisabled && Boolean(narration?.cues.some(Boolean)),
+    [narration, narrationDisabled]
+  );
+
+  useEffect(() => {
+    narrationRef.current = narration;
+    narrationFailuresRef.current = 0;
+    narrationDisabledRef.current = false;
+    setNarrationDisabled(false);
+  }, [narration]);
   useEffect(() => { contentModeRef.current = contentMode; }, [contentMode]);
   useEffect(() => { speedRef.current = speed; }, [speed]);
   useEffect(() => { voiceRef.current = voiceGender; }, [voiceGender]);
@@ -115,6 +189,35 @@ export function useAudioBook({
     setStatus(next);
   }, []);
 
+  /** Drops the cached recording. Returns whether it was the element being played. */
+  const discardNarrationAudio = useCallback(() => {
+    const audio = narrationAudioRef.current;
+    if (!audio) return false;
+    audio.ontimeupdate = null;
+    audio.onended = null;
+    audio.onerror = null;
+    audio.pause();
+    audio.src = '';
+    narrationAudioRef.current = null;
+    narrationUrlRef.current = null;
+    return audioRef.current === audio;
+  }, []);
+
+  const releaseNarrationAudio = useCallback(() => {
+    if (!discardNarrationAudio()) return;
+    // Dropping the recording mid-sentence has to cancel the play in flight too,
+    // or the player keeps reporting itself as playing with nothing to play.
+    audioRef.current = null;
+    playTokenRef.current++;
+    isAutoRef.current = false;
+    updateStatus('idle');
+  }, [discardNarrationAudio, updateStatus]);
+
+  useEffect(() => {
+    if (narration?.audioUrl === narrationUrlRef.current) return;
+    releaseNarrationAudio();
+  }, [narration, releaseNarrationAudio]);
+
   const updateIndex = useCallback((next: number) => {
     indexRef.current = next;
     setIndex(next);
@@ -136,18 +239,41 @@ export function useAudioBook({
     if (!audio) return;
     audio.onended = null;
     audio.onerror = null;
+    audio.ontimeupdate = null;
     audio.pause();
-    audio.src = '';
+    // The narration element is shared by every unit, so clearing its src here
+    // would re-download the whole recording on each sentence.
+    if (audio !== narrationAudioRef.current) audio.src = '';
     audioRef.current = null;
+  }, []);
+
+  const acquireNarrationAudio = useCallback((audioUrl: string) => {
+    const existing = narrationAudioRef.current;
+    // An element that already failed keeps its error and never re-fires load
+    // events, so reusing it would make every retry wait out the load timeout.
+    if (existing && narrationUrlRef.current === audioUrl && !existing.error) return existing;
+    releaseNarrationAudio();
+    const audio = new Audio(audioUrl);
+    audio.preload = 'auto';
+    audio.preservesPitch = true;
+    narrationAudioRef.current = audio;
+    narrationUrlRef.current = audioUrl;
+    return audio;
+  }, [releaseNarrationAudio]);
+
+  const cueForStep = useCallback((step: PlayStep): NarrationCue | null => {
+    if (step.part !== 'main' || narrationDisabledRef.current) return null;
+    return narrationRef.current?.cues[step.index] ?? null;
   }, []);
 
   const prefetch = useCallback((step: PlayStep) => {
     const next = stepAfter(unitsRef.current, step, contentModeRef.current);
     if (!next) return;
+    if (cueForStep(next)) return;
     const unit = unitsRef.current[next.index];
     const text = next.part === 'sub' ? unit.sub : unit.main;
     fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current }).catch(() => {});
-  }, []);
+  }, [cueForStep]);
 
   const advanceAfter = useCallback((token: number) => {
     if (token !== playTokenRef.current) return;
@@ -183,6 +309,91 @@ export function useAudioBook({
     updateStatus('idle');
   }, [advanceAfter, updateStatus]);
 
+  // A narration failure is a whole-recording problem rather than a bad clip, so
+  // it stops playback instead of skipping ahead like the TTS path does.
+  const playNarration = useCallback(async (step: PlayStep, cue: NarrationCue, token: number) => {
+    const stopOnFailure = (error: unknown) => {
+      console.error('Narration playback failed:', error);
+      // A superseded step must not touch playback state -- the step that replaced
+      // it may already be mid-flight -- but its element still has to go, since
+      // leaving an errored one cached poisons the next attempt.
+      if (token !== playTokenRef.current) {
+        if (narrationAudioRef.current?.error) discardNarrationAudio();
+        return;
+      }
+      isAutoRef.current = false;
+      // Retrying a broken recording forever would leave the book unplayable even
+      // though speech synthesis could read it, so give up on the recording and
+      // let the next play fall through to TTS.
+      narrationFailuresRef.current += 1;
+      const givingUp = narrationFailuresRef.current >= MAX_CONSECUTIVE_FAILURES;
+      if (givingUp) {
+        narrationDisabledRef.current = true;
+        setNarrationDisabled(true);
+      }
+      setPlaybackError(givingUp
+        ? 'Audiobook recording unavailable, reading with speech synthesis'
+        : 'Audiobook recording could not be played');
+      // A failed element keeps its error state and will not re-fire load events,
+      // so leaving it cached would make every retry wait out the load timeout.
+      releaseNarrationAudio();
+      updateStatus('idle');
+    };
+
+    const manifest = narrationRef.current;
+    if (!manifest) {
+      stopOnFailure(new Error('Narration manifest disappeared mid-step'));
+      return;
+    }
+
+    // detachAudio must run first: it clears audioRef so the release inside
+    // acquireNarrationAudio cannot mistake this play for one it should cancel.
+    detachAudio();
+    const audio = acquireNarrationAudio(manifest.audioUrl);
+    audio.playbackRate = speedRef.current;
+    // timeupdate fires a few times per second, so playback overshoots the cue end
+    // slightly -- more so above 1x, since the cadence is wall clock rather than
+    // media time. Aligned cues normally end in the narrator's pause, which absorbs
+    // it; interpolated cues can clip. Chosen over requestAnimationFrame because
+    // that stops firing in a background tab, which is a normal way to listen.
+    audio.ontimeupdate = () => {
+      if (audio.currentTime < cue.end) return;
+      audio.ontimeupdate = null;
+      audio.pause();
+      advanceAfter(token);
+    };
+    // The recording can run out before the cue end is crossed, which would
+    // otherwise leave playback stuck reporting itself as playing.
+    audio.onended = () => advanceAfter(token);
+    audio.onerror = () => stopOnFailure(audio.error);
+    audioRef.current = audio;
+
+    try {
+      await seekTo(audio, cue.start);
+      if (token !== playTokenRef.current) return;
+      // A cue starting past the end means the hosted recording is shorter than the
+      // one it was aligned against. Playing anyway restarts the media from zero,
+      // which ends, advances, and loops the whole book forever.
+      if (isFinite(audio.duration) && cue.start >= audio.duration) {
+        stopOnFailure(new Error(`Cue starts at ${cue.start}s, past the ${audio.duration}s recording`));
+        return;
+      }
+      // Seeking into an unbuffered range can leave play() pending indefinitely on
+      // a hung range request, which would pin the player on its loading spinner.
+      await withTimeout(audio.play(), 'Narration audio did not start playing', NARRATION_LOAD_TIMEOUT_MS);
+    } catch (error) {
+      stopOnFailure(error);
+      return;
+    }
+    if (token !== playTokenRef.current) return;
+    narrationFailuresRef.current = 0;
+    setPlaybackError(null);
+    updateStatus('playing');
+    consecutiveFailuresRef.current = 0;
+    clearStartCursor();
+    prefetch(step);
+  }, [acquireNarrationAudio, advanceAfter, clearStartCursor, detachAudio, discardNarrationAudio, prefetch, releaseNarrationAudio, updateStatus]);
+
   const playStep = useCallback(async (step: PlayStep, isAuto: boolean) => {
     const units2 = unitsRef.current;
     if (step.index < 0 || step.index >= units2.length) return;
@@ -193,15 +404,28 @@ export function useAudioBook({
     updateIndex(step.index);
     updateStatus('loading');
 
+    const cue = cueForStep(step);
+    if (cue) {
+      await playNarration(step, cue, token);
+      return;
+    }
+
     const unit = units2[step.index];
     const text = step.part === 'sub' ? unit.sub : unit.main;
 
     let audioBase64: string | null = null;
     try {
-      audioBase64 = await fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current });
+      // Without a deadline a hung /api/tts leaves status on 'loading', where
+      // togglePlayPause refuses to act and the player looks frozen.
+      audioBase64 = await withTimeout(
+        fetchTTS({ text: text ?? '', speed: 1, voiceGender: voiceRef.current }),
+        'Speech synthesis did not respond',
+        TTS_FETCH_TIMEOUT_MS
+      );
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook TTS fetch failed:', error);
+      setPlaybackError('Speech synthesis failed');
       skipOrEndOnFailure(token);
       return;
     }
@@ -220,6 +444,7 @@ export function useAudioBook({
     audio.onerror = () => {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook clip failed to decode/play');
+      setPlaybackError('Speech synthesis clip could not be played');
       skipOrEndOnFailure(token);
     };
     audioRef.current = audio;
@@ -229,16 +454,18 @@ export function useAudioBook({
     } catch (error) {
       if (token !== playTokenRef.current) return;
       console.error('Audiobook playback failed:', error);
+      setPlaybackError('Playback could not start');
       isAutoRef.current = false;
       updateStatus('idle');
       return;
     }
     if (token !== playTokenRef.current) return;
+    setPlaybackError(null);
     updateStatus('playing');
     consecutiveFailuresRef.current = 0;
     clearStartCursor();
     prefetch(step);
-  }, [advanceAfter, clearStartCursor, detachAudio, prefetch, skipOrEndOnFailure, updateIndex, updateStatus]);
+  }, [advanceAfter, clearStartCursor, cueForStep, detachAudio, playNarration, prefetch, skipOrEndOnFailure, updateIndex, updateStatus]);
 
   useEffect(() => { playStepRef.current = playStep; }, [playStep]);
 
@@ -276,6 +503,7 @@ export function useAudioBook({
     phaseRef.current = 'main';
     updateIndex(-1);
     clearStartCursor();
+    setPlaybackError(null);
     updateStatus('idle');
   }, [clearStartCursor, detachAudio, updateIndex, updateStatus]);
 
@@ -343,6 +571,7 @@ export function useAudioBook({
     statusRef.current = 'idle';
     setIndex(-1);
     setCursor(-1);
+    setPlaybackError(null);
     setStatus('idle');
   }, [units, detachAudio]);
 
@@ -350,8 +579,9 @@ export function useAudioBook({
     return () => {
       playTokenRef.current++;
       detachAudio();
+      releaseNarrationAudio();
     };
-  }, [detachAudio]);
+  }, [detachAudio, releaseNarrationAudio]);
 
   return {
     status,
@@ -359,6 +589,8 @@ export function useAudioBook({
     cursor,
     total: units.length,
     speed,
+    hasNarration,
+    playbackError,
     togglePlayPause,
     pause,
     resume,

@@ -33,7 +33,14 @@ function isGuestAllowed(request: NextRequest): boolean {
   // keeps the full-text .txt sibling from riding along and bypassing the preview
   // cap; images are already excluded from the matcher, so they still render.
   const decodedPath = decodePath(path);
-  if (!decodedPath.endsWith('.json')) return false;
+  // Compared case-insensitively because a case-insensitive filesystem would serve
+  // .NARRATION.json from the same file an exact-case check would have denied.
+  const suffix = decodedPath.toLowerCase();
+  if (!suffix.endsWith('.json')) return false;
+  // The narration manifest is a .json sibling, but it carries the URL of the
+  // complete recording plus cue times for the whole book, so letting it ride this
+  // allowance would hand guests the audio the preview cap exists to withhold.
+  if (suffix.endsWith('.narration.json')) return false;
   return PUBLIC_BOOKS.some((book) => decodedPath.startsWith(`/${book.directory}/`));
 }
 

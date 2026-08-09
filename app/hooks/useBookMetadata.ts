@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { bookAssetPath } from '@/lib/utils/bookAssetPath';
 import type { BookMetadata, ImageMap } from '@/lib/types';
 
 interface UseBookMetadataResult {
@@ -36,21 +37,7 @@ export function useBookMetadata(
       setError(null);
 
       try {
-        // For rephrase files (ending with -rephrase or -rephrase-furigana), use the base book name for metadata
-        // e.g., "book-rephrase" -> "book", "book-rephrase-furigana" -> "book"
-        const isRephraseFile = /-rephrase(-furigana)?$/.test(fileName);
-        const baseFileName = isRephraseFile
-          ? fileName.replace(/-rephrase(-furigana)?$/, '')
-          : fileName;
-
-        // Construct JSON file path
-        // For rephrase files in nested directories (e.g., bookv2-furigana/book-name/),
-        // the JSON is in the same directory: /{directory}/{baseFileName}.json
-        // For regular files, it's: /{directory}/{fileName}/{fileName}.json
-        const jsonPath = isRephraseFile
-          ? `/${directory}/${baseFileName}.json`  // Rephrase: JSON is sibling to rephrase file
-          : `/${directory}/${baseFileName}/${baseFileName}.json`;  // Original: JSON is in book subfolder
-        const response = await fetch(jsonPath);
+        const response = await fetch(bookAssetPath(directory, fileName, '.json'));
 
         if (!response.ok) {
           // If JSON doesn't exist, silently fail (not all books have metadata)
