@@ -13,7 +13,14 @@
 import * as fs from 'fs';
 import { buildPlayableUnits } from '@/lib/utils/buildPlayableUnits';
 import { stripFurigana } from '@/lib/utils/furiganaParser';
-import type { NarrationCue, NarrationManifest } from '@/lib/types';
+import type { NarrationCue } from '@/lib/types';
+
+/** What this script emits: cue positions only. The audio location is attached
+ *  later by scripts/db/sync-narration.ts, which is what the reader reads. */
+interface NarrationBuild {
+  unitCount: number;
+  cues: (NarrationCue | null)[];
+}
 
 interface TimingCue {
   start: number;
@@ -138,11 +145,10 @@ function matchCues(unitTexts: string[], cues: TimingCue[]): (NarrationCue | null
 function main(): void {
   const timingsPath = readArg('timings');
   const textPath = readArg('text');
-  const audioUrl = readArg('audio-url');
   const outPath = readArg('out');
 
-  if (!timingsPath || !textPath || !audioUrl || !outPath) {
-    console.error('Usage: --timings <file> --text <file> --audio-url <url> --out <file> [--min-coverage <0-1>]');
+  if (!timingsPath || !textPath || !outPath) {
+    console.error('Usage: --timings <file> --text <file> --out <file> [--min-coverage <0-1>]');
     process.exit(1);
   }
 
@@ -182,7 +188,7 @@ function main(): void {
     process.exit(1);
   }
 
-  const manifest: NarrationManifest = { audioUrl, unitCount: units.length, cues: matched };
+  const manifest: NarrationBuild = { unitCount: units.length, cues: matched };
   fs.writeFileSync(outPath, JSON.stringify(manifest), 'utf8');
   console.log(`wrote     ${outPath}`);
 }

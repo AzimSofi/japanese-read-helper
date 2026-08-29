@@ -70,12 +70,23 @@ recording plus a transcript of it — not the ebook text, it must match what is 
 # 1. Align transcript to audio -> .srt (for eyeballing) + .timings.json
 python scripts/audio/align-transcript.py "book.m4b" "book.txt"
 
-# 2. Map those cues onto reader units -> the manifest the reader fetches
+# 2. Map those cues onto reader units -> a build artifact (cue positions only)
 npx tsx scripts/audio/build-narration.ts \
   --timings "book.timings.json" \
-  --text "public/bookv2-furigana/<book>/<book>-rephrase-furigana.txt" \
-  --audio-url "https://<cdn>/<book>.m4a" \
-  --out "public/bookv2-furigana/<book>/<book>-rephrase-furigana.narration.json"
+  --text "public/bookv2-furigana/<book>/<book>.txt" \
+  --out "temp/<book>.narration.json"
+
+# 3. Re-encode for the browser, then upload to the private narration bucket
+ffmpeg -i "book.m4b" -map 0:a:0 -c:a aac -b:a 40k -ac 1 -ar 22050 \
+  -movflags +faststart -map_metadata -1 "temp/<book>.m4a"
+aws s3 cp "temp/<book>.m4a" "s3://$BUCKET/<book>.m4a" --region ap-northeast-1
+
+# 4. Pair the cues with the S3 key in the database
+npx tsx scripts/db/sync-narration.ts \
+  --manifest "temp/<book>.narration.json" \
+  --audio-key "<book>.m4a" \
+  --directory "bookv2-furigana" \
+  --file-name "<book>"
 ```
 
 The aligner uses no ASR. Container chapter marks are exact anchors, ffmpeg
@@ -88,28 +99,19 @@ that land mid-speech.
 
 Notes:
 
-- The `--out` path must sit **inside** the book folder and be named after the
-  **text file** it was built from, not the book. Each text variant splits into
-  different units, so each needs its own manifest; the plain variant would be
-  `<book>/<book>.narration.json`. Anywhere else is a silent 404 that leaves
-  playback on TTS with no error anywhere
-- `--text` must be the same revision that was synced to the `text_entries` table.
-  The reader builds its units from Postgres, not from `public/*.txt`, and cues are
-  positional — if the two have drifted by a paragraph, every later line plays the
-  wrong audio. The builder stores a `unitCount`, but the reader only rejects text
-  that has grown; shorter text is accepted as a prefix because that is how the
-  guest preview arrives. A same-length edit and a deleted paragraph both slip
-  through, so rebuild the manifest whenever you re-process a book
-- Do not publish a manifest for a book that is in the guest preview allowlist.
-  `middleware.ts` denies `.narration.json` to signed-out visitors, but that only
-  covers requests the server function sees: under SST, `public/` is uploaded to S3
-  and CloudFront answers those paths directly, so middleware never runs. Today
-  `public/bookv2-furigana/*` is gitignored and CI deploys from a plain checkout,
-  so nothing lands there — the middleware rule is defence in depth, not the gate
+- Nothing here goes in `public/`. Book assets under `public/bookv2-furigana/` are
+  gitignored and CI deploys from a plain checkout, so a file placed there never
+  reaches production; the repo is also public, so a recording's location must not
+  be committed. Cues live in the `narration` table and the audio lives in a private
+  S3 bucket, which `GET /api/narration` pairs into a short-lived presigned URL
+- That route requires a session, so the guest preview never receives a recording
+- `--text` must be the same revision that was synced to `text_entries`. The reader
+  builds its units from Postgres, and cues are positional — if the two have drifted
+  by a paragraph, every later line plays the wrong audio. `unitCount` lets the
+  reader reject text that has grown, but shorter text is accepted as a prefix
+  (that is how the guest preview arrives), so a same-length edit or a deleted
+  paragraph both slip through. Rebuild whenever you re-process a book
 - Requires `ffmpeg` and `ffprobe` on PATH, and the container must have chapter marks
-- Audio is not served from `public/`. Host it separately and pass its URL: the
-  recording is far too large for the Lambda bundle. Re-encode to mono and add
-  `-movflags +faststart` so the browser can seek with range requests
 - Manifest cue indices are `PlayableUnit.globalIndex`; `null` falls back to TTS
 - Rephrased text has no recording, so `sub` playback stays on TTS
 

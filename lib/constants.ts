@@ -72,6 +72,7 @@ export const API_ROUTES = {
   LIST_TEXT_FILES: '/api/list-text-files',
   EXPLAIN_SENTENCE: '/api/explain-sentence',
   PRIORITIZE: '/api/prioritize',
+  NARRATION: '/api/narration',
   VOCABULARY: '/api/vocabulary',
   AUTH_LOGIN: '/api/auth?action=login',
   AUTH_LOGOUT: '/api/auth?action=logout',
