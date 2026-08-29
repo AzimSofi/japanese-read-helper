@@ -39,6 +39,10 @@ export default $config({
       name: `${ssmPrefix}-GOOGLE_TTS_API_KEY`,
       withDecryption: true,
     });
+    const sessionSecret = await aws.ssm.getParameter({
+      name: `${ssmPrefix}-SESSION_SECRET`,
+      withDecryption: true,
+    });
 
     // Audiobook recordings. Private: the app hands out short-lived presigned URLs
     // so a purchased recording is never reachable without a signed-in session.
@@ -55,6 +59,7 @@ export default $config({
         POSTGRES_URL: databaseUrl.value,
         GOOGLE_TRANSLATE_API_KEY: googleTranslateApiKey.value,
         GOOGLE_TTS_API_KEY: googleTtsApiKey.value,
+        SESSION_SECRET: sessionSecret.value,
       },
       warm: 1,
     });
