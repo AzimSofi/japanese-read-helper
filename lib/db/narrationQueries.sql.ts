@@ -25,6 +25,9 @@ export async function getNarration(
   return firstRow<NarrationRow>(result);
 }
 
+// The ::text step is load-bearing: casting a JS string straight to jsonb makes
+// the driver send it as a jsonb *string*, storing "[...]" instead of the array,
+// which the reader then rejects as a malformed manifest.
 export async function upsertNarration(entry: {
   fileName: string;
   directory: string;
@@ -36,13 +39,13 @@ export async function upsertNarration(entry: {
     INSERT INTO narration (file_name, directory, audio_key, unit_count, cues, created_at, updated_at)
     VALUES (
       ${entry.fileName}, ${entry.directory}, ${entry.audioKey}, ${entry.unitCount},
-      ${JSON.stringify(entry.cues)}::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+      ${JSON.stringify(entry.cues)}::text::jsonb, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
     )
     ON CONFLICT (file_name, directory)
     DO UPDATE SET
       audio_key = ${entry.audioKey},
       unit_count = ${entry.unitCount},
-      cues = ${JSON.stringify(entry.cues)}::jsonb,
+      cues = ${JSON.stringify(entry.cues)}::text::jsonb,
       updated_at = CURRENT_TIMESTAMP
   `;
 }
