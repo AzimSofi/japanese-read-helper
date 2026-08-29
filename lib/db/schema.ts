@@ -134,6 +134,24 @@ export const CREATE_TABLES_SQL = `
   CREATE INDEX IF NOT EXISTS idx_text_entries_file_directory
     ON text_entries(file_name, directory);
 
+  -- Narration table (audiobook recording paired with one text variant)
+  -- Holds the S3 object key rather than a URL: the recording is private, so the
+  -- API signs a short-lived URL per request instead of storing a durable one.
+  CREATE TABLE IF NOT EXISTS narration (
+    id SERIAL PRIMARY KEY,
+    file_name VARCHAR(255) NOT NULL,
+    directory VARCHAR(255) NOT NULL,
+    audio_key VARCHAR(500) NOT NULL,
+    unit_count INT NOT NULL,
+    cues JSONB NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(file_name, directory)
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_narration_file_directory
+    ON narration(file_name, directory);
+
   -- Books table (book metadata from EPUB processing)
   CREATE TABLE IF NOT EXISTS books (
     id VARCHAR(255) PRIMARY KEY,

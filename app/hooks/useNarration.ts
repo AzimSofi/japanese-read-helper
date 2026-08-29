@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { bookVariantAssetPath } from '@/lib/utils/bookAssetPath';
+import { API_ROUTES } from '@/lib/constants';
 import type { NarrationCue, NarrationManifest } from '@/lib/types';
 
 export interface NarrationLoad {
@@ -80,7 +80,7 @@ export function useNarration(
     if (!fileName || !directory || unitCount <= 0) return;
 
     const controller = new AbortController();
-    const url = bookVariantAssetPath(directory, fileName, '.narration.json');
+    const url = `${API_ROUTES.NARRATION}?directory=${encodeURIComponent(directory)}&fileName=${encodeURIComponent(fileName)}`;
 
     const fail = (message: string, detail: string) => {
       console.error(`${detail}: ${url}`);
@@ -92,14 +92,13 @@ export function useNarration(
         const response = await fetch(url, { signal: controller.signal });
         if (controller.signal.aborted) return;
         if (!response.ok) {
-          // 404 just means this variant has no recording, which is the normal case.
-          if (response.status === 404) return;
+          // 404 means this variant has no recording and 401 means a guest, who is
+          // never served one. Both are the normal case, not a fault to show.
+          if (response.status === 404 || response.status === 401) return;
           fail('Audiobook recording could not be loaded', `Narration manifest request failed (${response.status})`);
           return;
         }
-        // A guest is redirected to the login page, and a CDN can answer a missing
-        // object with an HTML error body -- both arrive as a perfectly ok
-        // response. Neither is a fault worth showing, so treat them as absent.
+        // An edge or proxy can answer with an HTML body and a perfectly ok status.
         if (!response.headers.get('content-type')?.includes('json')) return;
 
         const parsed = parseManifest(await response.json(), url);

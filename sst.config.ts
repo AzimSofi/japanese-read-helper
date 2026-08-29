@@ -40,9 +40,15 @@ export default $config({
       withDecryption: true,
     });
 
+    // Audiobook recordings. Private: the app hands out short-lived presigned URLs
+    // so a purchased recording is never reachable without a signed-in session.
+    const narrationAudio = new sst.aws.Bucket("NarrationAudio");
+
     const web = new sst.aws.Nextjs("JapaneseReadHelper", {
       openNextVersion: "3.4.1",
+      link: [narrationAudio],
       environment: {
+        NARRATION_AUDIO_BUCKET: narrationAudio.name,
         GEMINI_API_KEY: geminiApiKey.value,
         AUTH_PASSWORD_HASH: authPasswordHash.value,
         DATABASE_URL: databaseUrl.value,
