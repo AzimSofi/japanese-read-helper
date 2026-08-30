@@ -42,9 +42,13 @@ body {
   color: inherit;
 }
 
-/* Reading content typography */
+/* Reading content typography.
+   Shared so a plain/furigana book reads identically to a rephrased one; they are
+   rendered by different components (ParagraphItem vs CollapsibleItem). */
 .collapsibleItem,
-.collapsibleItem p {
+.collapsibleItem p,
+.paragraph-item,
+.paragraph-item p {
   font-size: 1.3rem !important;
   font-family: 'Noto Serif JP', serif;
   font-weight: 500;

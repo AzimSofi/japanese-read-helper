@@ -740,8 +740,6 @@ function ReaderContent({
           directory={directoryParam || ''}
           bookmarkText={bookmarkText}
           showFurigana={showFurigana}
-          fontSize={fontSize}
-          lineHeight={lineHeight}
           displayMode={displayMode}
           aiExplanationEnabled={aiExplanationEnabled}
           currentPage={currentPage}
