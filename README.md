@@ -3,12 +3,13 @@
 Read Helper is a full-stack web app for Japanese language learners. It started as a tool for reading Visual Novels (capturing in-game text via Textractor and AI-rephrasing it for comprehension) and has grown into a complete reading app for books, with furigana, AI assistance, text-to-speech, and vocabulary tracking.
 
 ---
-
-## Demo (Early prototype)
+<details>
+<summary>Demo (Early prototype)</summary>
 
 This video demonstrates Read Helper in operation, showcasing its text processing and AI rephrasing capabilities.
 
 https://github.com/user-attachments/assets/16d81533-e417-4123-b764-a0066d0b6c84
+</details>
 
 ---
 
