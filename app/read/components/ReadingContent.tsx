@@ -24,8 +24,6 @@ interface ReadingContentProps {
   directory: string;
   bookmarkText: string;
   showFurigana: boolean;
-  fontSize: number;
-  lineHeight: number;
   displayMode: "collapsed" | "expanded";
   aiExplanationEnabled: boolean;
   currentPage: number;
@@ -101,8 +99,6 @@ export default function ReadingContent({
   directory,
   bookmarkText,
   showFurigana,
-  fontSize,
-  lineHeight,
   displayMode,
   aiExplanationEnabled,
   currentPage,
@@ -219,8 +215,6 @@ export default function ReadingContent({
             showFurigana={showFurigana}
             onBookmarkSuccess={onBookmarkSuccess}
             onSentenceClick={onSentenceClick}
-            fontSize={fontSize}
-            lineHeight={lineHeight}
             imageMap={imageMap}
             currentPage={currentPage}
             audiobookEnabled={audiobookEnabled}

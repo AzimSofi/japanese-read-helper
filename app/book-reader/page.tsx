@@ -326,8 +326,6 @@ function BookReaderContent({ directoryParam, fileNameParam }: { directoryParam: 
             showFurigana={showFurigana}
             onBookmarkSuccess={refetchBookmark}
             onSentenceClick={handleSentenceClick}
-            fontSize={fontSize}
-            lineHeight={lineHeight}
             imageMap={imageMap}
           />
         );

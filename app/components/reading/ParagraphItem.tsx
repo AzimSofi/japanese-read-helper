@@ -21,8 +21,6 @@ interface ParagraphItemProps {
   showFurigana: boolean;
   onBookmarkSuccess: () => void;
   onSentenceClick?: (sentence: string) => void;
-  fontSize: number;
-  lineHeight: number;
   imageMap?: Record<string, string>;
   currentPage?: number;
   audiobookEnabled?: boolean;
@@ -40,8 +38,6 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   showFurigana,
   onBookmarkSuccess,
   onSentenceClick,
-  fontSize,
-  lineHeight,
   imageMap,
   currentPage,
   audiobookEnabled,
@@ -230,7 +226,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     if (showTranslation && translatedText) {
       return (
         <div
-          className="paragraph-text whitespace-pre-wrap"
+          className="head-text font-bold text-lg whitespace-pre-wrap"
           style={{ color: "#636366" }}
         >
           {translatedText}
@@ -241,7 +237,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
     if (!hasImage) {
       return (
         <div
-          className="paragraph-text whitespace-pre-wrap"
+          className="head-text font-bold text-lg whitespace-pre-wrap"
           onClickCapture={handleTripleClickSelect}
         >
           {renderTextWithFurigana(text, true)}
@@ -258,7 +254,7 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
             return (
               <div
                 key={index}
-                className="paragraph-text whitespace-pre-wrap"
+                className="head-text font-bold text-lg whitespace-pre-wrap"
                 onClickCapture={handleTripleClickSelect}
               >
                 {renderTextWithFurigana(part.content, true)}
@@ -301,9 +297,9 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
   };
 
   return (
-    <div className="paragraph-item relative" id={id} data-global-index={globalIndex} style={{ scrollMarginTop: '80px' }}>
+    <div className="paragraph-item" id={id} data-global-index={globalIndex} style={{ scrollMarginTop: '80px' }}>
       <div
-        className="p-5 my-3 rounded-xl"
+        className="p-4 my-4 rounded-xl"
         style={{
           backgroundColor: isPlaying
             ? "rgba(52, 199, 89, 0.08)"
@@ -320,23 +316,11 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
                 ? "4px solid #007AFF"
                 : "none",
           border: isPlaying || isStartCursor || isBookmarked ? undefined : "1px solid rgba(0, 0, 0, 0.04)",
-          fontSize: `${fontSize}px`,
-          lineHeight: lineHeight,
         }}
       >
-        {renderContentWithImages()}
-      </div>
-
-      <div
-        style={{
-          position: "absolute",
-          top: "16px",
-          right: "8px",
-          display: "flex",
-          flexDirection: "row",
-          gap: "2px",
-        }}
-      >
+        <div className="flex flex-col sm:flex-row sm:items-start gap-2">
+          <div className="flex-1 min-w-0">{renderContentWithImages()}</div>
+          <div className="flex items-center gap-0.5 flex-shrink-0 pt-0.5 self-end sm:self-auto">
         {audiobookEnabled && onStartFromHere && globalIndex != null && (
           <button
             onClick={(e) => {
@@ -410,6 +394,8 @@ const ParagraphItem: React.FC<ParagraphItemProps> = ({
             {isBookmarked ? <BookmarkFilled /> : <BookmarkUnfilled />}
           </button>
         </form>
+          </div>
+        </div>
       </div>
     </div>
   );
